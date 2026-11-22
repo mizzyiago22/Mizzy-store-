@@ -235,7 +235,7 @@ try{if(localStorage.getItem('ksl_token'))document.documentElement.classList.add(
 (function(){
   function grid(){
     var it=document.querySelector('.dsh-svc-item');
-    if(!it||!it.parentElement)return;
+    if(!it||!it.parentElement||it.closest('.dsh-service-group'))return;
     var g=it.parentElement,st=g.style;
     st.setProperty('display','grid','important');
     st.setProperty('grid-template-columns','repeat(4,minmax(0,1fr))','important');
