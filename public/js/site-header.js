@@ -124,6 +124,10 @@
       burger = header.querySelector('.std-burger');
     }
 
+    var dashboardHeader = !!(header && header.classList.contains('dsh-header'));
+    var burgerHome = burger.parentNode;
+    var burgerBefore = burger.nextSibling;
+
     var overlay = document.createElement('div');
     overlay.className = 'std-overlay';
     overlay.hidden = true;
@@ -157,26 +161,57 @@
     document.body.appendChild(drawer);
 
     var closeBtn = drawer.querySelector('.std-close');
+    var closeTimer = null;
+    var menuOpen = false;
+    var transitionId = 0;
+
+    function liftDashboardBurger() {
+      if (!dashboardHeader || burger.classList.contains('std-burger-floating')) return;
+      burger.classList.add('std-burger-floating');
+      document.body.appendChild(burger);
+    }
+
+    function restoreDashboardBurger() {
+      if (!dashboardHeader || !burger.classList.contains('std-burger-floating')) return;
+      burger.classList.remove('std-burger-floating');
+      var parent = burgerHome && document.documentElement.contains(burgerHome)
+        ? burgerHome
+        : (header.querySelector('.dsh-header-right') || header);
+      if (burgerBefore && burgerBefore.parentNode === parent) parent.insertBefore(burger, burgerBefore);
+      else parent.appendChild(burger);
+    }
 
     function open() {
+      menuOpen = true;
+      var thisTransition = ++transitionId;
+      if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
       drawer.hidden = false; overlay.hidden = false;
+      liftDashboardBurger();
       requestAnimationFrame(function () {
+        if (!menuOpen || thisTransition !== transitionId) return;
         drawer.classList.add('open'); overlay.classList.add('open');
       });
       burger.setAttribute('aria-expanded', 'true');
       document.body.classList.add('std-menu-open');
     }
     function close() {
+      menuOpen = false;
+      transitionId++;
       drawer.classList.remove('open'); overlay.classList.remove('open');
       burger.setAttribute('aria-expanded', 'false');
       document.body.classList.remove('std-menu-open');
-      setTimeout(function () { drawer.hidden = true; overlay.hidden = true; }, 240);
+      if (closeTimer) clearTimeout(closeTimer);
+      closeTimer = setTimeout(function () {
+        drawer.hidden = true; overlay.hidden = true;
+        restoreDashboardBurger();
+        closeTimer = null;
+      }, 260);
     }
 
     burger.addEventListener('click', function () {
-      drawer.classList.contains('open') ? close() : open();
+      menuOpen ? close() : open();
     });
-    closeBtn.addEventListener('click', close);
+    closeBtn.addEventListener('click', function (e) { e.preventDefault(); close(); });
     overlay.addEventListener('click', close);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
     drawer.addEventListener('click', function (e) {

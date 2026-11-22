@@ -34,6 +34,16 @@
   margin-left: 2px;
 }
 
+body > .std-burger.std-burger-floating {
+  position: fixed !important;
+  top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+  left: max(12px, env(safe-area-inset-left, 0px)) !important;
+  right: auto !important;
+  z-index: 2147483002 !important;
+  background: var(--bg-card, #0f1626);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .28);
+}
+
 .dsh-header .dsh-profile {
   flex: 1 1 auto;
   min-width: 0;
