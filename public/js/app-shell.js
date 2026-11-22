@@ -64,7 +64,7 @@
       var el = document.getElementById(id);
       if (el) el.remove();
     });
-    buildHamburgerMenu();
+    if (!document.body.hasAttribute('data-std-recommended')) buildHamburgerMenu();
   }
 
 

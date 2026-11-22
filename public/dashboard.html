@@ -154,14 +154,6 @@
     .dsh-promo-btn{background:#fff;color:var(--blue);font-size:12.5px;font-weight:800;padding:9px 16px;border-radius:20px;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:4px}
     .dsh-promo-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 
-    /* ── BOTTOM NAV ────────────────────────── */
-    .dsh-bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--white);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
-    .dsh-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 8px;cursor:pointer;border:none;background:none;color:var(--text2);font-size:10.5px;font-weight:700;gap:4px;transition:color .15s;position:relative}
-    .dsh-nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-    .dsh-nav-item.active{color:var(--blue)}
-    .dsh-nav-item.active svg{stroke:var(--blue)}
-    .dsh-nav-dot{position:absolute;top:8px;right:calc(50% - 16px);width:8px;height:8px;border-radius:50%;background:#ef4444;border:2px solid #fff;display:none}
-
     /* ── TOAST ─────────────────────────────── */
     .dsh-toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#f4f8ff;color:#0b1b3a;padding:10px 22px;border-radius:24px;font-size:13.5px;font-weight:600;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap}
     .dsh-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -194,7 +186,10 @@
 <script src="/js/mys-menu-guard.js?v=20261022b" defer></script>
 <link rel="stylesheet" href="/css/mys-ui-fixes.css?v=20261022c">
 <link rel="stylesheet" href="/css/mizzy-theme.css?v=1"/>
-<link rel="stylesheet" href="/css/dashboard-redesign.css?v=2"/>
+<link rel="stylesheet" href="/css/dashboard-redesign.css?v=3"/>
+<link rel="stylesheet" href="/css/smooth.css?v=1"/>
+<link rel="stylesheet" href="/css/site-header.css?v=1"/>
+<script src="/js/smooth-nav.js?v=3" defer></script>
 <link rel="manifest" href="/manifest.json"/>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"/>
@@ -202,7 +197,7 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="theme-color" content="#ffffff"/>
 </head>
-<body>
+<body data-std-recommended>
 <!-- SVG SPRITES -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12l2 2 4-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -455,31 +450,6 @@
   </div>
   <button type="button" class="dsh-support-toggle" aria-label="Contact and support" onclick="document.getElementById('dshSupportFab').classList.toggle('open')"><svg><use href="#i-headset"/></svg></button>
 </div>
-
-<!-- BOTTOM NAV -->
-<nav class="dsh-bottom-nav">
-  <button class="dsh-nav-item active" onclick="window.location.href='/dashboard'">
-    <svg><use href="#i-home"/></svg>
-    Home
-  </button>
-  <button class="dsh-nav-item" onclick="window.location.href='/marketplace'">
-    <svg><use href="#i-grid"/></svg>
-    Market
-  </button>
-  <button class="dsh-nav-item" onclick="window.location.href='/deposit'">
-    <svg><use href="#i-wallet"/></svg>
-    Wallet
-  </button>
-  <button class="dsh-nav-item" onclick="window.location.href='/support'">
-    <svg><use href="#i-message-circle"/></svg>
-    Support
-    <span class="dsh-nav-dot" id="navChatDot"></span>
-  </button>
-  <button class="dsh-nav-item" onclick="window.location.href='/settings'">
-    <svg><use href="#i-user"/></svg>
-    Profile
-  </button>
-</nav>
 
 <!-- TOAST -->
 <div class="dsh-toast" id="dshToast"></div>
@@ -734,7 +704,8 @@
 </script>
 <script src="/welcome-popup.js?v=1" defer></script>
 
-<script src="/js/app-shell.js?v=4" defer></script>
+<script src="/js/app-shell.js?v=5" defer></script>
+<script src="/js/site-header.js?v=4" defer></script>
   <script src="/js/page-transitions.js?v=1" defer></script>
 
 <!-- MYS-MARKETS -->

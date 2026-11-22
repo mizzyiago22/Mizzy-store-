@@ -76,13 +76,14 @@
   }
   hookToast(); window.addEventListener('DOMContentLoaded', hookToast); window.addEventListener('load', hookToast);
 
-  // 4. The same bottom dock on every customer page (the dashboard already has its own).
+  // 4. The same bottom dock on every customer page, including the dashboard.
   function addDock() {
     try {
       var p = location.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/';
       if (['/', '/index', '/apidocs', '/api-docs', '/tutorials', '/games', '/login', '/register'].indexOf(p) > -1 || /admin/.test(p)) return;
       if (!localStorage.getItem('ksl_token') || document.querySelector('.ms-dock')) return;
-      // Pages that had their own bottom bar (e.g. the dashboard) use the standard one instead.
+      // Replace the dashboard's legacy dock so its Services action opens the shared hamburger.
+      document.querySelectorAll('.dsh-bottom-nav').forEach(function (n) { n.remove(); });
       document.querySelectorAll('.mz-dock').forEach(function (n) { n.remove(); });
       var I = {
         home: '<path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>',

@@ -36,44 +36,36 @@
     return '<svg class="' + (cls || '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICON[name] || '') + '</svg>';
   }
 
-  // Menu: grouped, always fully open (no collapsing arrows), every active page listed.
+  // Menu: one consolidated service directory shared by the header and Services dock.
   var MENU = [
     { title: 'Home', items: [
-      { href: '/', label: 'Home', icon: 'home', color: '#6366f1' },
-      { href: '/dashboard', label: 'Dashboard', icon: 'grid', color: '#6366f1' }
+      { href: '/dashboard', label: 'Dashboard', icon: 'home', color: '#6366f1' }
     ] },
     { title: 'Marketplace', items: [
-      { href: '/marketplace', label: 'Marketplace 1', icon: 'cart', color: '#10b981' },
-      { href: '/marketplace2', label: 'Marketplace 2', icon: 'cart', color: '#10b981' },
-      { href: '/marketplace3', label: 'Marketplace 3', icon: 'cart', color: '#10b981' },
-      { href: '/marketplace4', label: 'Marketplace 4', icon: 'cart', color: '#10b981' },
-      { href: '/tools', label: 'Format & tools', icon: 'tool', color: '#10b981' },
-      { href: '/working-pics', label: 'Working Pics', icon: 'image', color: '#10b981' }
+      { href: '/marketplace', label: 'Marketplace', icon: 'cart', color: '#10b981' }
     ] },
-    { title: 'Buy Number', items: [
-      { href: '/buy-number-app?server=server1', label: 'Buy Number 1', icon: 'phone', color: '#3b82f6' },
-      { href: '/buy-number-app?server=server2', label: 'Buy Number 2', icon: 'phone', color: '#3b82f6' },
+    { title: 'Numbers & Email', items: [
+      { href: '/buy-number', label: 'Buy Numbers', icon: 'phone', color: '#3b82f6' },
       { href: '/instant-numbers', label: 'Instant Numbers', icon: 'phone', color: '#3b82f6' },
       { href: '/rental', label: 'Rentals', icon: 'key', color: '#f59e0b' },
-      { href: '/temp-email', label: 'Temp email', icon: 'mail', color: '#8b5cf6' },
+      { href: '/temp-email', label: 'Temporary Email', icon: 'mail', color: '#8b5cf6' },
       { href: '/number-history', label: 'Number history', icon: 'clock', color: '#3b82f6' }
     ] },
-    { title: 'Boost', items: [
-      { href: '/boost', label: 'Boost', icon: 'rocket', color: '#ec4899' },
-      { href: '/boost1', label: 'Boost 1', icon: 'bolt', color: '#ec4899' },
-      { href: '/boost2', label: 'Boost 2', icon: 'bolt', color: '#ec4899' },
-      { href: '/boost-services', label: 'All boost services', icon: 'list', color: '#ec4899' },
-      { href: '/boost-history', label: 'Boost history', icon: 'clock', color: '#ec4899' }
+    { title: 'Boost & Tools', items: [
+      { href: '/boost', label: 'Social Boost', icon: 'rocket', color: '#ec4899' },
+      { href: '/boost-services', label: 'Boost Services', icon: 'list', color: '#ec4899' },
+      { href: '/tools', label: 'Tools & FMT', icon: 'tool', color: '#10b981' },
+      { href: '/vtu', label: 'Airtime & Data', icon: 'zap', color: '#06b6d4' },
+      { href: '/working-pics', label: 'Working Pics', icon: 'image', color: '#10b981' }
     ] },
-    { title: 'More services', items: [
-      { href: '/vtu', label: 'Airtime & data', icon: 'zap', color: '#06b6d4' },
+    { title: 'More Services', items: [
       { href: '/games', label: 'Games', icon: 'game', color: '#f97316' },
       { href: '/giveaways', label: 'Giveaways', icon: 'gift', color: '#84cc16' },
+      { href: '/tutorials', label: 'Tutorials', icon: 'book', color: '#a855f7' }
+    ] },
+    { title: 'Community', items: [
       { href: '/groups', label: 'Groups', icon: 'users', color: '#6366f1' },
       { href: '/messages', label: 'Messages', icon: 'chat', color: '#6366f1' }
-    ] },
-    { title: 'Learn', items: [
-      { href: '/tutorials', label: 'Tutorials', icon: 'book', color: '#a855f7' }
     ] },
     { title: 'Account', items: [
       { href: '/purchases', label: 'My Orders', icon: 'bag', color: '#22c55e' },
@@ -103,16 +95,34 @@
     var old = document.querySelector('nav.navbar');
     if (old) old.style.display = 'none';
 
-    var header = document.createElement('header');
-    header.className = 'std-header';
-    header.innerHTML =
-      '<a class="std-brand" href="/buy-number">' +
-        '<img src="/img/mizzy-logo.jpg" alt="" width="36" height="36"/>' +
-        '<span>Mizzy Sales</span>' +
-      '</a>' +
-      '<button type="button" class="std-burger" aria-label="Open menu" aria-expanded="false" aria-controls="stdDrawer">' +
-        '<span></span><span></span><span></span>' +
-      '</button>';
+    var header = document.querySelector('.dsh-header');
+    var burger;
+    if (header) {
+      burger = header.querySelector('.std-burger');
+      if (!burger) {
+        burger = document.createElement('button');
+        burger.type = 'button';
+        burger.className = 'std-burger';
+        burger.setAttribute('aria-label', 'Open menu');
+        burger.setAttribute('aria-expanded', 'false');
+        burger.setAttribute('aria-controls', 'stdDrawer');
+        burger.innerHTML = '<span></span><span></span><span></span>';
+        (header.querySelector('.dsh-header-right') || header).appendChild(burger);
+      }
+    } else {
+      header = document.createElement('header');
+      header.className = 'std-header';
+      header.innerHTML =
+        '<a class="std-brand" href="/buy-number">' +
+          '<img src="/img/mizzy-logo.jpg" alt="" width="36" height="36"/>' +
+          '<span>Mizzy Sales</span>' +
+        '</a>' +
+        '<button type="button" class="std-burger" aria-label="Open menu" aria-expanded="false" aria-controls="stdDrawer">' +
+          '<span></span><span></span><span></span>' +
+        '</button>';
+      document.body.insertBefore(header, document.body.firstChild);
+      burger = header.querySelector('.std-burger');
+    }
 
     var overlay = document.createElement('div');
     overlay.className = 'std-overlay';
@@ -143,11 +153,9 @@
       '<button type="button" class="std-logout">' + svg('logout') + '<span>Log out</span></button>' +
       '</div>';
 
-    document.body.insertBefore(header, document.body.firstChild);
     document.body.appendChild(overlay);
     document.body.appendChild(drawer);
 
-    var burger = header.querySelector('.std-burger');
     var closeBtn = drawer.querySelector('.std-close');
 
     function open() {

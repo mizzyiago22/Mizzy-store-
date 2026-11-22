@@ -25,12 +25,13 @@
   gap: 14px;
 }
 
-.dsh-header .mys-menu-trigger {
+.dsh-header .std-burger {
   position: relative !important;
   top: auto !important;
   left: auto !important;
   z-index: 610;
-  font-family: inherit !important;
+  flex: 0 0 44px;
+  margin-left: 2px;
 }
 
 .dsh-header .dsh-profile {
@@ -225,45 +226,20 @@
   grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
 }
 
-html body nav.dsh-bottom-nav {
-  display: flex !important;
-  position: fixed !important;
-  left: 50% !important;
-  right: auto !important;
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
-  width: min(92%, 480px) !important;
-  max-width: 480px !important;
-  transform: translateX(-50%) !important;
-  justify-content: space-between !important;
-  align-items: stretch !important;
-  gap: 2px !important;
-  padding: 6px !important;
-  border-radius: 999px !important;
-  z-index: 1000 !important;
-}
-
-html body nav.dsh-bottom-nav .dsh-nav-item {
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  padding: 6px 2px !important;
-  font-size: clamp(9px, 2.4vw, 11px) !important;
-}
-
-html body #mysMenuBackdrop {
+html body .std-overlay {
   z-index: 2147483000 !important;
 }
 
-html body #mysDrawer {
+html body .std-drawer {
   position: fixed !important;
   z-index: 2147483001 !important;
 }
 
-body.mys-menu-open .dsh-header {
+body.std-menu-open .dsh-header {
   z-index: 1 !important;
 }
 
-body.mys-menu-open #kb-loader {
+body.std-menu-open #kb-loader {
   display: none !important;
 }
 
@@ -273,7 +249,7 @@ body.mys-menu-open #kb-loader {
 
 .dsh-svc-item:focus-visible,
 .dsh-nav-item:focus-visible,
-.dsh-header .mys-menu-trigger:focus-visible,
+.dsh-header .std-burger:focus-visible,
 .dsh-header .dsh-icon-btn:focus-visible {
   outline: 3px solid var(--gold, #78b8e8);
   outline-offset: 3px;
