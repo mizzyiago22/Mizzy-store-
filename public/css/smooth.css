@@ -193,3 +193,29 @@ html[data-theme="light"] { --ui-backdrop: rgba(15, 30, 55, .42); --ui-panel-shad
 /* Floating support button sits above the dock, never on top of it */
 #msDock, .dsh-support-fab, .support-fab { bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important; }
 .ms-dock { left: 50% !important; right: auto !important; }
+
+/* ══ DOCK LOCK: fixed size/layout so no other stylesheet can inflate or wrap it ══ */
+html body nav.ms-dock {
+  position: fixed !important; left: 50% !important; right: auto !important; top: auto !important;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  transform: translateX(-50%) !important;
+  width: calc(100% - 24px) !important; max-width: 460px !important; height: auto !important; min-height: 0 !important;
+  display: flex !important; flex-flow: row nowrap !important; align-items: stretch !important; justify-content: space-between !important;
+  gap: 2px !important; padding: 6px 8px !important; margin: 0 !important;
+  border-radius: 999px !important; font-size: 11px !important; line-height: 1.2 !important;
+  overflow: hidden !important; z-index: 100 !important;
+}
+html body nav.ms-dock > .ms-dock-link {
+  flex: 1 1 0 !important; min-width: 0 !important; width: auto !important; height: auto !important; min-height: 0 !important;
+  display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important;
+  gap: 3px !important; margin: 0 !important; padding: 6px 2px !important;
+  font-size: 11px !important; font-weight: 600 !important; line-height: 1.2 !important; letter-spacing: 0 !important;
+  white-space: nowrap !important; text-transform: none !important;
+  border: 0 !important; border-radius: 999px !important; background: transparent !important; box-shadow: none !important;
+  color: var(--t3, #8293ae) !important; text-decoration: none !important;
+}
+html body nav.ms-dock > .ms-dock-link.active {
+  color: var(--gold, #00b4f8) !important; background: rgba(0, 180, 248, .14) !important;
+}
+html body nav.ms-dock > .ms-dock-link svg { width: 20px !important; height: 20px !important; flex: 0 0 auto !important; }
+html body.has-ms-dock { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important; }
