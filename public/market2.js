@@ -81,6 +81,12 @@ function m2Apply() {
   if (m2Q) items = items.filter(i => `${i.title} ${i.description} ${i.category}`.toLowerCase().includes(m2Q));
   if (m2SortBy === 'price-asc') items.sort((a, b) => a.price - b.price);
   else if (m2SortBy === 'price-desc') items.sort((a, b) => b.price - a.price);
+  else {
+    // Default: grouped by category, cheapest first inside each category
+    const order = [];
+    m2Items.forEach(i => { if (order.indexOf(i.category) < 0) order.push(i.category); });
+    items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || a.price - b.price);
+  }
   items.sort((a, b) => Number(b.inStock) - Number(a.inStock));
   document.getElementById('marketGrid').innerHTML = items.length ? items.map(m2Card).join('') : '<div class="no-items">No listings match your search</div>';
   const c = document.getElementById('mktResultCount');

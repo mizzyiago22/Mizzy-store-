@@ -145,6 +145,13 @@ function applyMarketFilters() {
   else if (mktSort === 'price-asc') items.sort((a, b) => (a.priceFrom ?? a.price ?? 0) - (b.priceFrom ?? b.price ?? 0));
   else if (mktSort === 'price-desc') items.sort((a, b) => (b.priceFrom ?? b.price ?? 0) - (a.priceFrom ?? a.price ?? 0));
   else if (mktSort === 'newest') items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  else {
+    // Default: grouped by category, cheapest first inside each category
+    const price = x => Number(x.priceFrom ?? x.price ?? 0);
+    const order = [];
+    (allMarketLogs || []).forEach(i => { if (order.indexOf(i.category) < 0) order.push(i.category); });
+    items.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || price(a) - price(b));
+  }
 
   const grid = document.getElementById('marketGrid');
   const total = (allMarketLogs || []).length;
