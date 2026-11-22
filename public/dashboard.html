@@ -5,7 +5,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Dashboard — Mizzy Sales</title>
-  <meta name="description" content="Manage your Mizzy Sales wallet, orders, numbers, boosts and account from one dashboard."/>
+  <meta name="description" content="Manage your Mizzy Sales wallet, orders, marketplaces, temporary email, numbers, boosts and account tools in one dashboard."/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/style.css?v=20260918"/>
@@ -194,6 +194,7 @@
 <script src="/js/mys-menu-guard.js?v=20261022b" defer></script>
 <link rel="stylesheet" href="/css/mys-ui-fixes.css?v=20261022c">
 <link rel="stylesheet" href="/css/mizzy-theme.css?v=1"/>
+<link rel="stylesheet" href="/css/dashboard-redesign.css?v=1"/>
 <link rel="manifest" href="/manifest.json"/>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"/>
@@ -243,6 +244,7 @@
 <div class="dsh-shell">
   <!-- HEADER -->
   <header class="dsh-header">
+    <div class="nav-inner dsh-nav-inner">
     <div class="dsh-profile" id="dshProfileWrap">
       <button type="button" id="dshProfileBtn" onclick="dshToggleUserMenu(event)" style="display:flex;align-items:center;gap:10px;background:none;border:none;padding:0;cursor:pointer;font-family:inherit;text-align:left">
         <div class="dsh-avatar" id="dshAvatar"><span id="dshAvatarInitial">K</span>
@@ -282,6 +284,7 @@
         <span class="dsh-notif-num" id="dshNotifNum"></span>
       </a>
     </div>
+    </div>
   </header>
 
   <!-- BALANCE CARD (wallet) -->
@@ -312,8 +315,12 @@
     </div>
   </section>
 
-<!-- FEATURES: 4-column grid right after the balance card -->
+<!-- GROUPED SERVICE DIRECTORY directly after the balance card -->
   <div class="dsh-card dsh-features-card">
+    <div class="dsh-card-head dsh-features-head">
+      <div><div class="dsh-card-title">Explore all services</div><div class="dsh-features-subtitle">Your marketplaces, numbers, email, boosts and account tools in one place.</div></div>
+      <span class="dsh-feature-count">Services</span>
+    </div>
     <div class="dsh-features-grid">
       <a class="dsh-svc-item" href="/buy-number">
         <div class="dsh-svc-icon svc-indigo"><svg><use href="#i-smartphone"/></svg></div>
@@ -781,22 +788,47 @@
 <!-- MYS-FEATURES -->
 <script>
 (function(){
-  var F=[
-    ['/buy-number','svc-indigo','<svg><use href="#i-smartphone"/></svg>','Buy Numbers',''],
-    ['/boost','svc-violet','<svg><use href="#i-rocket"/></svg>','Boost','NEW'],
-    ['/marketplace','svc-emerald','<span style="font-size:24px">&#128717;</span>','Marketplace',''],
-    ['/tools','svc-cyan','<svg><use href="#i-wrench"/></svg>','Tools &amp; FMT',''],
-    ['/tutorials','svc-orange','<span style="font-size:24px">&#128218;</span>','Tutorials',''],
-    ['/purchases','svc-teal','<svg><use href="#i-clipboard"/></svg>','My Orders',''],
-    ['/transactions','svc-sky','<svg><use href="#i-history"/></svg>','Transactions',''],
-    ['/referrals','svc-orange','<svg><use href="#i-gift"/></svg>','Referrals','']
+  var groups=[
+    {title:'Marketplace',note:'Browse accounts and digital products.',items:[
+      ['/marketplace','svc-emerald','i-cart','Marketplace']
+    ]},
+    {title:'Numbers & email',note:'Get verification numbers, temporary inboxes and rentals.',items:[
+      ['/buy-number','svc-indigo','i-smartphone','Buy Numbers'],
+      ['/instant-numbers','svc-cyan','i-zap','Instant Numbers'],
+      ['/temp-email','svc-violet','i-send','Temporary Email'],
+      ['/rental','svc-amber','i-key','Rentals'],
+      ['/number-history','svc-teal','i-number-history','Number History']
+    ]},
+    {title:'Boost & tools',note:'Grow social accounts and access your everyday tools.',items:[
+      ['/boost','svc-rose','i-rocket','Social Boost','NEW'],
+      ['/boost1','svc-violet','i-zap','Boost 1'],
+      ['/boost2','svc-orange','i-zap','Boost 2'],
+      ['/boost-services','svc-rose','i-grid','Boost Services'],
+      ['/tools','svc-cyan','i-wrench','Tools & FMT'],
+      ['/vtu','svc-sky','i-zap','Airtime & Data'],
+      ['/working-pics','svc-indigo','i-grid','Working Pics'],
+      ['/tutorials','svc-purple','i-scroll','Tutorials'],
+      ['/giveaways','svc-orange','i-gift','Giveaways']
+    ]},
+    {title:'Wallet, orders & community',note:'Manage your account and stay connected.',items:[
+      ['/deposit','svc-blue','i-wallet','Add Money'],
+      ['/purchases','svc-emerald','i-clipboard','My Orders'],
+      ['/transactions','svc-sky','i-history','Transactions'],
+      ['/referrals','svc-amber','i-link','Referrals'],
+      ['/groups','svc-purple','i-users','Groups'],
+      ['/messages','svc-indigo','i-message-circle','Messages'],
+      ['/support','svc-teal','i-headset','Support'],
+      ['/notifications','svc-rose','i-bell','Notifications'],
+      ['/settings','svc-slate','i-settings','Settings']
+    ]}
   ];
-  var a=document.querySelector('.dsh-svc-item');
-  if(a&&a.parentElement){
-    a.parentElement.innerHTML=F.map(function(f){
-      return '<a class="dsh-svc-item" href="'+f[0]+'"><div class="dsh-svc-icon '+f[1]+'">'+f[2]+'</div><span class="dsh-svc-label">'+f[3]+'</span>'+(f[4]?'<span class="dsh-svc-badge">'+f[4]+'</span>':'')+'</a>';
-    }).join('');
-  }
+  var grid=document.querySelector('.dsh-features-grid');
+  if(!grid||!document.querySelector('.dsh-svc-item'))return;
+  grid.innerHTML=groups.map(function(group){
+    return '<section class="dsh-service-group"><div class="dsh-service-group-head"><div><h3>'+group.title+'</h3><p>'+group.note+'</p></div><span>'+group.items.length+'</span></div><div class="dsh-services-grid">'+group.items.map(function(item){
+      return '<a class="dsh-svc-item" href="'+item[0]+'"><span class="dsh-svc-icon '+item[1]+'"><svg><use href="#'+item[2]+'"/></svg></span><span class="dsh-svc-label">'+item[3]+'</span>'+(item[4]?'<span class="dsh-svc-badge">'+item[4]+'</span>':'')+'</a>';
+    }).join('')+'</div></section>';
+  }).join('');
 
   // Floating support button goes straight to the support page
   document.addEventListener('click',function(ev){
