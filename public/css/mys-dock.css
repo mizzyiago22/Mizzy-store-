@@ -1,0 +1,54 @@
+/* Mizzy Sales bottom dock - fixed in the same place on every page */
+/* ══ ONE BOTTOM DOCK FOR EVERY PAGE (same as the dashboard) ═══════════════════ */
+.ms-dock {
+  position: fixed; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  width: calc(100% - 32px); max-width: 460px; z-index: 100;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 18px; border-radius: 999px;
+  background: color-mix(in srgb, var(--card, #131b2e) 94%, transparent);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border: 1px solid var(--border, #29394f); box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+}
+.ms-dock-link { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 10px;
+  font-size: 11px; font-weight: 600; color: var(--t3, #8293ae); text-decoration: none; background: none; border: 0; }
+.ms-dock-link.active, .ms-dock-link:hover { color: var(--gold, #00b4f8); }
+.ms-dock-link svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* The older, different bottom bars are replaced by the dock, and pages leave room for it. */
+body.has-ms-dock .bottom-tabbar, body.has-ms-dock .app-tabbar, body.has-ms-dock #bottomTabbar { display: none !important; }
+body.has-ms-dock { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important; }
+/* The old "Back to menu" strip is gone: every page has exactly one Back. */
+.app-backbar { display: none !important; }
+
+
+/* Floating support button sits above the dock, never on top of it */
+#msDock, .dsh-support-fab, .support-fab { bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important; }
+.ms-dock { left: 50% !important; right: auto !important; }
+
+
+/* ══ DOCK LOCK: fixed size/layout so no other stylesheet can inflate or wrap it ══ */
+html body nav.ms-dock {
+  position: fixed !important; left: 50% !important; right: auto !important; top: auto !important;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  transform: translateX(-50%) !important;
+  width: calc(100% - 24px) !important; max-width: 460px !important; height: auto !important; min-height: 0 !important;
+  display: flex !important; flex-flow: row nowrap !important; align-items: stretch !important; justify-content: space-between !important;
+  gap: 2px !important; padding: 6px 8px !important; margin: 0 !important;
+  border-radius: 999px !important; font-size: 11px !important; line-height: 1.2 !important;
+  overflow: hidden !important; z-index: 100 !important;
+}
+html body nav.ms-dock > .ms-dock-link {
+  flex: 1 1 0 !important; min-width: 0 !important; width: auto !important; height: auto !important; min-height: 0 !important;
+  display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important;
+  gap: 3px !important; margin: 0 !important; padding: 6px 2px !important;
+  font-size: 11px !important; font-weight: 600 !important; line-height: 1.2 !important; letter-spacing: 0 !important;
+  white-space: nowrap !important; text-transform: none !important;
+  border: 0 !important; border-radius: 999px !important; background: transparent !important; box-shadow: none !important;
+  color: var(--t3, #8293ae) !important; text-decoration: none !important;
+}
+html body nav.ms-dock > .ms-dock-link.active {
+  color: var(--gold, #00b4f8) !important; background: rgba(0, 180, 248, .14) !important;
+}
+html body nav.ms-dock > .ms-dock-link svg { width: 20px !important; height: 20px !important; flex: 0 0 auto !important; }
+html body.has-ms-dock { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important; }
+
+html body nav.ms-dock { will-change: transform; contain: layout; }

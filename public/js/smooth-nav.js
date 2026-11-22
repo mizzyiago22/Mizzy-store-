@@ -129,7 +129,7 @@
       document.body.classList.add('has-ms-dock');
     } catch (e) {}
   }
-  addDock();
+  /* dock is built by /js/mys-dock.js */
 
   // 5. One normal Back: goes to the page you came from (falls back to the link's own address).
   document.addEventListener('click', function (e) {

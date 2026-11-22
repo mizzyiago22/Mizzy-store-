@@ -46,6 +46,7 @@
       .catch(function () { return null; });
   }
 
+  if (!window.__mysDock && !document.querySelector('script[src*="mys-dock.js"]')) { var ds = document.createElement('script'); ds.src = '/js/mys-dock.js?v=1'; (document.head || document.documentElement).appendChild(ds); }
   /* ── 1. Shell + drawer removal ─────────────────────────────────────────── */
   function initShell() {
     document.body.classList.add('app-shell');
