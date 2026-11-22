@@ -46,7 +46,7 @@
     ] },
     { title: 'Numbers & Email', items: [
       { href: '/buy-number', label: 'Buy Numbers', icon: 'phone', color: '#3b82f6' },
-      { href: '/instant-numbers', label: 'Instant Numbers', icon: 'phone', color: '#3b82f6' },
+      { href: '/instant-numbers', label: 'Fast SMS', icon: 'phone', color: '#3b82f6' },
       { href: '/rental', label: 'Rentals', icon: 'key', color: '#f59e0b' },
       { href: '/temp-email', label: 'Temporary Email', icon: 'mail', color: '#8b5cf6' },
       { href: '/number-history', label: 'Number history', icon: 'clock', color: '#3b82f6' }

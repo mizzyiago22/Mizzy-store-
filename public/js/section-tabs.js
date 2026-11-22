@@ -8,7 +8,7 @@
       tabs: [
         ['📱 Buy Number 1', '/buy-number-1', ['/buy-number-1']],
         ['🔐 Buy Number 2', '/buy-number-2', ['/buy-number-2']],
-        ['⚡ Instant Numbers', '/instant-numbers', ['/instant-numbers']],
+        ['⚡ Fast SMS', '/instant-numbers', ['/instant-numbers']],
         ['✉️ Temp Email', '/temp-email', ['/temp-email']],
         ['🕒 Rentals', '/rental', ['/rental']],
         ['⚡ Active Numbers', '#activeNumbersCard', ['/buy-number-1', '/buy-number-2']],
