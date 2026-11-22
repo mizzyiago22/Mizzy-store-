@@ -189,3 +189,7 @@ html[data-theme="light"] { --ui-backdrop: rgba(15, 30, 55, .42); --ui-panel-shad
 .ms-toast.ok { border-left-color: #00d46a; } .ms-toast.err { border-left-color: #ff4757; }
 .ms-toast.out { opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s; }
 @media (prefers-reduced-motion: reduce) { .ann-box, .mswp-card, .mzs-panel, .klsann-box, .bn-box, .ms-toast { animation: none !important; } }
+
+/* Floating support button sits above the dock, never on top of it */
+#msDock, .dsh-support-fab, .support-fab { bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important; }
+.ms-dock { left: 50% !important; right: auto !important; }

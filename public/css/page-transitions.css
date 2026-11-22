@@ -1,11 +1,11 @@
 /* Mizzy Sales — lightweight page-to-page transitions */
 :root { --mys-transition-accent: var(--brand-primary, #0b7cf5); }
-html.mys-transition-ready body > :not(#mys-page-transition):not(#dbfl-overlay):not(#kb-loader):not(script):not(style):not(.mys-drawer):not(.mys-menu-backdrop):not(.std-drawer):not(.std-overlay):not(.std-burger) {
-  animation: mysPageEnter .34s cubic-bezier(.2,.75,.25,1) both;
+html.mys-transition-ready body > :not(#mys-page-transition):not(#dbfl-overlay):not(#kb-loader):not(script):not(style):not(.mys-drawer):not(.mys-menu-backdrop):not(.std-drawer):not(.std-overlay):not(.std-burger):not(.ms-dock):not(#msDock):not(.dsh-support-fab) {
+  animation: mysPageEnter .34s ease-out backwards;
 }
 @keyframes mysPageEnter {
-  from { opacity: .72; transform: translate3d(0, 9px, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
+  from { opacity: .72; }
+  to { opacity: 1; }
 }
 #mys-page-transition {
   position: fixed; inset: 0; z-index: 2147483000; pointer-events: none;
@@ -44,12 +44,12 @@ html.mys-transition-ready body > :not(#mys-page-transition):not(#dbfl-overlay):n
 #mys-page-transition.is-active { opacity: 1; visibility: visible; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
 #mys-page-transition.is-active::before { opacity: 1; transform: scale(1); }
 #mys-page-transition.is-active .mys-transition-card { opacity: 1; transform: translateY(0) scale(1); }
-html.mys-transition-leaving body > :not(#mys-page-transition):not(#dbfl-overlay):not(#kb-loader):not(script):not(style):not(.std-drawer):not(.std-overlay):not(.std-burger) {
-  opacity: .38; transform: translate3d(0,-5px,0) scale(.997); transition: opacity .16s ease, transform .16s ease;
+html.mys-transition-leaving body > :not(#mys-page-transition):not(#dbfl-overlay):not(#kb-loader):not(script):not(style):not(.std-drawer):not(.std-overlay):not(.std-burger):not(.ms-dock):not(#msDock):not(.dsh-support-fab) {
+  opacity: .38; transition: opacity .16s ease;
 }
 @media (prefers-reduced-motion: reduce) {
-  html.mys-transition-ready body > :not(#mys-page-transition):not(#dbfl-overlay):not(#kb-loader):not(script):not(style):not(.std-drawer):not(.std-overlay):not(.std-burger),
-  html.mys-transition-leaving body > :not(#mys-page-transition):not(#dbfl-overlay):not(#kb-loader):not(script):not(style):not(.std-drawer):not(.std-overlay):not(.std-burger) { animation: none !important; transition: none !important; transform: none !important; }
+  html.mys-transition-ready body > :not(#mys-page-transition):not(#dbfl-overlay):not(#kb-loader):not(script):not(style):not(.std-drawer):not(.std-overlay):not(.std-burger):not(.ms-dock):not(#msDock):not(.dsh-support-fab),
+  html.mys-transition-leaving body > :not(#mys-page-transition):not(#dbfl-overlay):not(#kb-loader):not(script):not(style):not(.std-drawer):not(.std-overlay):not(.std-burger):not(.ms-dock):not(#msDock):not(.dsh-support-fab) { animation: none !important; transition: none !important; }
   #mys-page-transition, #mys-page-transition::before, #mys-page-transition .mys-transition-card { transition: none !important; }
   #mys-page-transition .mys-transition-dots i { animation: none !important; }
 }

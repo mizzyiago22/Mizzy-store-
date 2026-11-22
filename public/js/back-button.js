@@ -1,6 +1,7 @@
 /* Adds a slim "Back" bar at the top of every inner page. */
 (function () {
   if (window.__kslBackBar) return; window.__kslBackBar = true;
+  return; /* Back now lives inside the standard header (site-header.js) - no separate block */
   var path = location.pathname.replace(/\/+$/, '') || '/';
   var skip = ['/', '/dashboard', '/login', '/register', '/welcome', '/terms'];
   if (skip.indexOf(path) !== -1 || /admin/i.test(path)) return;

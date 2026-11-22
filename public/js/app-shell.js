@@ -64,7 +64,16 @@
       var el = document.getElementById(id);
       if (el) el.remove();
     });
-    if (!document.body.hasAttribute('data-std-recommended')) buildHamburgerMenu();
+    // One standard header (logo left, hamburger right) on every customer page.
+    var pth = location.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/';
+    var skipHdr = ['/', '/index', '/login', '/register', '/welcome', '/terms', '/apidocs', '/api-docs'].indexOf(pth) > -1 || /admin/i.test(pth);
+    if (skipHdr) { if (!document.body.hasAttribute('data-std-recommended')) buildHamburgerMenu(); return; }
+    if (!document.querySelector('script[src*="site-header.js"]')) {
+      if (!document.querySelector('link[href*="site-header.css"]')) {
+        var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/css/site-header.css?v=2'; document.head.appendChild(l);
+      }
+      var sc = document.createElement('script'); sc.src = '/js/site-header.js?v=5'; document.body.appendChild(sc);
+    }
   }
 
 

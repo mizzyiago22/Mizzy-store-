@@ -147,3 +147,15 @@ body[data-std-recommended]:not(.std-keep-wallet) .std-hide-balance { display: no
 .std-numbal-eye { width: 32px; height: 32px; border-radius: 10px; border: 1px solid rgba(148, 163, 184, .22); background: rgba(148, 163, 184, .08); color: inherit; display: grid; place-items: center; cursor: pointer; padding: 0; }
 .std-numbal-eye svg { width: 16px; height: 16px; }
 .std-numbal-add { font-size: 12.5px; font-weight: 700; padding: 8px 12px; border-radius: 10px; color: #fff !important; text-decoration: none !important; white-space: nowrap; background: linear-gradient(135deg, #19c1ff, #0084d6); }
+
+/* ── One header on every page: [back] logo ........ hamburger (always right) ── */
+.std-header { gap: 10px; }
+.std-header .std-brand { margin-right: auto; min-width: 0; }
+.std-back {
+  flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px; padding: 0;
+  border: 1px solid rgba(148, 163, 184, .22); background: rgba(148, 163, 184, .08);
+  color: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.std-back svg { width: 20px; height: 20px; }
+.std-header .std-burger { margin-left: auto; flex: 0 0 44px; }
+#kslBackBar, .app-backbar { display: none !important; }

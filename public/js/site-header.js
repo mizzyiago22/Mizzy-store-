@@ -124,6 +124,35 @@
       burger = header.querySelector('.std-burger');
     }
 
+    // Back button lives inside the header (left of the logo) - never a separate block.
+    (function addBack() {
+      var path = location.pathname.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
+      if (['/', '/dashboard', '/login', '/register', '/welcome', '/terms'].indexOf(path) > -1 || /admin/i.test(path)) return;
+      if (header.querySelector('.std-back')) return;
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'std-back'; b.setAttribute('aria-label', 'Go back');
+      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
+      b.addEventListener('click', function () {
+        var depOpen = ['depScreen1', 'depScreen2'].some(function (id) {
+          var e = document.getElementById(id);
+          return e && e.style.display !== 'none' && e.offsetParent !== null;
+        });
+        if (depOpen && typeof window.depGoHome === 'function') { window.depGoHome(); return; }
+        if (path === '/boost1' || path === '/boost2') { location.href = '/boost'; return; }
+        if (path === '/boost') { location.href = '/dashboard'; return; }
+        var sameSite = document.referrer && document.referrer.indexOf(location.origin) === 0;
+        if (sameSite && history.length > 1) history.back(); else location.href = '/dashboard';
+      });
+      header.insertBefore(b, header.firstChild);
+      // The page's own "Back" links become redundant: remove them so nothing is doubled up.
+      var kill = /^\s*(\u2190|<-)?\s*(back|back to dashboard|all number services|back to menu)\s*$/i;
+      Array.prototype.forEach.call(document.querySelectorAll('main a, .page a, .container a, body > a'), function (a) {
+        if (header.contains(a) || a.closest('.std-drawer')) return;
+        if (kill.test(a.textContent || '')) a.style.display = 'none';
+      });
+      var old = document.getElementById('kslBackBar'); if (old) old.remove();
+    })();
+
     var dashboardHeader = !!(header && header.classList.contains('dsh-header'));
     var burgerHome = burger.parentNode;
     var burgerBefore = burger.nextSibling;
