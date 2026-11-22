@@ -1,0 +1,72 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Temp Mail | Mizzy Sales</title>
+<link rel="icon" type="image/png" href="/favicon.png"><link rel="manifest" href="/manifest.json"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b0f19">
+<script>try{var t=localStorage.getItem('ksl_theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark')}catch(e){}</script>
+<link rel="stylesheet" href="/style.css?v=20260918"><link rel="stylesheet" href="/theme.css?v=20260918"><link rel="stylesheet" href="/css/mizzy-unified.css?v=2"><link rel="stylesheet" href="/css/mz-pages.css?v=1">
+<link rel="stylesheet" href="/css/smooth.css?v=1"/>
+<script src="/js/smooth-nav.js?v=2" defer></script>
+  <link rel="stylesheet" href="/css/site-header.css?v=1"/>
+</head><body data-std-recommended>
+<main class="mzp"><a href="/buy-number">← All number services</a><h1>Temp Email</h1><p class="muted">Get a temporary email, use it on a website, and receive the verification code here. Paid from your NGN wallet.</p>
+<div class="panel">
+<label for="type">Step 1 — Email type</label><select id="type"><option value="1">Server 1 — Gmail (pick the service)</option><option value="2">Server 2 — Outlook &amp; more (pick the website)</option></select>
+<div id="t1"><label for="d1">Step 2 — Mail domain</label><select id="d1"></select><label for="svc1">Step 3 — Service</label><select id="svc1" disabled><option value="">Loading…</option></select></div>
+<div id="t2" class="hide"><label for="site">Step 2 — Website that will send the code</label><select id="site"></select><input id="siteOther" class="hide" placeholder="example.com" maxlength="60" style="margin-top:8px"><label for="svc2">Step 3 — Mail domain</label><select id="svc2" disabled><option value="">Loading…</option></select></div>
+<div id="price" class="muted" style="margin:12px 0"></div><button id="buy" disabled>Buy Email</button><div id="notice" role="status" class="msg" style="display:none"></div></div>
+<div class="panel"><h2>My Emails</h2><p class="muted">Your code appears here automatically — no refresh needed.</p><div id="orders">Loading…</div></div>
+<div class="panel"><h2>How It Works &amp; Refund Rules</h2><ul class="guide-list"><li>Your wallet is charged when you buy, and the email address is reserved for you</li><li>Use the address on the website, then wait here for the code (checked every few seconds)</li><li>No code yet? Tap <b>Cancel &amp; Refund</b> — you are refunded right away</li><li>If no code arrives and the email expires, you are refunded automatically</li><li>Once a code has been delivered, the email can no longer be cancelled or refunded</li></ul></div></main>
+<script>// Site banners and confirm boxes (same look as the rest of the site); browser boxes only as a last resort
+const MizzyUI = {
+  confirm: (msg, o) => (typeof mzConfirm === 'function')
+    ? mzConfirm({ type: 'info', title: (o && o.title) || 'Confirm', message: msg, confirmText: (o && o.okText) || 'OK', cancelText: 'Cancel' })
+    : Promise.resolve(window.confirm(msg)),
+  loading: () => {},
+  banner: (msg, kind) => (typeof mzBanner === 'function')
+    ? mzBanner(msg, kind === 'err' ? 'err' : (kind === 'success' ? 'ok' : 'info'))
+    : notice(msg)
+};
+function kset(el, html) { el.innerHTML = html; }
+async function kswr(url, apiFn, ok, fail) { try { ok(await apiFn(url)); } catch (e) { fail(e); } }
+function kpeek() { return false; }
+
+const token=()=>localStorage.getItem('ksl_token')||localStorage.getItem('token')||'';
+const $=id=>document.getElementById(id);
+function money(n){return '₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token(),...(opts.headers||{})}});let d={};try{d=await r.json()}catch{}if(r.status===401){throw Error('Could not verify your login. Refresh the page; if it keeps happening, open the dashboard and tap Home.')}if(!r.ok)throw Error(d.error||'Request failed.');return d}
+function notice(t){$('notice').style.display='block';$('notice').textContent=t}
+function copyLiteral(t){navigator.clipboard?.writeText(String(t||'')).then(()=>notice('Copied to clipboard.')).catch(()=>notice('Could not copy automatically.'))}
+function copyValue(id){copyLiteral($(id)?.textContent||'')}
+let opt={domains1:[],sites:[]},items=[],orders=[],timer=null;
+const type=()=>$('type').value;
+function setType(){const t=type();$('t1').classList.toggle('hide',t!=='1');$('t2').classList.toggle('hide',t!=='2');items=[];$('buy').disabled=true;updatePrice();t==='1'?loadItems1():loadItems2()}
+function fillItems(sel,list,empty){kset(sel,list.length?'<option value="">Choose…</option>'+list.map(i=>`<option value="${esc(i.id)}" ${i.count>0?'':'disabled'}>${esc(i.name)} — ${money(i.price)}${i.count>0?' · '+i.count+' in stock':' · out of stock'}</option>`).join(''):`<option value="">${empty}</option>`);sel.disabled=!list.length}
+let optReady=false;async function loadOptions(){await kswr('/api/temp-email/options',api,d=>{opt=d;kset($('d1'),opt.domains1.map(d=>`<option>${esc(d)}</option>`).join(''));kset($('site'),opt.sites.map(d=>`<option>${esc(d)}</option>`).join('')+'<option value="__other">Other website…</option>');if(!optReady){optReady=true;setType()}},e=>notice(e.message))}
+async function loadItems1(){const d=$('d1').value;$('svc1').disabled=true;const u='/api/temp-email/services?server=1&domain='+encodeURIComponent(d);if(!kpeek(u))$('svc1').innerHTML='<option value="">Loading…</option>';await kswr(u,api,l=>{if($('d1').value!==d)return;items=l;fillItems($('svc1'),items,'Nothing available');updatePrice()},e=>{$('svc1').innerHTML='<option value="">Could not load</option>';notice(e.message)});updatePrice()}
+function siteVal(){return $('site').value==='__other'?$('siteOther').value.trim().toLowerCase():$('site').value}
+async function loadItems2(){const s=siteVal();$('svc2').disabled=true;if(!/^[a-z0-9]([a-z0-9.-]{1,58})[a-z0-9]$/.test(s)){$('svc2').innerHTML='<option value="">Enter the website first</option>';items=[];updatePrice();return}const u='/api/temp-email/services?server=2&site='+encodeURIComponent(s);if(!kpeek(u))$('svc2').innerHTML='<option value="">Loading…</option>';await kswr(u,api,l=>{if(siteVal()!==s)return;items=l;fillItems($('svc2'),items,'Nothing available');updatePrice()},e=>{$('svc2').innerHTML='<option value="">Could not load</option>';notice(e.message)});updatePrice()}
+function cur(){const sel=type()==='1'?$('svc1'):$('svc2');return items.find(x=>x.id===sel.value)}
+function updatePrice(){const i=cur();$('price').textContent=i?'Price: '+money(i.price)+' (NGN).':'Choose an option to see its price.';$('buy').disabled=!i||!(i.count>0)}
+$('type').addEventListener('change',setType);$('d1').addEventListener('change',loadItems1);$('svc1').addEventListener('change',updatePrice);$('svc2').addEventListener('change',updatePrice);
+$('site').addEventListener('change',()=>{$('siteOther').classList.toggle('hide',$('site').value!=='__other');loadItems2()});$('siteOther').addEventListener('change',loadItems2);
+$('buy').addEventListener('click',async()=>{const i=cur();if(!i)return;const btn=$('buy');if(!(await MizzyUI.confirm('Buy this email for '+money(i.price)+'?\nThe amount will be taken from your wallet.',{title:'Confirm purchase',okText:'Buy'})))return;btn.disabled=true;btn.textContent='Purchasing…';MizzyUI.loading(true,'Getting your email…');
+try{const t=type();const body=t==='1'?{server:1,serviceId:i.id,domain:$('d1').value}:{server:2,domain:i.id,site:siteVal()};body.clientRef=crypto.randomUUID();const d=await api('/api/temp-email/buy',{method:'POST',body:JSON.stringify(body)});notice(d.pending?d.message:'Email ready. Use it now — your code will appear below.');MizzyUI.banner(d.pending?d.message:'Email purchased successfully.',d.pending?'info':'success');await loadOrders();const id=d.order?.id;if(id)setTimeout(()=>document.getElementById('order-'+id)?.scrollIntoView({behavior:'smooth',block:'center'}),150)}
+catch(e){notice(e.message);MizzyUI.banner(e.message,'err')}finally{MizzyUI.loading(false);btn.textContent='Buy Email';updatePrice()}});
+const isOpen=o=>['active','pending'].includes(o.status)&&!o.code;
+function renderOrders(){if(!orders.length){$('orders').innerHTML='<p class="muted">No emails yet.</p>';return}
+$('orders').innerHTML=orders.map(o=>{const got=!!o.code||o.status==='received';const closed=got||['cancelled','refunded','failed'].includes(o.status);
+return `<div class="order active-order" id="order-${esc(o.id)}"><div class="order-light ${closed?'received':''}"><span class="led"></span><span>${got?'CODE RECEIVED':closed?esc(o.status).toUpperCase():'WAITING FOR CODE'}</span></div><div><b>${esc(o.service)}${o.site?' · '+esc(o.site):''}</b></div><div class="order-phone" id="em-${esc(o.id)}">${esc(o.email||'Preparing…')}</div><div>Price: <b>${money(o.price)}</b> · Status: <span class="status">${esc(o.status)}</span></div>
+${got?`<div class="codebox"><div class="muted">Your verification code</div><div class="code" id="cd-${esc(o.id)}">${esc(o.code)}</div><button type="button" class="mini" onclick="copyValue('cd-${esc(o.id)}')">Copy code</button></div>`:''}
+<div class="order-actions"><button type="button" onclick="copyValue('em-${esc(o.id)}')" ${o.email?'':'disabled'}>Copy email</button>${closed?'':`<button type="button" onclick="checkOne('${esc(o.id)}')">Check code</button>`}${!closed&&o.canCancel?`<button class="danger" type="button" onclick="cancelOne('${esc(o.id)}')">Cancel &amp; Refund</button>`:''}</div><div class="muted" style="margin-top:10px">${new Date(o.createdAt).toLocaleString('en-NG')}</div></div>`}).join('')}
+async function loadOrders(){try{orders=await api('/api/temp-email/orders');renderOrders();if(timer)clearInterval(timer);if(orders.some(isOpen))timer=setInterval(()=>orders.filter(isOpen).forEach(o=>checkOne(o.id,true)),4000)}catch(e){$('orders').textContent=e.message}}
+async function checkOne(id,silent){try{const d=await api('/api/temp-email/code/'+encodeURIComponent(id));const i=orders.findIndex(o=>o.id===id);if(i>=0){const was=orders[i];orders[i]=d.order;if(JSON.stringify(was)!==JSON.stringify(d.order)){renderOrders();if(d.order.code&&!was.code)MizzyUI.banner('Your code has arrived!','success');if(d.order.status==='cancelled'&&was.status!=='cancelled')MizzyUI.banner('Email expired — you were refunded.','info')}}}catch(e){if(!silent)notice(e.message)}}
+async function cancelOne(id){if(!(await MizzyUI.confirm('Cancel this email and get a refund?',{title:'Cancel & refund',okText:'Cancel email'})))return;try{const d=await api('/api/temp-email/cancel/'+encodeURIComponent(id),{method:'POST',body:'{}'});const i=orders.findIndex(o=>o.id===id);if(i>=0)orders[i]=d.order;renderOrders();notice('Cancelled — your refund was added to your wallet.')}catch(e){notice(e.message)}}
+if(!token())location.href='/login?next=/temp-email';else{loadOptions();loadOrders()}
+</script>
+<script src="/js/mz-banner.js?v=2" defer></script>
+<script src="/js/mz-select.js?v=1" defer></script>
+<script src="/js/app-shell.js?v=4" defer></script>
+<script src="/js/site-header.js?v=3" defer></script>
+</body></html>

@@ -1,0 +1,191 @@
+/* Mizzysales | smooth page switching + professional polish.
+   Loaded LAST on every customer page, so it refines the existing design without replacing it.
+   Colours and logo are untouched: everything here reads the site's own CSS variables. */
+
+/* ── 1. Page-to-page switching ──────────────────────────────────────────────
+   Browsers that support cross-document view transitions keep the old page on screen
+   until the new one is ready, then cross-fade. No blank flash, no half-loaded look. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: ms-out .14s ease both; }
+::view-transition-new(root) { animation: ms-in .22s ease both; }
+@keyframes ms-out { to { opacity: 0; } }
+@keyframes ms-in { from { opacity: 0; } }
+
+/* Fallback for browsers without view transitions: one soft fade on arrival.
+   It animates opacity only, so content is never hidden if scripts are slow. */
+html:not(.ms-vt) body { animation: ms-arrive .2s ease-out both; }
+@keyframes ms-arrive { from { opacity: .0; } to { opacity: 1; } }
+
+/* Tap feedback bar (see smooth-nav.js) */
+.ms-bar { position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 100001; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, #00d2ff, var(--gold, #00b4f8)); box-shadow: 0 0 10px var(--gold, #00b4f8); }
+.ms-bar.go { opacity: 1; width: 85%; transition: width 6s cubic-bezier(.1, .7, .2, 1); }
+
+/* The navbar and tab bar stay put during a switch instead of re-fading with the page. */
+.navbar { view-transition-name: ms-nav; }
+.bottom-tabbar { view-transition-name: ms-tabs; }
+.ms-dock, .mz-dock { view-transition-name: ms-dock; }
+::view-transition-group(ms-nav), ::view-transition-group(ms-tabs), ::view-transition-group(ms-dock) { animation-duration: 0s; }
+
+/* ── 2. Cards: depth, even spacing, calm hover ───────────────────────────── */
+:root {
+  --ms-radius: 16px;
+  --ms-edge: color-mix(in srgb, var(--gold, #00b4f8) 22%, var(--border, #29394f));
+  --ms-shadow: 0 1px 2px rgba(2, 12, 28, .10), 0 10px 28px rgba(2, 12, 28, .16);
+  --ms-shadow-hover: 0 2px 4px rgba(2, 12, 28, .12), 0 18px 40px rgba(0, 132, 214, .22);
+}
+html[data-theme="light"] {
+  --ms-shadow: 0 1px 2px rgba(24, 70, 110, .08), 0 10px 26px rgba(24, 70, 110, .10);
+  --ms-shadow-hover: 0 2px 4px rgba(24, 70, 110, .10), 0 18px 38px rgba(0, 132, 214, .18);
+}
+:where(.card, .prod-card, .product-card, .app-tiles a, .dep-method-card, .mz-tile, .mp-card, .stat-card, .setting-card, .bal-card, .how-card, .kls-card) {
+  border-radius: var(--ms-radius);
+  border: 1px solid var(--ms-edge);
+  box-shadow: var(--ms-shadow);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--gold, #00b4f8) 5%, transparent), transparent 55%);
+}
+:where(a.card, .prod-card, .product-card, .app-tiles a, .dep-method-card, .mz-tile, a.mp-card, .srv-card) {
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+@media (hover: hover) {
+  :where(a.card, .prod-card, .product-card, .app-tiles a, .dep-method-card, .mz-tile, a.mp-card, .srv-card:not([disabled])):hover {
+    transform: translateY(-3px);
+    border-color: var(--gold, #00b4f8);
+    box-shadow: var(--ms-shadow-hover);
+  }
+}
+:where(.card, .prod-card, .product-card, .app-tiles a, .mz-tile, .mp-card, .srv-card):active { transform: scale(.99); }
+
+/* ── 3. Banners and heroes ───────────────────────────────────────────────── */
+:where(.hero, .page-hero, .dep-page-hero, .nf-hero) {
+  position: relative;
+  border-radius: var(--ms-radius);
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--gold, #00b4f8) 20%, transparent), transparent 60%),
+    linear-gradient(135deg, var(--bg3, #172237), var(--bg2, #101827));
+  border: 1px solid var(--ms-edge);
+  box-shadow: var(--ms-shadow);
+}
+:where(.hero, .nf-hero) h1 { font-weight: 800; letter-spacing: -.01em; }
+.ms-banner { border-radius: 0 0 var(--ms-radius) var(--ms-radius); box-shadow: 0 8px 22px rgba(0, 132, 214, .28); }
+.mz-banner { border-radius: var(--ms-radius) !important; }
+
+/* ── 4. Buttons and inputs feel finished ─────────────────────────────────── */
+:where(.btn-primary, .btn-gold, .kls-btn-primary, .prod-select-btn) {
+  border-radius: 12px;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--gold, #00b4f8) 32%, transparent);
+  transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+:where(.btn-primary, .btn-gold, .kls-btn-primary, .prod-select-btn):hover { transform: translateY(-1px); }
+:where(.btn-primary, .btn-gold, .kls-btn-primary, .prod-select-btn):active { transform: scale(.98); }
+:where(input, textarea, select, .input-field) { border-radius: 12px; }
+
+/* Wider, more breathing room between stacked cards on phones. */
+@media (max-width: 640px) {
+  :where(.card, .how-card, .bal-card) { margin-bottom: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+  html:not(.ms-vt) body { animation: none; }
+  :where(a.card, .prod-card, .product-card, .app-tiles a, .dep-method-card, .mz-tile, a.mp-card, .srv-card):hover { transform: none; }
+}
+
+/* ══ ONE BOTTOM DOCK FOR EVERY PAGE (same as the dashboard) ═══════════════════ */
+.ms-dock {
+  position: fixed; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  width: calc(100% - 32px); max-width: 460px; z-index: 100;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 18px; border-radius: 999px;
+  background: color-mix(in srgb, var(--card, #131b2e) 94%, transparent);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border: 1px solid var(--border, #29394f); box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+}
+.ms-dock-link { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 10px;
+  font-size: 11px; font-weight: 600; color: var(--t3, #8293ae); text-decoration: none; background: none; border: 0; }
+.ms-dock-link.active, .ms-dock-link:hover { color: var(--gold, #00b4f8); }
+.ms-dock-link svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* The older, different bottom bars are replaced by the dock, and pages leave room for it. */
+body.has-ms-dock .bottom-tabbar, body.has-ms-dock .app-tabbar, body.has-ms-dock #bottomTabbar { display: none !important; }
+body.has-ms-dock { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important; }
+/* The old "Back to menu" strip is gone: every page has exactly one Back. */
+.app-backbar { display: none !important; }
+
+/* ══ STANDARD POP-UPS, NOTICES, PICKERS AND TOASTS ═══════════════════════════
+   One look for everything that appears over a page: same backdrop, same panel,
+   same corners, same entrance, same buttons, in both light and dark themes.
+   Covers: announcements (klsann-*, ann-*), welcome pop-up (mswp-*), buy notice (bn-*),
+   confirm dialogs and banners (mz-*), option sheets (mzs-*), country picker (kls-cs-*). */
+:root {
+  --ui-backdrop: rgba(4, 10, 24, .62);
+  --ui-panel-radius: 20px;
+  --ui-panel-shadow: 0 24px 64px rgba(2, 12, 28, .45);
+}
+html[data-theme="light"] { --ui-backdrop: rgba(15, 30, 55, .42); --ui-panel-shadow: 0 24px 60px rgba(24, 70, 110, .28); }
+
+/* Backdrops */
+.ann-overlay, .mswp-ov, .mzs-sheet, .mz-ov, #mysBN, .game-modal-ov {
+  background: var(--ui-backdrop) !important;
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+.klsann-backdrop { background: var(--ui-backdrop) !important; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+
+/* Panels */
+.ann-box, .mswp-card, .mzs-panel, .klsann-box, .bn-box, .mz-dlg {
+  background: var(--card) !important;
+  color: var(--t1) !important;
+  border: 1px solid var(--ms-edge, var(--border2)) !important;
+  border-radius: var(--ui-panel-radius) !important;
+  box-shadow: var(--ui-panel-shadow) !important;
+}
+.ann-box, .mswp-card, .mzs-panel, .klsann-box, .bn-box { animation: ms-pop .22s ease both; }
+@keyframes ms-pop { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+.ann-box p, .mswp-card p, .mz-db, .bn-p { color: var(--t2) !important; }
+
+/* Headers inside panels use the brand gradient (the buy notice was orange/red) */
+.bn-head { background: linear-gradient(135deg, #0084d6, var(--gold, #00b4f8)) !important; }
+.bn-title { text-transform: none !important; letter-spacing: 0 !important; font-size: 16px !important; }
+
+/* Primary actions inside pop-ups look like the site's primary button */
+.ann-btn, .klsann-btn-primary, .bn-ok, .mz-df button.mz-go, .mswp-b {
+  background: var(--gold, #00b4f8) !important; color: #fff !important; border: 0 !important;
+  border-radius: 12px !important; font-weight: 800 !important;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--gold, #00b4f8) 32%, transparent) !important;
+}
+.klsann-btn-ghost, .mz-df button:not(.mz-go) {
+  background: transparent !important; color: var(--t1) !important; border: 1px solid var(--border2) !important; border-radius: 12px !important;
+}
+
+/* Banners (success / error / warning / info): theme-aware card with a coloured edge */
+.mz-banner {
+  background: var(--card) !important; color: var(--t1) !important;
+  border: 1px solid var(--border2) !important; border-radius: var(--ms-radius, 16px) !important;
+  box-shadow: var(--ui-panel-shadow) !important; font-family: inherit !important;
+}
+.mz-dh { background: var(--bg3) !important; color: var(--t1) !important; border-color: var(--border) !important; }
+
+/* Option sheets and the country picker */
+.mzs-search, .kls-cs-search input { border-radius: 12px !important; background: var(--bg3) !important; color: var(--t1) !important; border: 1px solid var(--border2) !important; }
+.mzs-opt, .kls-cs-item { border-radius: 10px; }
+.mzs-opt:hover, .kls-cs-item:hover, .kls-cs-item.active { background: var(--bg3); }
+.kls-cs-menu {
+  background: var(--card) !important; border: 1px solid var(--ms-edge, var(--border2)) !important;
+  border-radius: 16px !important; box-shadow: var(--ui-panel-shadow) !important;
+}
+@media (max-width: 640px) {
+  /* On phones, option sheets rise from the bottom like a native sheet. */
+  .mzs-sheet { align-items: flex-end !important; }
+  .mzs-panel { border-radius: 20px 20px 0 0 !important; max-width: 100% !important; animation-name: ms-rise; }
+}
+@keyframes ms-rise { from { transform: translateY(40px); opacity: 0; } }
+
+/* Standard toast (replaces the black bar pages used to draw) */
+#msToasts { position: fixed; left: 0; right: 0; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 100002;
+  display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 14px; pointer-events: none; }
+.ms-toast { pointer-events: auto; max-width: 460px; width: fit-content; display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-radius: 14px; font: 600 13.5px/1.4 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: var(--t1); background: var(--card); border: 1px solid var(--border2); border-left: 4px solid var(--gold, #00b4f8);
+  box-shadow: var(--ui-panel-shadow); animation: ms-pop .2s ease both; }
+.ms-toast.ok { border-left-color: #00d46a; } .ms-toast.err { border-left-color: #ff4757; }
+.ms-toast.out { opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s; }
+@media (prefers-reduced-motion: reduce) { .ann-box, .mswp-card, .mzs-panel, .klsann-box, .bn-box, .ms-toast { animation: none !important; } }

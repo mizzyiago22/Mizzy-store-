@@ -1,0 +1,120 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Airtime & Data | Mizzy Sales</title>
+<link rel="icon" type="image/png" href="/favicon.png"><link rel="manifest" href="/manifest.json"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b0f19">
+<script>try{var t=localStorage.getItem('ksl_theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark')}catch(e){}</script>
+<link rel="stylesheet" href="/style.css?v=20260918"><link rel="stylesheet" href="/theme.css?v=20260918"><link rel="stylesheet" href="/css/mizzy-unified.css?v=2"><link rel="stylesheet" href="/css/mz-pages.css?v=1">
+</head><body>
+<main class="mzp"><a class="back" href="/dashboard">← Back</a>
+<h1>Airtime &amp; Data</h1><p class="muted">Airtime, data bundles and cable TV — delivered instantly from your wallet.</p>
+<div class="tabs"><div class="tab on" data-t="airtime">Airtime</div><div class="tab" data-t="data">Data</div><div class="tab" data-t="tv">Cable TV</div></div>
+<div class="panel">
+ <label>Network / Provider</label><select id="svc"><option>Loading…</option></select>
+ <div id="fAirtime"><label>Phone number</label><input id="aPhone" inputmode="numeric" maxlength="11" placeholder="08012345678">
+  <label>Amount (₦50 – ₦5,000)</label><input id="aAmt" inputmode="numeric" placeholder="500"><div class="chips" id="quick"></div></div>
+ <div id="fData" style="display:none"><label>Phone number</label><input id="dPhone" inputmode="numeric" maxlength="11" placeholder="08012345678">
+  <label>Data plan</label><select id="dPlan"></select></div>
+ <div id="fTv" style="display:none"><label>Smartcard / IUC number</label><input id="cCard" inputmode="numeric" placeholder="1234567890">
+  <div id="cName" class="muted" style="font-size:14px;margin-top:4px"></div>
+  <label>Package</label><select id="cPlan"></select></div>
+ <div class="price" id="total" style="margin-top:12px"></div>
+ <button class="btn" id="go">Buy now</button><div class="msg" id="msg"></div>
+</div>
+<div class="panel"><h3 style="margin:0 0 6px">Recent orders</h3><div id="orders" class="muted">Loading…</div></div>
+<div class="ov" id="ov" role="dialog" aria-modal="true"><div class="sheet"><div class="grab"></div>
+ <h3 id="shT">Confirm</h3><div class="sub">Check the details, then confirm. This is paid from your wallet.</div>
+ <div id="shRows"></div>
+ <div class="tot"><span>You pay</span><b id="shTot"></b></div>
+ <div style="display:flex;gap:10px;margin-top:14px"><button class="btn" id="shNo" style="flex:1;background:transparent;border:1px solid var(--border2,#35475e);color:var(--t1,#f0f6fc);box-shadow:none">Cancel</button><button class="btn" id="shYes" style="flex:1">Confirm</button></div>
+</div></div>
+</main>
+<script>// Site banners and confirm boxes (same look as the rest of the site); browser boxes only as a last resort
+const MizzyUI = {
+  confirm: (msg, o) => (typeof mzConfirm === 'function')
+    ? mzConfirm({ type: 'info', title: (o && o.title) || 'Confirm', message: msg, confirmText: (o && o.okText) || 'OK', cancelText: 'Cancel' })
+    : Promise.resolve(window.confirm(msg)),
+  loading: () => {},
+  banner: (msg, kind) => (typeof mzBanner === 'function')
+    ? mzBanner(msg, kind === 'err' ? 'err' : (kind === 'success' ? 'ok' : 'info'))
+    : notice(msg)
+};
+function kset(el, html) { el.innerHTML = html; }
+async function kswr(url, apiFn, ok, fail) { try { ok(await apiFn(url)); } catch (x) { fail(x); } }
+function kpeek() { return false; }
+
+const $=id=>document.getElementById(id);const money=n=>'₦'+Number(n||0).toLocaleString('en-NG');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(url,body){const t=localStorage.getItem('ksl_token')||localStorage.getItem('token')||'';
+ const r=await fetch(url,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:body?JSON.stringify(body):undefined});
+ const j=await r.json().catch(()=>({}));if(r.status===401){location.replace('/login');}return{ok:r.ok,status:r.status,j};}
+let tab='airtime',plans=[],airPct=0;
+api('/api/vtu/status').then(r=>{if(r.ok&&r.j.airtimePct)airPct=Number(r.j.airtimePct)||0;upd();});
+const airPrice=a=>Math.ceil(Math.round(a*(100+airPct))/100);
+function askConfirm(title,rows,total){return new Promise(res=>{
+ $('shT').textContent=title;$('shTot').textContent=money(total);
+ $('shRows').innerHTML=rows.map(r=>`<div class="kv"><span>${esc(r[0])}</span><span>${esc(r[1])}</span></div>`).join('');
+ const ov=$('ov');ov.classList.add('show');
+ const done=v=>{ov.classList.remove('show');$('shYes').onclick=$('shNo').onclick=ov.onclick=null;document.removeEventListener('keydown',key);res(v);};
+ const key=e=>{if(e.key==='Escape')done(false);};document.addEventListener('keydown',key);
+ $('shYes').onclick=()=>done(true);$('shNo').onclick=()=>done(false);ov.onclick=e=>{if(e.target===ov)done(false);};});}
+const svcName=()=>{const o=$('svc').selectedOptions[0];return o?o.text:'';};
+function show(kind,text){const m=$('msg');m.className='msg '+kind;m.textContent=text;}
+async function loadServices(){
+ $('svc').innerHTML='<option>Loading…</option>';
+ const r=await api('/api/vtu/services?type='+tab);
+ if(!r.ok){$('svc').innerHTML='<option value="">Unavailable</option>';show('err',r.j.error||'Unavailable');return;}
+ $('msg').className='msg';
+ $('svc').innerHTML=(r.j.services||[]).map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
+ loadPlans();
+}
+async function loadPlans(){
+ if(tab==='airtime'){$('total').textContent='';return;}
+ const sel=tab==='data'?$('dPlan'):$('cPlan');sel.innerHTML='<option>Loading…</option>';
+ const r=await api('/api/vtu/'+(tab==='data'?'data-plans':'cable-plans')+'?service_id='+encodeURIComponent($('svc').value));
+ if(!r.ok){sel.innerHTML='';show('err',r.j.error||'Could not load plans');return;}
+ plans=r.j.plans||[];
+ sel.innerHTML=plans.map((p,i)=>`<option value="${i}">${esc(p.name)} — ${money(p.price)}</option>`).join('');
+ upd();
+}
+function upd(){
+ if(tab==='airtime'){const a=Number($('aAmt').value);$('total').textContent=a?'You pay: '+money(airPrice(a)):'';return;}
+ const p=plans[Number((tab==='data'?$('dPlan'):$('cPlan')).value)];$('total').textContent=p?'You pay: '+money(p.price):'';
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');tab=t.dataset.t;
+ $('fAirtime').style.display=tab==='airtime'?'':'none';$('fData').style.display=tab==='data'?'':'none';$('fTv').style.display=tab==='tv'?'':'none';
+ $('msg').className='msg';loadServices();});
+$('svc').onchange=loadPlans;$('dPlan').onchange=upd;$('cPlan').onchange=upd;$('aAmt').oninput=upd;
+$('quick').innerHTML=[100,200,500,1000,2000].map(n=>`<span class="chip" data-n="${n}">${money(n)}</span>`).join('');
+$('quick').onclick=e=>{const n=e.target.dataset.n;if(n){$('aAmt').value=n;upd();}};
+let vt;$('cCard').oninput=()=>{clearTimeout(vt);$('cName').textContent='';const v=$('cCard').value.trim();
+ if(v.length<6)return;vt=setTimeout(async()=>{const r=await api('/api/vtu/verify-cable',{service_id:$('svc').value,smartcard_number:v});
+  $('cName').textContent=r.ok&&r.j.name?'✔ '+r.j.name:(r.ok?'':(r.j.error||''));},600);};
+$('go').onclick=async()=>{
+ const b=$('go');let url,body,title,rows,total;
+ if(tab==='airtime'){url='/api/vtu/airtime';body={service_id:$('svc').value,phone:$('aPhone').value.trim(),amount:Number($('aAmt').value)};
+  if(!/^0\d{10}$/.test(body.phone))return show('err','Enter a valid 11-digit phone number.');
+  if(!(body.amount>=50))return show('err','Enter an amount of at least ₦50.');
+  title='Confirm airtime';total=airPrice(body.amount);rows=[['Service','Airtime'],['Network',svcName()],['Phone number',body.phone],['Amount',money(body.amount)]];}
+ else if(tab==='data'){const p=plans[Number($('dPlan').value)];if(!p)return show('err','Choose a plan');url='/api/vtu/data';body={service_id:p.service_id||$('svc').value,network_service_id:$('svc').value,phone:$('dPhone').value.trim(),plan_code:p.code};
+  if(!/^0\d{10}$/.test(body.phone))return show('err','Enter a valid 11-digit phone number.');
+  title='Confirm data bundle';total=p.price;rows=[['Service','Data'],['Network',svcName()],['Plan',p.name],['Phone number',body.phone]];}
+ else{const p=plans[Number($('cPlan').value)];if(!p)return show('err','Choose a package');url='/api/vtu/cable';body={service_id:$('svc').value,smartcard_number:$('cCard').value.trim(),plan_code:p.code};
+  if(!/^\d{6,20}$/.test(body.smartcard_number))return show('err','Enter a valid smartcard number.');
+  title='Confirm cable TV';total=p.price;rows=[['Service','Cable TV'],['Provider',svcName()],['Package',p.name],['Smartcard',body.smartcard_number]];
+  if($('cName').textContent.indexOf('✔')===0)rows.push(['Name',$('cName').textContent.replace('✔','').trim()]);}
+ if(!(await askConfirm(title,rows,total)))return;
+ b.disabled=true;show('','');$('msg').className='msg';
+ const r=await api(url,body);b.disabled=false;
+ if(r.ok)show('ok',r.j.message||'Successful');else show('err',r.j.error||'Failed');
+ loadOrders();
+};
+async function loadOrders(){const r=await api('/api/vtu/orders');const rows=r.ok?r.j:[];
+ $('orders').innerHTML=rows.length?rows.map(o=>`<div class="ord"><span>${esc(o.label)}<br><small class="muted">${new Date(o.createdAt).toLocaleString()}</small></span><span style="text-align:right">${money(o.amount)}<br><small class="muted">${esc(o.status)}</small></span></div>`).join(''):'No orders yet.';}
+loadServices();loadOrders();
+</script>
+<script src="/js/mz-banner.js?v=2" defer></script>
+<script src="/js/mz-select.js?v=1" defer></script>
+<script src="/js/app-shell.js?v=3" defer></script>
+</body></html>

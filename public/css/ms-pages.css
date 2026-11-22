@@ -1,0 +1,52 @@
+:root{--ms-blue:#00b4f8;--ms-blue-d:#0084d6;--ms-bg:#0b0f19;--ms-card:#131b2e;--ms-line:#29394f;--ms-t:#f0f6fc;--ms-m:#8b9bb4}
+:root[data-theme="light"]{--ms-bg:#f4f8fc;--ms-card:#fff;--ms-line:#dbe5f0;--ms-t:#0e1726;--ms-m:#5e6d82}
+*{box-sizing:border-box}body{margin:0;background:var(--ms-bg);color:var(--ms-t);font:15px/1.5 'Plus Jakarta Sans',system-ui,sans-serif}
+.msp{max-width:760px;margin:0 auto;padding:16px 16px 90px}
+.msp-top{display:flex;align-items:center;gap:12px;margin:6px 0 18px}
+.msp-back{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--ms-card);border:1px solid var(--ms-line);color:var(--ms-t);text-decoration:none;font-size:18px}
+.msp h1{font:800 1.35rem 'Sora',sans-serif;margin:0}.msp-sub{color:var(--ms-m);font-size:13px;margin:2px 0 0}
+.msp-bal{margin-left:auto;background:var(--ms-card);border:1px solid var(--ms-line);padding:6px 12px;border-radius:999px;font-weight:800;font-size:13px;color:var(--ms-blue)}
+.msp-tabs{display:flex;gap:8px;margin-bottom:14px}.msp-tabs button{flex:1;padding:10px;border-radius:12px;border:1px solid var(--ms-line);background:var(--ms-card);color:var(--ms-m);font-weight:700;cursor:pointer}
+.msp-tabs button.on{background:var(--ms-blue);color:#fff;border-color:var(--ms-blue)}
+.msp-grid{display:grid;gap:12px}.msp-card{background:var(--ms-card);border:1px solid var(--ms-line);border-radius:16px;padding:14px}
+.msp-row{display:flex;gap:12px;align-items:center}.msp-logo{width:52px;height:52px;border-radius:14px;object-fit:cover;background:var(--ms-line);flex:none}
+.msp-card h3{margin:0;font-size:15px}.msp-card p{margin:4px 0 0;color:var(--ms-m);font-size:13px}
+.msp-meta{display:flex;align-items:center;justify-content:space-between;margin-top:12px;gap:10px}.msp-price{font-weight:800;color:var(--ms-blue);font-size:16px}
+.msp-tag{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(0,180,248,.14);color:var(--ms-blue)}.msp-tag.out{background:rgba(239,68,68,.14);color:#ef4444}
+.msp-btn{background:var(--ms-blue);color:#fff;border:0;border-radius:12px;padding:10px 18px;font-weight:800;cursor:pointer}.msp-btn:disabled{opacity:.45;cursor:not-allowed}
+.msp-imgs{display:grid;gap:10px;margin-top:12px}.msp-imgs img{width:100%;border-radius:12px;border:1px solid var(--ms-line)}
+.msp-empty{text-align:center;color:var(--ms-m);padding:40px 10px}.msp-box{background:rgba(0,180,248,.08);border:1px dashed var(--ms-blue);border-radius:12px;padding:10px;margin-top:10px;word-break:break-all;font-size:13px}
+.msp-box a{color:var(--ms-blue);font-weight:700}
+#mspToast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0e1726;color:#fff;padding:10px 18px;border-radius:999px;font-weight:700;font-size:13px;display:none;z-index:99}
+
+/* Working Pics shop: two cards per row, logo on top (same feel as the marketplace) */
+.msp-grid.msp-two{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.msp-two .msp-card{display:flex;flex-direction:column;padding:12px;min-width:0}
+.msp-two .msp-row{flex-direction:column;align-items:flex-start;gap:10px}
+.msp-two .msp-logo{width:100%;height:auto;aspect-ratio:1/1;border-radius:12px}
+.msp-two .msp-card h3{font-size:14px;line-height:1.25;word-break:break-word}
+.msp-two .msp-card p{font-size:12px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.msp-two .msp-meta{flex-direction:column;align-items:stretch;margin-top:auto;padding-top:10px;gap:8px}
+.msp-two .msp-btn{width:100%;padding:10px 8px}
+.msp-two .msp-box{margin-top:10px;font-size:12px;word-break:break-all}
+@media(min-width:900px){.msp-grid.msp-two{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+.msp-oid{margin-top:10px;font-size:12px;color:var(--ms-m);cursor:pointer;word-break:break-all}.msp-oid b{color:var(--ms-blue);font-family:ui-monospace,monospace}
+
+/* Working Pics shop cards — same look as the Tools page (cover image, TOOL tag, sold count, big Buy button) */
+.wp-card{position:relative;display:flex;flex-direction:column;min-width:0;background:var(--ms-card);border:1px solid var(--ms-line);border-radius:18px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.wp-badge{position:absolute;top:10px;left:10px;z-index:2;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:rgba(124,92,214,.88);color:#e9ddff;font-size:11px;font-weight:800;letter-spacing:.04em}
+.wp-img{width:100%;aspect-ratio:1/1;background:var(--ms-line);overflow:hidden}
+.wp-img img{width:100%;height:100%;object-fit:cover;display:block}
+.wp-ph{display:grid;place-items:center;color:var(--ms-m)}.wp-ph svg{width:34px;height:34px}
+.wp-body{display:flex;flex-direction:column;gap:5px;padding:12px;flex:1}
+.wp-cat{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#a78bfa}
+.wp-title{font-weight:800;font-size:14px;line-height:1.3;word-break:break-word}
+.wp-desc{font-size:12px;line-height:1.4;color:var(--ms-m);text-transform:uppercase;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.8em}
+.wp-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;padding-top:10px;border-top:1px dashed var(--ms-line)}
+.wp-price{font-weight:900;font-size:16px;color:var(--ms-blue)}
+.wp-meta{text-align:right;font-size:11.5px;color:var(--ms-m);line-height:1.5}
+.wp-stock{display:inline-flex;align-items:center;gap:4px;color:#a78bfa;font-weight:700}.wp-stock.out{color:#ef4444}
+.wp-buy{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;padding:12px 10px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--ms-blue),var(--ms-blue-d));color:#fff;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 6px 16px rgba(0,132,214,.35)}
+.wp-buy:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+.wp-body .msp-box{margin-top:10px;font-size:12px;word-break:break-all}

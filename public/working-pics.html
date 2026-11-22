@@ -1,0 +1,77 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Sora:wght@700;800&display=swap" rel="stylesheet"/>
+<link rel="icon" href="/img/mizzy-logo.jpg"/><link rel="stylesheet" href="/css/ms-pages.css"/><link rel="stylesheet" href="/css/site-banner.css"/>
+<script>try{var t=localStorage.getItem('ksl_theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<title>Working Pics | Mizzy Sales</title><link rel="stylesheet" href="/css/smooth.css?v=1"/>
+<script src="/js/smooth-nav.js?v=2" defer></script>
+  <link rel="stylesheet" href="/css/site-header.css?v=1"/>
+</head><body data-std-recommended>
+<div class="msp">
+  <div class="msp-top"><a class="msp-back" href="/dashboard" aria-label="Back">&#8592;</a><div><h1>Working Pics</h1><p class="msp-sub">Buy once, receive instantly</p></div><span class="msp-bal" id="bal">...</span></div>
+  <div class="msp-tabs"><button class="on" id="tShop" onclick="tab('shop')">Shop</button><button id="tMine" onclick="tab('mine')">My purchases</button></div>
+  <div class="msp-grid" id="list"></div>
+</div>
+<div id="mspToast"></div>
+<script src="/js/site-banner.js"></script>
+<script src="/js/mz-banner.js?v=2"></script>
+<script>
+var TOKEN=localStorage.getItem('ksl_token'); if(!TOKEN) location.href='/login';
+function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function api(u,m){return fetch(u,{method:m||'GET',headers:{Authorization:'Bearer '+TOKEN}}).then(function(r){return r.json().then(function(d){if(r.status===401){location.href='/login'}if(!r.ok)throw new Error(d.error||'Something went wrong');return d})})}
+function toast(t){var e=document.getElementById('mspToast');e.textContent=t;e.style.display='block';setTimeout(function(){e.style.display='none'},2600)}
+function money(n){return '\u20a6'+Number(n||0).toLocaleString()}
+function logo(u,t){return u?'<img class="msp-logo" src="'+esc(u)+'" alt="">':'<div class="msp-logo" style="display:grid;place-items:center;font-weight:800">'+esc((t||'?')[0])+'</div>'}
+function bal(){api('/api/user/me').then(function(p){document.getElementById('bal').textContent=money(p.balance)}).catch(function(){})}
+function delivered(o){
+  var idTag=o.orderId?'<div class="msp-oid" onclick="copyId(\''+esc(o.orderId)+'\')" title="Tap to copy">Order ID: <b>'+esc(o.orderId)+'</b></div>':'';
+  return idTag+deliveredBody(o);
+}
+function copyId(t){try{navigator.clipboard.writeText(t);mzBanner('Order ID copied: '+t,'ok',{ms:2500})}catch(e){}}
+function deliveredBody(o){
+  if(o.kind==='image')return '<div class="msp-box"><img style="width:100%;border-radius:10px" src="'+esc(o.imageUrl)+'" alt=""><a href="'+esc(o.imageUrl)+'" target="_blank" rel="noopener noreferrer">Open full image</a></div>';
+  if(o.kind==='link'&&/^https?:\/\//i.test(o.content))return '<div class="msp-box"><a href="'+esc(o.content)+'" target="_blank" rel="noopener noreferrer">'+esc(o.content)+'</a></div>';
+  return '<div class="msp-box" style="white-space:pre-wrap">'+esc(o.content)+'</div>';
+}
+var IC={
+  cart:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 11.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 7H6"/></svg>',
+  tool:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.4 2.4-2.6-.6-.6-2.6z"/></svg>',
+  pic:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg>',
+  loop:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg>',
+  x:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>'
+};
+function shop(){
+  api('/api/working-pics').then(function(items){
+    var el=document.getElementById('list');
+    if(!items.length){el.innerHTML='<div class="msp-empty">Nothing available right now.</div>';return}
+    el.innerHTML=items.map(function(p){
+      var img=p.logo?'<div class="wp-img"><img src="'+esc(p.logo)+'" alt="'+esc(p.title)+'" loading="lazy"></div>':'<div class="wp-img wp-ph">'+IC.pic+'</div>';
+      var stock=p.unlimited?'<div class="wp-stock">'+IC.loop+' Unlimited</div>':(p.soldOut?'<div class="wp-stock out">Sold out</div>':'<div class="wp-stock">'+p.remaining+' left</div>');
+      var btn=p.soldOut?'<button class="wp-buy" disabled>'+IC.x+' Sold Out</button>':'<button class="wp-buy" onclick="buy(\''+p._id+'\',this,'+JSON.stringify(p.title).replace(/"/g,'&quot;')+','+p.price+')">'+IC.cart+' Buy Now</button>';
+      return '<div class="wp-card">'+img+
+        '<div class="wp-body"><div class="wp-title">'+esc(p.title)+'</div><div class="wp-desc">'+esc(p.description||'')+'</div>'+
+        '<div class="wp-foot"><div class="wp-price">'+money(p.price)+'</div><div class="wp-meta"><div>'+Number(p.sold||0)+' sold</div>'+stock+'</div></div>'+btn+'</div></div>';
+    }).join('');
+  }).catch(function(e){document.getElementById('list').innerHTML='<div class="msp-empty">'+esc(e.message)+'</div>'});
+}
+function buy(id,btn,title,price){
+  mzConfirm({type:'info',title:'Buy working picture?',message:title+'\n'+money(price)+' will be deducted from your wallet now.',confirmText:'Buy now',cancelText:'Not now'}).then(function(ok){
+    if(!ok)return;
+    btn.disabled=true;
+    api('/api/working-pics/'+id+'/buy','POST').then(function(r){mzBanner(title+' — '+money(price)+' paid. Your details are below.','ok',{title:'Purchase successful'});bal();var o=r.order;
+      var host=btn.closest('.wp-body')||btn.closest('.wp-card')||btn.closest('.msp-card');host.insertAdjacentHTML('beforeend',delivered(o));btn.innerHTML='Purchased';
+    }).catch(function(e){mzBanner(e.message,'err',{title:'Purchase failed'});btn.disabled=false;shop()});
+  });
+}
+function mine(){
+  api('/api/working-pics/mine').then(function(items){
+    var el=document.getElementById('list');
+    if(!items.length){el.innerHTML='<div class="msp-empty">You have not bought anything yet.</div>';return}
+    el.innerHTML=items.map(function(o){return '<div class="msp-card"><div class="msp-row">'+logo(o.logo,o.title)+'<div><h3>'+esc(o.title)+'</h3><p>'+new Date(o.createdAt).toLocaleString()+' &middot; '+money(o.pricePaid)+'</p></div></div>'+delivered(o)+'</div>'}).join('');
+  }).catch(function(e){document.getElementById('list').innerHTML='<div class="msp-empty">'+esc(e.message)+'</div>'});
+}
+function tab(t){document.getElementById('list').classList.toggle('msp-two',t==='shop');document.getElementById('tShop').className=t==='shop'?'on':'';document.getElementById('tMine').className=t==='mine'?'on':'';t==='shop'?shop():mine()}
+document.getElementById('list').classList.add('msp-two');bal();shop();
+</script><script src="/js/float-tools.js" defer></script>
+<script src="/js/support-dock.js?v=1" defer></script>
+<script src="/js/site-header.js?v=3" defer></script>
+</body></html>

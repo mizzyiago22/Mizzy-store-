@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/js/auth-keeper.js?v=1"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Instant Numbers | Mizzy Sales</title>
+<meta name="description" content="Rent a virtual number for SMS/OTP verification on Mizzy Sales."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232f7bf6'/><text y='72' x='50' font-size='58' text-anchor='middle' fill='white' font-family='system-ui,sans-serif' font-weight='800'>M</text></svg>"/>
+<meta name="theme-color" content="#2f7bf6"/>
+<!-- shared site stylesheet: loaded before this page's own <style> so page rules still win -->
+<link rel="stylesheet" href="/style.css?v=20260910a"/>
+<link rel="stylesheet" href="/css/marketplace-standard.css?v=1"/>
+<link rel="stylesheet" href="/css/numbers-redesign.css?v=2"/>
+  <link rel="stylesheet" href="/css/app-structure.css?v=3"/>
+<link rel="stylesheet" href="/css/mizzy-unified.css?v=2"/>
+<link rel="stylesheet" href="/css/numbers-workspace.css?v=1"/>
+<link rel="stylesheet" href="/css/buy-clean.css?v=1"/>
+<link rel="stylesheet" href="/css/site-header.css?v=1"/>
+<link rel="stylesheet" href="/css/buy-compact.css?v=1"/>
+<script>
+function PRICE(n) { return window.KLSMoney ? window.KLSMoney.price(n) : '₦' + Number(n || 0).toLocaleString('en-NG'); }
+function AMT(n)   { return window.KLSMoney ? window.KLSMoney.amount(n) : '₦' + Number(n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  (function(){
+    try {
+      var pref = localStorage.getItem('ksl_theme');
+      var effective = (pref === 'light' || pref === 'dark') ? pref : (function(){ var h = new Date().getHours(); return (h >= 19 || h < 7) ? 'dark' : 'light'; })();
+      document.documentElement.setAttribute('data-theme', effective);
+    } catch(e) {}
+  })();
+</script>
+<style>
+  html.srv-locked #numServerCard{display:none!important}
+  #srvOpening{display:none}
+  html.srv-locked:not(.srv-ready) #srvOpening{display:flex}
+  html.srv-locked:not(.srv-ready) #numHero{display:none!important}
+  #srvOpening{align-items:center;gap:12px;padding:20px;font-weight:700}
+  #srvOpening i{width:20px;height:20px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--gold);animation:srvspin .7s linear infinite}
+  @keyframes srvspin{to{transform:rotate(360deg)}}
+  .icon{width:1em;height:1em;flex-shrink:0;vertical-align:-0.15em;display:inline-block;color:currentColor}
+  /* ── THEME (dark default, light override via data-theme attr set in the inline script above) ── */
+  :root, [data-theme="dark"] {
+    --bg:#08080f; --card:#131320; --card2:#1a1a2b; --card3:#1c1c2a;
+    --border:#252535; --border2:#2e2e42; --border-hover:#3e3e5a;
+    --t1:#eeeef5; --t2:#8888a8; --t2b:#aaaacc;
+    --navbar-bg:rgba(10,10,20,.92);
+    --gold:#2f7bf6; --green:#00d46a; --red:#ff4757; --blue:#4a9eff;
+  }
+  [data-theme="light"] {
+    --bg:#f4f6fb; --card:#ffffff; --card2:#f7f9fc; --card3:#eef1f8;
+    --border:#dde3ee; --border2:#ccd5e6; --border-hover:#b3bfd6;
+    --t1:#1a2035; --t2:#636c85; --t2b:#454e66;
+    --navbar-bg:rgba(255,255,255,.92);
+    --gold:#1d5fd1; --green:#00a854; --red:#e5373d; --blue:#2a7de1;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--t1);font-family:'Plus Jakarta Sans',sans-serif;padding-bottom:40px;transition:background .25s,color .25s;font-size:12px}
+  a{color:var(--blue)}
+  .navbar{position:sticky;top:0;z-index:50;background:var(--navbar-bg);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;transition:background .25s,border-color .25s}
+  .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--t1);font-weight:800}
+  .brand-icon{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#4a9eff,#2f7de0);display:flex;align-items:center;justify-content:center;font-size:17px}
+  .back-btn{padding:8px 14px;border-radius:8px;background:#4a9eff;color:#fff;text-decoration:none;font-weight:700;font-size:13px}
+  .wrap{max-width:560px;margin:0 auto;padding:20px 16px}
+  .hero{text-align:center;padding:20px 8px 24px}
+  .chip{display:inline-block;background:rgba(74,158,255,.12);color:#4a9eff;padding:5px 14px;border-radius:20px;font-size:12.5px;font-weight:700;margin-bottom:10px}
+  h1{font-size:23px;margin:0 0 8px}
+  .hero p{color:var(--t2);font-size:14px;margin:0;line-height:1.5}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;transition:background .25s,border-color .25s}
+  .card h3{margin:0 0 14px;font-size:15px;color:var(--t1)}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--t2);margin-bottom:6px}
+  select,input{width:100%;padding:11px;border:1px solid var(--border2);border-radius:9px;background:var(--card3);color:var(--t1);font-size:14px;font-family:inherit;margin-bottom:12px;transition:background .25s,color .25s,border-color .25s;outline:none}
+  select:focus,input:focus{border-color:var(--gold)}
+  select:disabled{opacity:.5}
+  .price-box{display:none;background:rgba(74,158,255,.1);border:1px solid #4a9eff;border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+  .price-box b{color:#4a9eff;font-size:18px}
+  .btn{width:100%;padding:13px;border:none;border-radius:10px;background:#4a9eff;color:#fff;font-weight:700;font-size:14.5px;cursor:pointer;font-family:inherit}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-outline{background:transparent;border:1px solid var(--border2);color:var(--t1)}
+  .btn-danger{background:transparent;border:1px solid #ff4757;color:#ff4757}
+  .btn-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .btn-row .btn{flex:1;min-width:120px}
+  .fb{font-size:13px;margin-top:8px;min-height:0}
+  .fb.err{color:#ff4757}
+  .fb.ok{color:#00d46a}
+  .empty{text-align:center;padding:34px 12px;color:var(--t2)}
+  .empty .icon{font-size:38px;margin-bottom:8px}
+  .phone-display{text-align:center}
+  .phone-num{font-size:24px;font-weight:800;letter-spacing:.5px;margin:10px 0}
+  .countdown{font-size:34px;font-weight:800;color:#4a9eff;margin:8px 0;font-variant-numeric:tabular-nums}
+  .lock-note{background:rgba(255,199,0,.1);border:1px solid #ffc700;color:#ffc700;border-radius:10px;padding:10px 12px;font-size:12.5px;margin:12px 0;text-align:left}
+  .code-box{display:none;background:rgba(0,212,106,.1);border:1.5px solid #00d46a;border-radius:10px;padding:16px;margin:14px 0;text-align:center}
+  .code-box .code{font-size:26px;font-weight:800;letter-spacing:3px;color:#00d46a}
+  .status-note{font-size:13.5px;margin-top:10px;color:var(--t2)}
+  .status-note.ok{color:#00d46a}
+  .rules{list-style:none;padding:0;margin:0;font-size:13px;color:var(--t2b);line-height:1.8}
+  .rules li{padding-left:22px;position:relative;margin-bottom:6px}
+ .rules li:before{content:"<svg class="icon i-check" aria-hidden="true"><use href="#i-check"/></svg>";position:absolute;left:0;color:#00d46a;font-weight:800}
+  .order-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+  .order-row:last-child{border-bottom:none}
+  .order-row .meta{color:var(--t2);font-size:11.5px;margin-top:2px}
+  .order-row{cursor:pointer}
+  .bal-card{background:linear-gradient(135deg,rgba(74,158,255,.16),rgba(47,125,224,.05));border:1px solid rgba(74,158,255,.35);border-radius:14px;padding:16px 18px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+  .bal-card .lbl{font-size:12px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .bal-card .amt{font-size:24px;font-weight:800;color:var(--t1);margin-top:2px}
+  .bal-refresh{background:rgba(74,158,255,.15);border:1px solid rgba(74,158,255,.4);color:#4a9eff;font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:9px;cursor:pointer;font-family:inherit}
+  .wa-note{background:rgba(0,212,106,.08);border:1px solid rgba(0,212,106,.35);border-radius:10px;padding:12px 14px;margin-top:14px;font-size:12.5px;line-height:1.6;text-align:left}
+  .wa-note b{color:#00d46a}
+
+  /* Icon-tile selects — a real <select> sits invisible on top of a styled tile so it stays a
+     normal, fully-accessible native dropdown while looking like a custom component. */
+  .select-tile{position:relative;display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px;cursor:pointer;transition:background .25s,border-color .25s}
+  .select-tile:hover{border-color:var(--border-hover)}
+  .st-icon{width:38px;height:38px;flex-shrink:0;background:rgba(74,158,255,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+  .st-body{flex:1;min-width:0}
+  .st-label{font-size:10.5px;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:2px}
+  .st-value{font-size:14.5px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .st-chev{color:var(--t2);font-size:16px;flex-shrink:0}
+  .select-tile select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
+
+  .an-count-chip{background:rgba(74,158,255,.15);color:#4a9eff;font-size:12px;font-weight:800;padding:3px 10px;border-radius:20px}
+  .an-table-wrap{overflow-x:auto}
+  .an-table{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
+  .an-table th{text-align:left;color:var(--t2);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding:0 10px 8px;font-weight:700}
+  .an-table td{padding:10px;border-top:1px solid var(--border)}
+  .an-table tr:hover td{background:rgba(74,158,255,.04)}
+  .an-code{font-weight:800;color:#00d46a;font-family:monospace;font-size:13px}
+  .an-waiting{color:var(--t2);font-style:italic}
+  .an-time{color:#4a9eff;font-weight:700;font-variant-numeric:tabular-nums}
+
+  .ann-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:999;padding:20px}
+  .ann-overlay.show{display:flex}
+  .ann-box{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:32px 26px;max-width:360px;width:100%;text-align:center;animation:annPop .25s ease;transition:background .25s,border-color .25s}
+  @keyframes annPop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+  .ann-icon{width:76px;height:76px;margin:0 auto 18px;background:rgba(74,158,255,.12);border:1px solid rgba(74,158,255,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:34px}
+  .ann-box h2{margin:0 0 14px;font-size:22px}
+  .ann-box p{color:var(--t2b);font-size:14px;line-height:1.7;margin:0 0 22px}
+  .ann-box p b{color:var(--t1)}
+  .ann-btn{width:100%;background:linear-gradient(135deg,#4a9eff,#2f7bf6);color:#fff;border:none;padding:14px;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}
+
+  /* ══ STANDARD BLUE + BLACK SKIN ═══════════════════════════════════════════
+     One accent (blue) on true black surfaces, so the numbers page reads as a
+     single, deliberate product screen instead of five different accent colours
+     (gold, amber, green, blue) competing on the same page. Declared last so it
+     wins over the rules above without touching them. */
+  :root, [data-theme="dark"] {
+    --nb-blue:#2f7bf6; --nb-blue-2:#1d5fd1; --nb-blue-soft:rgba(47,123,246,.14);
+    --bg:#05060b; --card:#0c0f18; --card2:#111522; --card3:#151a29;
+    --border:#1c2233; --border2:#26304a; --border-hover:#38466b;
+    --t1:#eef2fb; --t2:#8792ad; --t2b:#aab4cc;
+    --navbar-bg:rgba(5,6,11,.92);
+    --gold:var(--nb-blue); --blue:var(--nb-blue);
+  }
+  [data-theme="light"] {
+    --nb-blue:#1d5fd1; --nb-blue-2:#16489f; --nb-blue-soft:rgba(29,95,209,.10);
+    --bg:#f5f7fc; --card:#ffffff; --card2:#f7f9fd; --card3:#eef2fa;
+    --border:#dde4f0; --border2:#c8d3e6; --border-hover:#a9b8d4;
+    --t1:#0a0d14; --t2:#5b6580; --t2b:#3d465c;
+    --navbar-bg:rgba(255,255,255,.94);
+    --gold:var(--nb-blue); --blue:var(--nb-blue);
+  }
+  a { color: var(--nb-blue); }
+  .brand-icon { background: linear-gradient(135deg, var(--nb-blue), var(--nb-blue-2)); }
+  .back-btn,
+  .btn,
+  .ann-btn { background: var(--nb-blue); color: #fff; }
+  .ann-btn { background: linear-gradient(135deg, var(--nb-blue), var(--nb-blue-2)); }
+  .btn-outline { background: transparent; color: var(--t1); border: 1px solid var(--border2); }
+  .chip,
+  .an-count-chip { background: var(--nb-blue-soft); color: var(--nb-blue); }
+  .price-box { background: var(--nb-blue-soft); border-color: var(--nb-blue); }
+  .price-box b,
+  .countdown,
+  .an-time,
+  .bal-refresh { color: var(--nb-blue); }
+  .bal-card { background: linear-gradient(135deg, var(--nb-blue-soft), transparent);
+              border-color: color-mix(in srgb, var(--nb-blue) 35%, transparent); }
+  .bal-refresh { background: var(--nb-blue-soft); border-color: color-mix(in srgb, var(--nb-blue) 40%, transparent); }
+  .st-icon,
+  .ann-icon { background: var(--nb-blue-soft); border-color: color-mix(in srgb, var(--nb-blue) 30%, transparent); }
+  /* Amber notice re-tuned to the blue scale — it is information, not a warning. */
+  .lock-note { background: var(--nb-blue-soft); border-color: color-mix(in srgb, var(--nb-blue) 40%, transparent); color: var(--t2b); }
+  .lock-note b { color: var(--nb-blue); }
+  .an-table tr:hover td { background: var(--nb-blue-soft); }
+
+  /* ══ DEEP BLUE + WHITE TYPE POLISH ════════════════════════════════════════
+     The page is one deep-blue accent on near-black (dark) / near-white (light)
+     surfaces. These rules only make the text that matters *stick*: headings,
+     prices, the OTP code, wallet balance and the numbers in the tables get more
+     weight, tighter tracking and real contrast, while supporting copy stays
+     quieter. Sizes are clamped so nothing shrinks below a readable size on a
+     phone or blows up on desktop. */
+  h1, h2, h3 { color: var(--t1); letter-spacing: -.015em; text-wrap: balance; }
+  .hero h1 { font-size: clamp(24px, 6.4vw, 34px); font-weight: 900; line-height: 1.14; }
+  .hero p { font-size: clamp(13.5px, 3.5vw, 15.5px); line-height: 1.65; color: var(--t2b); max-width: 46ch; }
+  .card h3 { font-size: clamp(16px, 4.2vw, 18.5px); font-weight: 850; }
+  .card h3 + p, .srv-note { color: var(--t2b); }
+  .card ol, .card ol li { color: var(--t2b); }
+  .card ol b, .srv-note b, .card p b { color: var(--t1); font-weight: 800; }
+
+  /* Wallet balance — the single loudest number on the page. */
+  .bal-card .lbl { font-size: 11px; font-weight: 800; letter-spacing: .09em;
+                   text-transform: uppercase; color: var(--t2); }
+  .bal-card .amt { font-size: clamp(24px, 7vw, 32px); font-weight: 900; line-height: 1.1;
+                   letter-spacing: -.02em; color: var(--t1);
+                   font-variant-numeric: tabular-nums; }
+
+  /* Price row — blue on blue-tint, heavier so it reads at a glance. */
+  .price-box { font-size: 13px; font-weight: 700; letter-spacing: .01em; }
+  .price-box span { color: var(--t2b); text-transform: uppercase; font-size: 11px;
+                    font-weight: 800; letter-spacing: .09em; }
+  .price-box b { font-size: clamp(18px, 5vw, 22px); font-weight: 900;
+                 letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+
+  /* Step + tile labels: quiet label, loud value. */
+  .step-label { color: var(--nb-blue); }
+  .st-label { color: var(--t2); font-weight: 800; letter-spacing: .09em; }
+  .st-value { font-size: clamp(14px, 3.9vw, 15.5px); font-weight: 800; color: var(--t1); }
+
+  /* Active numbers table — codes and countdowns must be unmistakable. */
+  .an-table th { font-size: 10.5px; font-weight: 800; letter-spacing: .09em;
+                 text-transform: uppercase; color: var(--t2); }
+  .an-table td { color: var(--t1); font-size: 13.5px; }
+  .an-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+             font-size: clamp(15px, 4.4vw, 18px); font-weight: 900; letter-spacing: .09em;
+             color: var(--nb-blue); background: var(--nb-blue-soft);
+             padding: 4px 9px; border-radius: 8px; display: inline-block; }
+  .an-waiting { color: var(--t2); font-style: italic; font-size: 12.5px; }
+  .an-time, .countdown { font-variant-numeric: tabular-nums; font-weight: 900;
+                         letter-spacing: .01em; }
+  .an-count-chip { font-weight: 900; font-variant-numeric: tabular-nums; }
+
+  /* Held-funds notice: readable body copy, blue emphasis on the amount. */
+  .lock-note { font-size: 12.8px; line-height: 1.6; }
+  .lock-note b { font-weight: 900; font-variant-numeric: tabular-nums; }
+
+  .chip, .stock-chip { font-weight: 800; letter-spacing: .05em; }
+  .btn, .ann-btn, .back-btn, .bal-refresh { letter-spacing: .01em; font-weight: 800; }
+
+  /* Light theme is white-on-deep-blue rather than grey-on-grey: push the
+     muted tones darker so small print stays legible outdoors on a phone. */
+  [data-theme="light"] { --t2:#4a5570; --t2b:#2a3348; }
+  [data-theme="light"] .hero h1 { color: #0a1330; }
+  [data-theme="light"] .an-code { color: var(--nb-blue-2); }
+
+  @media (max-width: 420px) {
+    .bal-card .amt { font-size: 26px; }
+    .an-table td, .an-table th { padding-left: 8px; padding-right: 8px; }
+    .lock-note { font-size: 13px; }
+  }
+</style>
+  <link rel="stylesheet" href="theme.css?v=20260910a"/>
+  <link rel="stylesheet" href="css/layout-polish.css?v=20260910a"/>
+  <link rel="stylesheet" href="css/pro-polish.css?v=20260910a"/>
+ <link rel="stylesheet" href="/css/announce.css"/>
+  <link rel="stylesheet" href="/css/redesign.css?v=20260910a"/>
+  <!-- Brand colours/fonts from site.config.js — keep last so it can override -->
+  <link rel="stylesheet" href="/brand.css"/>
+  <link rel="stylesheet" href="/css/mobile-fix.css">
+  <link rel="stylesheet" href="/css/mizzy-unified.css?v=2"/>
+<link rel="stylesheet" href="/number-flow.css?v=2"/>
+<style id="number-flow-inline">
+/* inlined so this page never depends on /css/number-flow.css loading */
+/* Mizzy Sales — buy-number page: minimal header, number cards, confirm popup */
+:root{--nf-a:#00b4f8;--nf-a2:#0084d6;--nf-ok:#18c277}
+/* remove the long explanatory text — only the controls and a few links remain */
+#numHowToCard,#numRulesCard,#numServerIntro,#srvNote,.number-overline,.pool-guide,#numHero .chip,#numHero p{display:none!important}
+.nf-hero{padding:6px 0 4px!important;background:none!important;border:0!important;text-align:left}
+.nf-hero h1{font:800 clamp(24px,5vw,32px)/1.1 'Sora','Plus Jakarta Sans',sans-serif!important;letter-spacing:-.02em;margin:0 0 12px!important}
+.nf-links{display:flex;flex-wrap:wrap;gap:8px}
+.nf-links a{padding:8px 14px;border-radius:999px;border:1px solid var(--border2,#2a2f45);color:var(--t1,#fff);font-weight:700;font-size:13px;text-decoration:none;background:var(--card,#131320)}
+.nf-links a:hover{border-color:var(--nf-a);color:var(--nf-a)}
+.nf-h{margin:0 0 12px;font-size:16px}
+.step-label{font-size:12px!important;font-weight:800!important;letter-spacing:.1em;text-transform:uppercase;color:var(--nf-a)!important;margin:14px 0 8px!important}
+#numPickerForm .select-tile,#numPickerForm2 .select-tile{border-radius:16px}
+#numBuyBtn,#g2BuyBtn{border-radius:14px;font-weight:800;background:linear-gradient(135deg,var(--nf-a),var(--nf-a2))!important;color:#fff!important;border:0}
+
+/* ---------- the number card (service chip · status · country · number · code) ---------- */
+.nf-card,.nf-mini{background:var(--card,#131320);border:1px solid var(--border2,#262b40);border-radius:24px;padding:24px 22px;box-shadow:0 20px 44px -28px rgba(0,0,0,.6)}
+.nf-card{max-width:520px;margin:0 auto}
+.nf-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.nf-svc{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;border-radius:999px;background:rgba(24,194,119,.12);color:var(--nf-ok);font-weight:800;font-size:14px;max-width:62%}
+.nf-svc i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--nf-ok);color:#fff;font-style:normal;font-size:13px;flex:none}
+.nf-svc b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nf-status{padding:7px 14px;border-radius:999px;font-weight:800;font-size:13px;background:rgba(24,194,119,.14);color:var(--nf-ok)}
+.nf-status--wait{background:rgba(245,166,35,.15);color:#f5a623}
+.nf-status--warn{background:rgba(255,71,87,.14);color:#ff6b78}
+.nf-country{text-align:center;color:var(--t2,#9aa3b8);font-size:15px;margin:22px 0 8px}
+.nf-country:empty{display:none}
+.nf-numrow{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px}
+.nf-numrow .phone-num,.nf-mini .phone-num{font:800 clamp(24px,6.5vw,32px)/1.1 'Sora','Plus Jakarta Sans',sans-serif!important;letter-spacing:-.01em;color:var(--t1,#fff)!important;margin:0!important;background:none!important}
+.nf-copy{width:44px;height:44px;border-radius:13px;border:1px solid var(--border2,#2a2f45);background:var(--bg3,#1a1f33);color:var(--t1,#fff);display:grid;place-items:center;cursor:pointer;flex:none}
+.nf-copy:hover{border-color:var(--nf-a);color:var(--nf-a)}
+.nf-copy svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nf-count{text-align:center;font:700 14px/1 'JetBrains Mono',ui-monospace,monospace;color:var(--t2,#9aa3b8);margin-top:10px}
+.nf-done .nf-count{display:none}
+.nf-hr{border:0;border-top:1px solid var(--border,#232842);margin:20px 0}
+.nf-codelabel{display:flex;align-items:center;justify-content:center;gap:9px;color:var(--t2,#9aa3b8);font-size:15px}
+.nf-codelabel svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.nf-codebox{background:none!important;border:0!important;padding:0!important;margin:12px 0 4px!important;text-align:center}
+.nf-codebox .code{font:800 clamp(38px,12vw,56px)/1.1 'Sora','Plus Jakarta Sans',sans-serif!important;letter-spacing:.12em;color:var(--nf-ok)!important;background:none!important;text-shadow:0 0 28px rgba(24,194,119,.25)}
+.nf-note{text-align:center;font-size:13px;margin:10px 0 2px}
+.nf-lock{text-align:center;font-size:12.5px;color:var(--t2,#9aa3b8);margin:6px 0 0}
+.nf-more{margin-top:14px;font-size:13px}
+.nf-more summary{cursor:pointer;color:var(--nf-a);font-weight:700;text-align:center;list-style:none}
+.nf-actions-top{margin-top:16px}
+.nf-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.nf-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:50px;border-radius:14px;font:800 14.5px/1 'Plus Jakarta Sans',sans-serif;cursor:pointer;text-decoration:none!important;border:1px solid var(--border2,#2a2f45);transition:transform .15s}
+.nf-btn:hover{transform:translateY(-2px)}
+.nf-btn--ghost{background:transparent;color:var(--t1,#fff)!important}
+.nf-btn--solid{background:linear-gradient(135deg,var(--nf-a),var(--nf-a2));color:#fff!important;border-color:transparent;box-shadow:0 12px 26px -12px rgba(0,180,248,.8)}
+.nf-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- active numbers list ---------- */
+.nf-active-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+#activeNumbersList{display:grid;gap:14px}
+.nf-mini{padding:18px 18px 16px;cursor:pointer;transition:border-color .2s,transform .2s}
+.nf-mini:hover{border-color:var(--nf-a);transform:translateY(-2px)}
+.nf-mini .nf-country{margin:14px 0 4px;font-size:14px}
+.nf-mini .nf-numrow{margin-top:6px}
+.nf-mini .phone-num{font-size:clamp(20px,5.4vw,26px)!important}
+.nf-mini .nf-copy{width:38px;height:38px;border-radius:11px}
+.nf-minifoot{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border,#232842);font-size:13px}
+.nf-minicode{font:800 22px/1 'Sora',sans-serif;letter-spacing:.12em;color:var(--nf-ok)}
+.nf-minifoot .an-time{font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--t2,#9aa3b8)}
+
+/* ---------- confirmation popup ---------- */
+.nf-modal{position:fixed;inset:0;z-index:100000;background:rgba(5,8,16,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;padding:16px}
+@media(min-width:560px){.nf-modal{align-items:center}}
+.nf-sheet{width:100%;max-width:420px;background:var(--card,#131320);border:1px solid var(--border2,#262b40);border-radius:24px;padding:24px 22px 20px;box-shadow:0 40px 80px -30px rgba(0,0,0,.8);animation:nfUp .22s ease-out}
+@keyframes nfUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+.nf-sheet h3{margin:0 0 14px;font:800 20px/1.2 'Sora','Plus Jakarta Sans',sans-serif}
+.nf-sum{border:1px solid var(--border,#232842);border-radius:16px;overflow:hidden}
+.nf-sum>div{display:flex;justify-content:space-between;gap:14px;padding:13px 16px;font-size:14px;border-bottom:1px solid var(--border,#232842)}
+.nf-sum>div:last-child{border-bottom:0}
+.nf-sum span{color:var(--t2,#9aa3b8)}
+.nf-sum b{text-align:right;word-break:break-word}
+.nf-sum-total{background:rgba(0,180,248,.08)}
+.nf-sum-total b{color:var(--nf-a);font-size:16px}
+.nf-msg{font-size:13px;line-height:1.6;color:var(--t2,#9aa3b8);margin:14px 2px 16px}
+.nf-modal-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+
+</style>
+
+<style id="np-style">
+/* ===== Number picker — stepper UI (drives the original hidden selects) ===== */
+.np-oldh,#numPickerForm2>*:not(#g2Feedback){display:none!important}
+#numPickStep2{padding:18px 16px 16px}
+.np-servers{display:flex;gap:6px;padding:4px;border-radius:14px;background:var(--bg3,rgba(255,255,255,.04));border:1px solid var(--border,#232842);margin-bottom:16px;width:max-content;max-width:100%}
+.np-srv{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:10px;border:0;background:transparent;color:var(--t2,#9aa3b8);font:700 13px 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+.np-srv.on{background:var(--nf-a,#00b4f8);color:#fff;box-shadow:0 6px 16px -8px rgba(0,180,248,.8)}
+.np-srv i{width:7px;height:7px;border-radius:50%;background:#18c277}
+.np-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:18px}
+.np-bar button{border:0;background:none;padding:0;text-align:left;color:var(--t3,#6b7590);font:700 11.5px 'Plus Jakarta Sans',sans-serif;cursor:default}
+.np-bar button:before{content:"";display:block;height:3px;border-radius:3px;background:var(--border2,#2a2f45);margin-bottom:7px}
+.np-bar button.done{color:var(--t2,#9aa3b8);cursor:pointer}.np-bar button.done:before{background:rgba(0,180,248,.55)}
+.np-bar button.on{color:var(--t1,#fff)}.np-bar button.on:before{background:var(--nf-a,#00b4f8)}
+.np-title{font:800 18px/1.2 'Sora','Plus Jakarta Sans',sans-serif;letter-spacing:-.01em;margin:0 0 12px}
+.np-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.np-chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border-radius:999px;border:1px solid var(--border2,#2a2f45);background:var(--bg3,rgba(255,255,255,.04));color:var(--t1,#fff);font:700 13px 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+.np-chip em{font-style:normal;color:var(--nf-a,#00b4f8);font-size:12px}
+.np-search{width:100%;height:46px;border-radius:13px;border:1.5px solid var(--border2,#2a2f45);background:var(--bg3,rgba(255,255,255,.04));color:var(--t1,#fff);padding:0 14px 0 40px;font:500 14.5px 'Plus Jakarta Sans',sans-serif;outline:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b95ad' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:13px center;background-size:18px}
+.np-search:focus{border-color:var(--nf-a,#00b4f8);box-shadow:0 0 0 4px rgba(0,180,248,.14)}
+.np-sub{font:800 11px 'Plus Jakarta Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--t3,#6b7590);margin:16px 2px 8px}
+.np-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:420px){.np-grid{grid-template-columns:repeat(3,1fr)}}
+.np-tile{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 4px 10px;border-radius:14px;border:1px solid var(--border2,#2a2f45);background:var(--bg3,rgba(255,255,255,.03));color:var(--t1,#fff);font:700 11.5px 'Plus Jakarta Sans',sans-serif;cursor:pointer;min-width:0}
+.np-tile span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-tile:hover,.np-row:hover,.np-pool:hover{border-color:var(--nf-a,#00b4f8)}
+.np-tile .app-ico,.np-tile .app-ico-fb{width:30px;height:30px;font-size:24px;display:grid;place-items:center}
+.np-list{display:flex;flex-direction:column;gap:6px;max-height:380px;overflow:auto;margin:0 -2px;padding:0 2px}
+.np-row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:13px;border:1px solid var(--border2,#2a2f45);background:var(--bg3,rgba(255,255,255,.03));color:var(--t1,#fff);font:700 14px 'Plus Jakarta Sans',sans-serif;cursor:pointer;text-align:left;width:100%}
+.np-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-row small{display:block;color:var(--t2,#9aa3b8);font-weight:600;font-size:12px;margin-top:2px}
+.np-row .pr{font-weight:800;color:var(--nf-a,#00b4f8);white-space:nowrap}
+.np-ico{width:26px;height:26px;display:grid;place-items:center;flex:none}
+.np-ico img{width:26px;height:auto;max-height:26px;border-radius:4px;object-fit:contain}
+.np-ico .app-ico,.np-ico .app-ico-fb{width:26px;height:26px;font-size:20px}
+.np-empty{padding:26px 10px;text-align:center;color:var(--t2,#9aa3b8);font-size:13.5px}
+.np-pool{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border-radius:15px;border:1.5px solid var(--border2,#2a2f45);background:var(--bg3,rgba(255,255,255,.03));color:var(--t1,#fff);text-align:left;cursor:pointer;margin-bottom:8px;font-family:'Plus Jakarta Sans',sans-serif}
+.np-pool.sel{border-color:var(--nf-a,#00b4f8);background:rgba(0,180,248,.09);box-shadow:0 0 0 3px rgba(0,180,248,.12)}
+.np-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--border2,#3a4160);flex:none;display:grid;place-items:center}
+.np-pool.sel .np-radio{border-color:var(--nf-a,#00b4f8)}.np-pool.sel .np-radio:after{content:"";width:8px;height:8px;border-radius:50%;background:var(--nf-a,#00b4f8)}
+.np-pool .mid{flex:1;min-width:0}.np-pool b{font-size:14.5px}
+.np-pool small{display:block;color:var(--t2,#9aa3b8);font-size:12px;margin-top:3px;font-weight:600}
+.np-pool .pr{font-weight:800;font-size:15.5px}
+.np-tag{display:inline-block;margin-left:7px;padding:2px 8px;border-radius:999px;font:800 10px 'Plus Jakarta Sans',sans-serif;letter-spacing:.03em;vertical-align:1px;background:rgba(0,180,248,.15);color:var(--nf-a,#00b4f8)}
+.np-tag.g{background:rgba(24,194,119,.15);color:#18c277}
+.np-op{width:100%;height:44px;border-radius:12px;border:1.5px solid var(--border2,#2a2f45);background:var(--bg3,rgba(255,255,255,.04));color:var(--t1,#fff);padding:0 12px;font:600 14px 'Plus Jakarta Sans',sans-serif;margin-bottom:10px}
+.np-foot{position:sticky;bottom:10px;margin-top:14px;display:flex;align-items:center;gap:12px;padding:12px 12px 12px 16px;border-radius:16px;background:var(--card,#131320);border:1px solid var(--border2,#2a2f45);box-shadow:0 14px 34px -14px rgba(0,0,0,.7)}
+.np-foot .t{flex:1;min-width:0;font:600 12px 'Plus Jakarta Sans',sans-serif;color:var(--t2,#9aa3b8)}
+.np-foot .t b{display:block;font:800 18px/1.2 'Sora','Plus Jakarta Sans',sans-serif;color:var(--t1,#fff)}
+.np-go{height:46px;padding:0 22px;border-radius:13px;border:0;background:linear-gradient(135deg,#00b4f8,#0084d6);color:#fff;font:800 14.5px 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+.np-go:disabled{opacity:.4;cursor:not-allowed}
+.np-refresh{border:0;background:none;color:var(--nf-a,#00b4f8);font:700 12.5px 'Plus Jakarta Sans',sans-serif;cursor:pointer;padding:6px 2px}
+</style>
+<style>
+/* Themed dropdown for Buy Number 1 (same look as the other Mizzy Sales pages; mz-select.js) */
+label.step-label{display:block}
+#numPickerForm .mzp{margin:0 0 6px}
+.mzs-native{position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important;overflow:hidden}
+.mzp .mzs-wrap{position:relative}
+.mzp .mzs-btn{display:flex!important;align-items:center;justify-content:space-between;gap:10px;width:100%!important;margin:0!important;padding:13px 14px!important;border-radius:10px;background:var(--bg2,#101827)!important;color:var(--t1,#f0f6fc)!important;border:1px solid var(--border2,#35475e)!important;font:inherit;font-size:16px;font-weight:600!important;text-align:left;box-sizing:border-box}
+.mzp .mzs-btn[disabled]{opacity:.5!important}
+.mzs-btn::after{content:'';width:8px;height:8px;border-right:2px solid var(--gold,#00b4f8);border-bottom:2px solid var(--gold,#00b4f8);transform:rotate(45deg);flex:0 0 auto;margin-top:-4px}
+.mzs-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.mzs-sheet{position:fixed;inset:0;background:rgba(3,6,14,.7);display:none;align-items:flex-end;justify-content:center;z-index:10000}
+.mzs-sheet.show{display:flex}
+.mzs-panel{width:100%;max-width:520px;max-height:72vh;display:flex;flex-direction:column;background:var(--card,#131b2e);border:1px solid var(--border2,#35475e);border-radius:20px 20px 0 0;overflow:hidden;box-shadow:var(--sh,none);box-sizing:border-box}
+@media(min-width:600px){.mzs-sheet{align-items:center}.mzs-panel{border-radius:20px}}
+.mzs-head{padding:16px 18px 10px;font-weight:800;color:var(--t1,#f0f6fc);font-size:16px;border-bottom:1px solid var(--border,#29394f)}
+.mzs-search{margin:10px 14px 4px;padding:11px 12px;border-radius:10px;background:var(--bg2,#101827);color:var(--t1,#f0f6fc);border:1px solid var(--border2,#35475e);font:inherit;font-size:15px;width:calc(100% - 28px);box-sizing:border-box}
+.mzs-list{overflow:auto;padding:6px 0 8px}
+.mzs-opt{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;color:var(--t1,#f0f6fc);font-size:15px;border-bottom:1px solid var(--border,#29394f);cursor:pointer}
+.mzs-opt:last-child{border-bottom:0}
+.mzs-opt.sel{color:var(--gold,#00b4f8);font-weight:800}
+.mzs-opt.dis{opacity:.45;cursor:default}
+.mzs-dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--border2,#35475e);flex:0 0 auto}
+.mzs-opt.sel .mzs-dot{border-color:var(--gold,#00b4f8);background:radial-gradient(circle,var(--gold,#00b4f8) 45%,transparent 50%)}
+.mzs-close{margin:6px 14px 14px;width:calc(100% - 28px)!important;background:var(--bg2,#101827)!important;color:var(--t1,#f0f6fc)!important;border:1px solid var(--border2,#35475e)!important}
+</style>
+<link rel="stylesheet" href="/css/smooth.css?v=1"/>
+<script src="/js/smooth-nav.js?v=2" defer></script>
+<style id="ip-theme">
+html, body { overflow: visible !important; }
+body { overflow-x: clip !important; }
+.select-tile { cursor: pointer; }
+.select-tile select { display: none !important; }
+.ip-sheet { position: fixed; inset: 0; z-index: 100000; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; justify-content: center; }
+.ip-sheet[hidden] { display: none !important; }
+.ip-panel { width: 100%; max-width: 560px; max-height: 78vh; display: flex; flex-direction: column; background: var(--card, #131b2e); border: 1px solid var(--border, #29394f); border-radius: 20px 20px 0 0; padding: 16px; box-sizing: border-box; box-shadow: 0 -10px 40px rgba(0,0,0,.35); }
+.ip-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.ip-title { font-weight: 800; font-size: 16px; color: var(--t1, #eeeef5); }
+.ip-close { background: var(--card2, #19253a); border: 1px solid var(--border, #29394f); color: var(--t1, #eeeef5); border-radius: 10px; width: 34px; height: 34px; cursor: pointer; }
+.ip-search { width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border, #29394f); background: var(--card2, #19253a); color: var(--t1, #eeeef5); font: inherit; font-size: 16px; margin-bottom: 10px; }
+.ip-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; }
+.ip-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 12px; background: var(--card2, #19253a); border: 1px solid var(--border, #29394f); color: var(--t1, #eeeef5); font: inherit; cursor: pointer; }
+.ip-item:hover, .ip-item:focus { border-color: var(--nb-blue, #4a9eff); }
+.ip-ico { width: 26px; display: inline-flex; justify-content: center; }
+.ip-name { flex: 1; font-weight: 700; }
+.ip-sub { font-size: 12px; color: var(--t2, #9aa3b8); white-space: nowrap; }
+</style>
+</head>
+<body data-std-recommended>
+<!-- Shared UI icon sprite (replaces emoji site-wide) — referenced via <svg class="icon i-NAME"><use href="#i-NAME"/></svg> -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-check-circle" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></g></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M13 5l7 7-7 7"/></g></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H4M11 5l-7 7 7 7"/></g></symbol>
+    <symbol id="i-arrow-down" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M5 13l7 7 7-7"/></g></symbol>
+    <symbol id="i-x-circle" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></g></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></g></symbol>
+    <symbol id="i-clipboard" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1"/></g></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L12 17l-5.6 3.1 1.4-6.3-4.8-4.3 6.4-.6z"/></g></symbol>
+    <symbol id="i-crown" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h16l1-9-5 4-4-7-4 7-5-4z"/></g></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></g></symbol>
+    <symbol id="i-message-circle" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 01-11.9 7.8L4 21l1.2-5A8.5 8.5 0 1121 12z"/></g></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6M8 12L5.5 14.5a3.5 3.5 0 004.9 4.9L13 17"/><path d="M16 12l2.5-2.5a3.5 3.5 0 00-4.9-4.9L11 7"/></g></symbol>
+    <symbol id="i-smartphone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></g></symbol>
+    <symbol id="i-credit-card" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></g></symbol>
+    <symbol id="i-package" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></g></symbol>
+    <symbol id="i-gamepad" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="4"/><path d="M7 10v4M5 12h4M15 11h.01M18 13h.01"/></g></symbol>
+    <symbol id="i-alert-triangle" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17h.01"/></g></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="12"/><path d="M3 9h18M12 9v12M12 9c-2-4-6-4-6-1s3 1 6 1M12 9c2-4 6-4 6-1s-3 1-6 1"/></g></symbol>
+    <symbol id="i-wrench" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 015.7 5l-5 5-2.4-2.4-5 5a2 2 0 01-2.8-2.8l5-5L7.8 8.7a4 4 0 015-5.7L10 6l1 1z"/></g></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0M16 8a3 3 0 010 6M21 20a6 6 0 00-6-6.5"/></g></symbol>
+    <symbol id="i-scroll" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H19v14a3 3 0 01-3 3H8a3 3 0 003-3V6a3 3 0 00-3-3z"/><path d="M8 3a3 3 0 00-3 3v11a3 3 0 003 3"/></g></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M3 4h2l2.6 12.6a2 2 0 002 1.4h8.6a2 2 0 002-1.6L22 8H6"/></g></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 6l9 7 9-7"/></g></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0112 0v5l2 3H4l2-3z"/><path d="M10 20a2 2 0 004 0"/></g></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 01-6 6 6 6 0 01-6-6z"/><path d="M12 17v5"/></g></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 000-2l2-1.5-2-3.5-2.4 1a7.6 7.6 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7.6 7.6 0 00-1.7 1l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 000 2l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 001.7 1l.3 2.5h4l.3-2.5a7.6 7.6 0 001.7-1l2.4 1 2-3.5z"/></g></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></g></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></g></symbol>
+    <symbol id="i-ban" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></g></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></g></symbol>
+    <symbol id="i-book-open" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-2-1.5-5-2-8-1v13c3-1 6-.5 8 1 2-1.5 5-2 8-1V5c-3-1-6-.5-8 1z"/><path d="M12 6v14"/></g></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></g></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></g></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></g></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v4a4 4 0 01-8 0z"/><path d="M6 5H4v2a3 3 0 003 3M18 5h2v2a3 3 0 01-3 3"/><path d="M10 15h4v3h-4zM8 21h8"/></g></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h8V3M7 21v-7h10v7"/></g></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6a1 1 0 011-1h5l2 2h9a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1z"/></g></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></g></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></g></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.6 4.8L18 8l-4.4 1.6L12 14l-1.6-4.4L6 8l4.4-1.2z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></g></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h13a1 1 0 011 1v3"/><path d="M3 7v11a2 2 0 002 2h14a1 1 0 001-1v-6a1 1 0 00-1-1h-4a2 2 0 000 4h5"/></g></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M21 16l-5.5-5.5L4 21"/></g></symbol>
+    <symbol id="i-dot" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6"/></g></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></g></symbol>
+    <symbol id="i-rocket" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c3 1 5 5 5 9 0 3-1 5-2 6l-3 3-3-3c-1-1-2-3-2-6 0-4 2-8 5-9z"/><circle cx="12" cy="9" r="2"/><path d="M9 17l-3 4M15 17l3 4"/></g></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></g></symbol>
+    <symbol id="i-bank" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M10 10v9M14 10v9M19 10v9"/><path d="M3 21h18"/></g></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 6l4 4"/></g></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14A8 8 0 1110 4a6.5 6.5 0 0010 10z"/></g></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></g></symbol>
+    <symbol id="i-medal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="15" r="6"/><path d="M9 3l3 6 3-6"/><path d="M10.5 13.5l1.5 3 1.5-3"/></g></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></g></symbol>
+    <symbol id="i-bot" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M12 2v4M9 3.5l1.5 1.5M15 3.5l-1.5 1.5"/><circle cx="9" cy="14" r="1.3"/><circle cx="15" cy="14" r="1.3"/></g></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6"/><path d="M20 20v-6h-6"/><path d="M5 15a8 8 0 0014-4M19 9A8 8 0 005 13"/></g></symbol>
+    <symbol id="i-headphones" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0116 0v2"/><rect x="2" y="14" width="5" height="6" rx="1.5"/><rect x="17" y="14" width="5" height="6" rx="1.5"/></g></symbol>
+    <symbol id="i-megaphone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h4l7 4V6l-7 4z"/><path d="M17 9a4 4 0 010 6"/></g></symbol>
+    <symbol id="i-banknote" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v.01M18 15v.01"/></g></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l2 2M14 9l2 2"/></g></symbol>
+    <symbol id="i-folder-open" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a1 1 0 011-1h5l2 2h8a1 1 0 011 1l-2 8H5z"/></g></symbol>
+    <symbol id="i-receipt" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></g></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-5-5"/></g></symbol>
+    <symbol id="i-paperclip" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12l6-6a3 3 0 014 4l-8 8a5 5 0 01-7-7l7-7"/></g></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10l3 3v10l-3 3H7l-3-3V7z"/></g></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2 1a12 12 0 006 6l1-2 5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/></g></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V11l2-5h12l2 5v5"/><rect x="2" y="16" width="20" height="3" rx="1"/><circle cx="7" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></g></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></g></symbol>
+    <symbol id="i-mouse" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 3v6"/></g></symbol>
+    <symbol id="i-bar-chart" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></g></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></g></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 20h16"/></g></symbol>
+    <symbol id="i-hash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/></g></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></g></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></g></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h13l-3 4 3 4H5"/></g></symbol>
+    <symbol id="i-at-sign" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 12v1.5a2.5 2.5 0 005 0V12a9 9 0 10-4 7.5"/></g></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></g></symbol>
+    <symbol id="i-ghost" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11a7 7 0 0114 0v9l-2.5-2-2 2-2.5-2-2 2-2.5-2z"/><circle cx="9.5" cy="10.5" r="1"/><circle cx="14.5" cy="10.5" r="1"/></g></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 01-1-8.9A5.5 5.5 0 0116.5 7 4.5 4.5 0 0117 16H7z"/></g></symbol>
+    <symbol id="i-disc" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></g></symbol>
+</svg>
+<nav class="navbar">
+ <a href="/dashboard" class="brand"><span class="brand-icon"><svg class="icon i-crown" aria-hidden="true"><use href="#i-crown"/></svg></span> Mizzy Sales Numbers</a>
+  <div style="display:flex;gap:8px">
+ <a href="/number-history" class="back-btn"><svg class="icon i-scroll" aria-hidden="true"><use href="#i-scroll"/></svg> History</a>
+ <a href="/dashboard" class="back-btn"><svg class="icon i-grid" aria-hidden="true"><use href="#i-grid"/></svg> Dashboard</a>
+  </div>
+</nav>
+<style>
+.tg-rec{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(148,163,184,.15)}
+.tg-rec-main{display:flex;gap:10px;align-items:center}
+.tg-rec-flag{font-size:22px;line-height:1}
+.tg-rec-side{display:flex;gap:10px;align-items:center}
+.tg-rec-actions{display:flex;gap:6px;flex-wrap:wrap}
+.tg-rec-line{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid rgba(148,163,184,.15)}
+.tg-sg{display:block;width:100%;text-align:left;padding:10px 12px;background:none;border:0;border-bottom:1px solid rgba(148,163,184,.15);color:inherit;cursor:pointer;font:inherit}
+.btn.small{width:auto;padding:6px 10px;font-size:13px}
+</style>
+<div class="ip-sheet" id="ipSheet" hidden></div>
+<div class="wrap">
+  <div class="card">
+    <h3 class="np-oldh">Instant Numbers</h3>
+    <p class="srv-note">Choose a country and a service. The number is reserved for you the moment you buy, and the code appears here as soon as it arrives.</p>
+  </div>
+
+  <div class="card" id="tgPickCard">
+    <div class="step-label">1 · Country</div>
+    <div class="sugg-wrap">
+      <input class="srv-search" id="tgCountrySearch" autocomplete="off" placeholder="Type a country — Nigeria, USA, India…"/>
+      <div class="sugg" id="tgCountrySugg"></div>
+    </div>
+    <div class="select-tile">
+      <div class="st-icon"><svg class="icon i-globe" aria-hidden="true"><use href="#i-globe"/></svg></div>
+      <div class="st-body"><div class="st-label">Select Country</div><div class="st-value" id="tgCountryValue">Choose a country</div></div>
+      <div class="st-chev">⌄</div>
+      <select id="tgCountrySelect"><option value="">Choose a country</option></select>
+    </div>
+
+    <div class="step-label">2 · Service</div>
+    <div class="sugg-wrap">
+      <input class="srv-search" id="tgServiceSearch" autocomplete="off" placeholder="Type a service — WhatsApp, Telegram, Google…" disabled/>
+      <div class="sugg" id="tgServiceSugg"></div>
+    </div>
+    <div class="select-tile">
+      <div class="st-icon"><svg class="icon i-package" aria-hidden="true"><use href="#i-package"/></svg></div>
+      <div class="st-body"><div class="st-label">Select Service</div><div class="st-value" id="tgServiceValue">Select a country first</div></div>
+      <div class="st-chev">⌄</div>
+      <select id="tgServiceSelect" disabled><option value="">Select a country first</option></select>
+    </div>
+
+    <p class="srv-note" id="tgPriceNote" style="margin:4px 0 10px"></p>
+    <div id="tgFeedback" class="fb"></div>
+    <button class="btn" id="tgBuyBtn" disabled><svg class="icon i-smartphone" aria-hidden="true"><use href="#i-smartphone"/></svg> Buy This Number</button>
+  </div>
+
+  <div class="card nf-active" id="tgActiveCard" style="display:none">
+    <div class="nf-active-head"><h3 style="margin:0">Active numbers</h3><span class="an-count-chip" id="tgActiveCount">0</span></div>
+    <div id="tgActiveList"></div>
+  </div>
+
+  <div class="card" id="tgRecordsCard">
+    <h3><svg class="icon i-scroll" aria-hidden="true"><use href="#i-scroll"/></svg> Your records</h3>
+    <div id="tgRecords" class="srv-note">Loading…</div>
+  </div>
+
+  <div class="card">
+    <h3><svg class="icon i-clipboard" aria-hidden="true"><use href="#i-clipboard"/></svg> How It Works &amp; Refund Rules</h3>
+    <ul class="rules">
+      <li>Your wallet is charged the moment you buy, which reserves a working number for you</li>
+      <li>You have about 20 minutes to receive the SMS code</li>
+      <li>If a code arrives in time, the sale is final and you keep the code</li>
+      <li>If no code arrives in time, you are refunded automatically</li>
+      <li>You can cancel for a full refund only before a code arrives</li>
+    </ul>
+  </div>
+</div>
+
+<script src="/js/mz-banner.js?v=2"></script>
+<script src="/js/money.js?v=20260910a"></script>
+<script>
+(function () {
+  var TOKEN = function () { try { return localStorage.getItem('ksl_token'); } catch (e) { return null; } };
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var ngn = function (n) { return '₦' + Number(n || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 }); };
+  var flagImg = function (code) {
+    var c = String(code || '').toLowerCase();
+    if (!/^[a-z]{2}$/.test(c)) return '<span class="app-ico-fb">🌍</span>';
+    return '<img class="flag-img" loading="lazy" alt="" src="https://flagcdn.com/w40/' + c + '.png" srcset="https://flagcdn.com/w80/' + c + '.png 2x" onerror="this.outerHTML=\'<span class=&quot;app-ico-fb&quot;>🌍</span>\'"/>';
+  };
+  var toast = function (msg, kind) { if (window.mzBanner) window.mzBanner(msg, kind === 'err' ? 'err' : kind === 'ok' ? 'ok' : 'info'); };
+  var fb = function (msg) { var el = $('tgFeedback'); el.textContent = msg || ''; el.style.display = msg ? 'block' : 'none'; };
+  var STATUS = { waiting: 'Waiting for SMS', delivered: 'Code received', completed: 'Completed', cancelled: 'Cancelled · refunded', expired: 'Expired · refunded' };
+
+  function api(url, opts) {
+    opts = opts || {};
+    return fetch(url, Object.assign({}, opts, { headers: Object.assign({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN() }, opts.headers || {}) }))
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          if (r.status === 401) throw new Error('Please sign in again to continue.');
+          if (!r.ok) { var e = new Error(d.error || 'Something went wrong. Please try again.'); e.order = d.order; throw e; }
+          return d;
+        });
+      });
+  }
+
+  var countries = [], services = [], orders = [], pending = null, countryId = '', serviceCode = '';
+
+  // ── Country picker (search + select tile, same as the buy page) ──
+  function countryOf(id) { return countries.find(function (c) { return String(c.id) === String(id); }); }
+  function setCountry(id) {
+    var c = countryOf(id);
+    countryId = c ? String(c.id) : '';
+    $('tgCountrySelect').value = countryId;
+    $('tgCountryValue').innerHTML = c ? flagImg(c.code) + ' ' + esc(c.name) : 'Choose a country';
+    $('tgCountrySearch').value = c ? c.name : '';
+    $('tgCountrySugg').innerHTML = '';
+    serviceCode = ''; services = []; updateBuy();
+    if (!c) { resetServices('Select a country first'); return; }
+    loadServices(c.id);
+  }
+  function resetServices(text) {
+    $('tgServiceSelect').innerHTML = '<option value="">' + esc(text) + '</option>';
+    $('tgServiceSelect').disabled = true; $('tgServiceSearch').disabled = true; $('tgServiceSearch').value = '';
+    $('tgServiceSugg').innerHTML = ''; $('tgServiceValue').textContent = text; $('tgPriceNote').textContent = '';
+  }
+  $('tgCountrySearch').addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    if (!q) { $('tgCountrySugg').innerHTML = ''; return; }
+    var m = countries.filter(function (c) { return c.name.toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
+    $('tgCountrySugg').innerHTML = m.length ? m.map(function (c) {
+      return '<button type="button" class="tg-sg" data-country="' + c.id + '">' + flagImg(c.code) + ' ' + esc(c.name) + '</button>';
+    }).join('') : '<div class="srv-note">No country matches that search</div>';
+  });
+  $('tgCountrySugg').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-country]'); if (b) setCountry(b.getAttribute('data-country'));
+  });
+  $('tgCountrySelect').addEventListener('change', function () { setCountry(this.value); });
+
+  // ── Service picker ──
+  function loadServices(id) {
+    resetServices('Loading services…');
+    api('/api/instant/services?country=' + encodeURIComponent(id)).then(function (list) {
+      if (String(countryId) !== String(id)) return; // country changed while loading
+      services = list;
+      if (!list.length) { resetServices('Nothing in stock for this country'); fb('Nothing is in stock for this country right now. Try another one.'); return; }
+      $('tgServiceSelect').innerHTML = '<option value="">Choose a service</option>' + list.map(function (s) {
+        return '<option value="' + esc(s.code) + '">' + esc(s.name) + ' — ' + ngn(s.priceNgn) + '</option>';
+      }).join('');
+      $('tgServiceSelect').disabled = false; $('tgServiceSearch').disabled = false;
+      $('tgServiceValue').textContent = 'Choose a service'; fb('');
+    }).catch(function (e) { resetServices('Could not load services'); toast(e.message, 'err'); });
+  }
+  function setService(code) {
+    var s = services.find(function (x) { return x.code === code; });
+    serviceCode = s ? s.code : '';
+    $('tgServiceSelect').value = serviceCode;
+    $('tgServiceValue').textContent = s ? s.name : 'Choose a service';
+    $('tgServiceSearch').value = s ? s.name : '';
+    $('tgServiceSugg').innerHTML = '';
+    $('tgPriceNote').textContent = s ? 'Price ' + ngn(s.priceNgn) + ' · ' + s.stock + ' numbers in stock' : '';
+    updateBuy();
+  }
+  $('tgServiceSearch').addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    if (!q) { $('tgServiceSugg').innerHTML = ''; return; }
+    var m = services.filter(function (s) { return s.name.toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
+    $('tgServiceSugg').innerHTML = m.length ? m.map(function (s) {
+      return '<button type="button" class="tg-sg" data-service="' + esc(s.code) + '">' + esc(s.name) + ' <span class="srv-note">' + ngn(s.priceNgn) + '</span></button>';
+    }).join('') : '<div class="srv-note">No service matches that search</div>';
+  });
+  $('tgServiceSugg').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-service]'); if (b) setService(b.getAttribute('data-service'));
+  });
+  $('tgServiceSelect').addEventListener('change', function () { setService(this.value); });
+
+  function updateBuy() { $('tgBuyBtn').disabled = !(countryId && serviceCode); }
+
+  // ── Buy ──
+  $('tgBuyBtn').addEventListener('click', async function () {
+    var s = services.find(function (x) { return x.code === serviceCode; });
+    if (!s || !countryId) return;
+    var ok = await window.mzConfirm({
+      type: 'info', title: 'Buy this number?',
+      message: ngn(s.priceNgn) + ' will be deducted from your wallet now.\n\nIf no code arrives within 20 minutes, it is refunded automatically.',
+      confirmText: 'Buy number', cancelText: 'Not now'
+    });
+    if (!ok) return;
+    var key = countryId + '|' + s.code;
+    if (!pending || pending.key !== key) pending = { key: key, ref: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2) };
+    var btn = this; btn.disabled = true; fb('');
+    try {
+      await api('/api/instant/buy', { method: 'POST', body: JSON.stringify({ country: Number(countryId), service: s.code, clientRef: pending.ref }) });
+      pending = null;
+      toast('Number reserved. The code will appear under Active numbers.', 'ok');
+      await loadOrders();
+    } catch (e) { fb(e.message); toast(e.message, 'err'); }
+    finally { updateBuy(); }
+  });
+
+  // ── Orders: active list (live) and records ──
+  function countdown(o) {
+    if (!o.expiresAt) return '';
+    var sec = Math.max(0, Math.round((new Date(o.expiresAt) - Date.now()) / 1000));
+    return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+  }
+  function renderActive() {
+    var active = orders.filter(function (o) { return o.status === 'waiting' || o.status === 'delivered'; });
+    $('tgActiveCard').style.display = active.length ? 'block' : 'none';
+    $('tgActiveCount').textContent = active.length;
+    $('tgActiveList').innerHTML = active.map(function (o) {
+      var c = countryOf(o.countryId) || {};
+      var flag = flagImg(countries.find(function (x) { return x.name === o.country; }) ? countries.find(function (x) { return x.name === o.country; }).code : '');
+      var side = o.code ? '<span class="an-code">' + esc(o.code) + '</span>' : '<span class="an-waiting">waiting…</span>';
+      var actions = o.code
+        ? '<button type="button" class="btn small" data-act="copy" data-id="' + o.id + '">Copy code</button> <button type="button" class="btn small" data-act="done" data-id="' + o.id + '">Done</button>'
+        : '<button type="button" class="btn small" data-act="cancel" data-id="' + o.id + '">Cancel &amp; refund</button>';
+      return '<div class="tg-rec" data-order="' + o.id + '">' +
+        '<div class="tg-rec-main"><span class="tg-rec-flag">' + flag + '</span><div><strong>' + esc(o.service) + '</strong><div class="srv-note">' + esc(o.phoneNumber) + ' · ' + esc(o.country) + '</div></div></div>' +
+        '<div class="tg-rec-side">' + side + ' <span class="an-time" data-exp="' + esc(o.expiresAt || '') + '">' + countdown(o) + '</span></div>' +
+        '<div class="tg-rec-actions">' + actions + '</div></div>';
+    }).join('');
+  }
+  function renderRecords() {
+    $('tgRecords').innerHTML = orders.length ? orders.map(function (o) {
+      var when = o.createdAt ? new Date(o.createdAt).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+      return '<div class="tg-rec-line"><div><strong>' + esc(o.service) + '</strong> · ' + esc(o.phoneNumber) + '<div class="srv-note">' + esc(o.country) + ' · ' + esc(when) + '</div></div>' +
+        '<div style="text-align:right"><div>' + ngn(o.sellPrice) + '</div><div class="srv-note">' + (STATUS[o.status] || o.status) + '</div></div></div>';
+    }).join('') : 'No numbers yet. Your purchases will show here.';
+  }
+  async function loadOrders() {
+    try { orders = await api('/api/instant/orders'); }
+    catch (e) { toast(e.message, 'err'); return; }
+    renderActive(); renderRecords();
+  }
+  // Each active order is re-checked with the provider, so a code shows up without a page reload.
+  async function refreshActive() {
+    var active = orders.filter(function (o) { return o.status === 'waiting'; });
+    if (!active.length) return;
+    var fresh = await Promise.all(active.map(function (o) { return api('/api/instant/orders/' + o.id).catch(function () { return null; }); }));
+    var changed = false;
+    fresh.forEach(function (f) {
+      if (!f) return;
+      var i = orders.findIndex(function (o) { return o.id === f.id; });
+      if (i !== -1 && (orders[i].status !== f.status || orders[i].code !== f.code)) { orders[i] = f; changed = true; if (f.code) toast('Code received for ' + f.service + '.', 'ok'); }
+    });
+    if (changed) { renderActive(); renderRecords(); }
+  }
+
+  $('tgActiveList').addEventListener('click', async function (e) {
+    var b = e.target.closest('[data-act]'); if (!b) return;
+    var id = b.getAttribute('data-id'), act = b.getAttribute('data-act');
+    var o = orders.find(function (x) { return x.id === id; }); if (!o) return;
+    if (act === 'copy') {
+      try { await navigator.clipboard.writeText(o.code); toast('Code copied.', 'ok'); }
+      catch (err) { toast('Select the code and copy it manually.', 'info'); }
+    } else if (act === 'done') {
+      try { await api('/api/instant/orders/' + id + '/complete', { method: 'POST' }); toast('Order completed.', 'ok'); await loadOrders(); }
+      catch (err) { toast(err.message, 'err'); }
+    } else if (act === 'cancel') {
+      var ok = await window.mzConfirm({
+        type: 'warn', title: 'Cancel & refund?',
+        message: 'The number will be released and the full amount goes back to your wallet.\n\nYou will not be able to receive a code on it after this.',
+        confirmText: 'Cancel number', cancelText: 'Keep it'
+      });
+      if (!ok) return;
+      try {
+        var r = await api('/api/instant/orders/' + id + '/cancel', { method: 'POST' });
+        toast('Cancelled. ' + ngn(r.refunded) + ' returned to your wallet.', 'ok');
+      } catch (err) { toast(err.message, 'err'); }
+      await loadOrders();
+    }
+  });
+
+  setInterval(function () {
+    document.querySelectorAll('#tgActiveList .an-time[data-exp]').forEach(function (el) {
+      var exp = el.getAttribute('data-exp'); if (!exp) return;
+      var sec = Math.max(0, Math.round((new Date(exp) - Date.now()) / 1000));
+      el.textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+    });
+  }, 1000);
+  setInterval(function () { refreshActive().catch(function () {}); }, 5000);
+
+  // ── Themed picker: a site-styled sheet instead of the phone's native dropdown ──
+  var sheet = document.getElementById('ipSheet');
+  sheet.innerHTML = '<div class="ip-panel" role="dialog" aria-modal="true"><div class="ip-head"><span class="ip-title"></span><button type="button" class="ip-close" aria-label="Close">✕</button></div><input class="ip-search" type="search" placeholder="Search" autocomplete="off"/><div class="ip-list"></div></div>';
+  var ipItems = [], ipOnPick = null;
+  function ipRender() {
+    var q = sheet.querySelector('.ip-search').value.trim().toLowerCase();
+    var list = ipItems.filter(function (i) { return !q || i.name.toLowerCase().indexOf(q) !== -1; });
+    sheet.querySelector('.ip-list').innerHTML = list.length ? list.map(function (i) {
+      return '<button type="button" class="ip-item" data-value="' + esc(i.value) + '"><span class="ip-ico">' + i.icon + '</span><span class="ip-name">' + esc(i.name) + '</span>' + (i.sub ? '<span class="ip-sub">' + esc(i.sub) + '</span>' : '') + '</button>';
+    }).join('') : '<div class="srv-note" style="padding:12px">No match</div>';
+  }
+  function ipOpen(title, items, onPick) {
+    ipItems = items; ipOnPick = onPick;
+    sheet.querySelector('.ip-title').textContent = title;
+    sheet.querySelector('.ip-search').value = '';
+    ipRender(); sheet.hidden = false;
+  }
+  function ipClose() { sheet.hidden = true; }
+  sheet.addEventListener('click', function (e) {
+    if (e.target === sheet || e.target.closest('.ip-close')) return ipClose();
+    var b = e.target.closest('.ip-item'); if (!b) return;
+    var cb = ipOnPick, v = b.getAttribute('data-value');
+    ipClose(); if (cb) cb(v);
+  });
+  sheet.querySelector('.ip-search').addEventListener('input', ipRender);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') ipClose(); });
+  document.getElementById('tgCountrySelect').closest('.select-tile').addEventListener('click', function () {
+    if (!countries.length) return;
+    ipOpen('Choose a country', countries.map(function (c) { return { value: String(c.id), name: c.name, icon: flagImg(c.code), sub: '' }; }), setCountry);
+  });
+  document.getElementById('tgServiceSelect').closest('.select-tile').addEventListener('click', function () {
+    if (!services.length) return;
+    ipOpen('Choose a service', services.map(function (s) { return { value: s.code, name: s.name, icon: '', sub: ngn(s.priceNgn) + ' · ' + s.stock + ' left' }; }), setService);
+  });
+
+  // ── Start ──
+  api('/api/instant/countries').then(function (list) {
+    countries = list;
+    $('tgCountrySelect').innerHTML = '<option value="">Choose a country</option>' + list.map(function (c) {
+      return '<option value="' + c.id + '">' + esc(c.name) + '</option>';
+    }).join('');
+  }).catch(function (e) { $('tgCountryValue').textContent = e.message || 'Could not load countries'; toast(e.message, 'err'); });
+  loadOrders();
+})();
+</script>
+<script src="/js/mz-select.js?v=1" defer></script>
+<script src="/js/float-tools.js" defer></script>
+<script src="/js/support-dock.js?v=1" defer></script>
+<script src="/js/site-header.js?v=3" defer></script>
+</body></html>

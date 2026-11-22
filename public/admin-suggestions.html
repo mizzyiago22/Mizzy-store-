@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Suggestions · Admin</title>
+<style>
+:root{--bg:#0b1020;--card:#121a2e;--line:#22304a;--txt:#e6ecf7;--mut:#8b9ab5;--blue:#3b82f6;--green:#22c55e;--red:#ef4444}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4f6fb;--card:#fff;--line:#dfe5f0;--txt:#0f172a;--mut:#64748b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.top b{font-size:17px}
+.wrap{max-width:820px;margin:0 auto;padding:14px 16px 40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:15px;margin:0 0 8px}
+input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--txt);font:inherit}
+button{padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--txt);font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+button.good{border-color:var(--green);color:var(--green)}
+button.bad{border-color:var(--red);color:var(--red)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.row:last-child{border-bottom:0}
+.mut{color:var(--mut);font-size:12.5px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px}
+@media (max-width:620px){.grid3{grid-template-columns:1fr}}
+.msg{font-size:13px;min-height:18px;margin-top:8px}
+.msg.err{color:var(--red)}.msg.ok{color:var(--green)}
+.gate{max-width:360px;margin:12vh auto;padding:0 16px}
+.hidden{display:none!important}
+select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--txt);font:inherit}
+.pick{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-bottom:8px}
+@media (max-width:620px){.pick{grid-template-columns:1fr}}
+.res{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:12px;margin-top:8px}
+.res:empty{display:none}
+.ri{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer}
+.ri:last-child{border-bottom:0}.ri:hover{background:rgba(59,130,246,.08)}
+.ri.sel{background:rgba(59,130,246,.16);outline:2px solid var(--blue);outline-offset:-2px}
+.th{width:42px;height:42px;border-radius:10px;object-fit:cover;background:var(--line);flex:none}
+.ri b,.prow b{display:block;font-size:13.5px}
+.ri small,.prow small{color:var(--mut);font-size:12px}
+.prow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.prow:last-child{border-bottom:0}.prow .grow{flex:1;min-width:140px}
+.prow select{width:auto}
+html.embed .top { display: none; }
+</style>
+</head>
+<body>
+<div class="top"><b>Suggestions</b><button type="button" id="lockBtn">Lock</button></div>
+
+<div id="gate" class="gate hidden">
+  <div class="card">
+    <form id="gateForm" autocomplete="off">
+      <input id="passIn" type="password" placeholder="Admin passcode" required/>
+      <div style="height:10px"></div>
+      <button class="on" type="submit" style="width:100%">Open</button>
+      <div class="msg err" id="gateMsg"></div>
+    </form>
+  </div>
+</div>
+
+<div id="app" class="wrap hidden">
+  <div class="card">
+    <h2>Recommended mix (6 cards on the site)</h2>
+    <p class="mut" style="margin:0 0 10px">The cards are real listings from the marketplaces. Each one takes its picture from the listing. It comes from Marketplace One first, then Two, Three and Four if One has none. The three numbers must add up to 6.</p>
+    <div class="grid3" style="grid-template-columns:1fr 1fr 1fr">
+      <label class="mut">Facebook<input id="mixFb" type="number" min="0" max="6" step="1"/></label>
+      <label class="mut">TikTok<input id="mixTt" type="number" min="0" max="6" step="1"/></label>
+      <label class="mut">Instagram<input id="mixIg" type="number" min="0" max="6" step="1"/></label>
+    </div>
+    <p class="mut" id="mixTotal" style="margin:8px 0 0"></p>
+  </div>
+
+  <div class="card">
+    <h2>Add a marketplace product to a card</h2>
+    <p class="mut" style="margin:0 0 10px">Pick which of the 6 cards it goes in, choose the marketplace, then type the product name. The product's logo, name and price show on the site. If the same name appears more than once, only one is listed.</p>
+    <div class="pick">
+      <select id="addSlot" aria-label="Card position"></select>
+      <select id="addMk" aria-label="Marketplace">
+        <option value="m1">Marketplace One</option><option value="m2">Marketplace Two</option>
+        <option value="m3">Marketplace Three</option><option value="m4">Marketplace Four</option>
+      </select>
+    </div>
+    <input id="addSearch" placeholder="Type the product name, e.g. Canada TikTok" autocomplete="off"/>
+    <div id="addResults" class="res"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
+      <span class="mut" id="addInfo">Nothing selected yet.</span>
+      <button class="good" type="button" id="addBtn" disabled>Add to card</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Pinned cards</h2>
+    <p class="mut" style="margin:0 0 8px">Pinned items stay in the card you chose. Any card you leave empty is filled automatically by the mix above.</p>
+    <div id="pinned"></div>
+    <form id="customForm" class="grid3" style="margin-top:12px" autocomplete="off">
+      <input id="cLabel" placeholder="Title, e.g. Apple iCloud" required/>
+      <input id="cSub" placeholder="Short line, e.g. Instant delivery"/>
+      <input id="cHref" placeholder="Link, e.g. /boost" required/>
+      <button class="good" type="submit">Add</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Best sellers (last 30 days)</h2>
+    <div id="candidates"></div>
+  </div>
+
+  <div class="card">
+    <h2>Hidden from the site</h2>
+    <div id="hiddenList"></div>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center">
+    <span class="msg" id="saveMsg"></span>
+    <button class="on" id="saveBtn" type="button">Save changes</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  if (window.top !== window.self) document.documentElement.classList.add('embed');
+  var KEY = 'ksl_admin_pass';
+  var pass = '';
+  try { pass = sessionStorage.getItem(KEY) || ''; } catch (e) {}
+  var state = { candidates: [], pinned: [], hidden: [], platformMix: { facebook: 2, tiktok: 2, instagram: 2 } };
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function setMsg(id, text, ok) { var el = $(id); el.textContent = text || ''; el.className = (id === 'gateMsg' ? 'msg err' : 'msg ' + (ok ? 'ok' : 'err')); }
+
+  async function api(path, opts) {
+    opts = opts || {};
+    var headers = { 'x-admin-passcode': pass };
+    if (opts.body) headers['Content-Type'] = 'application/json';
+    var r = await fetch(path, { method: opts.method || 'GET', headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+    var d = {};
+    try { d = await r.json(); } catch (e) {}
+    if (!r.ok) throw new Error(d.error || ('Request failed (' + r.status + ')'));
+    return d;
+  }
+
+  function showGate(err) { $('app').classList.add('hidden'); $('gate').classList.remove('hidden'); setMsg('gateMsg', err || ''); $('passIn').focus(); }
+  function showApp() { $('gate').classList.add('hidden'); $('app').classList.remove('hidden'); load(); }
+
+  $('gateForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    pass = $('passIn').value.trim();
+    try { await api('/api/admin/suggestions'); try { sessionStorage.setItem(KEY, pass); } catch (x) {} showApp(); }
+    catch (err) { pass = ''; showGate('Wrong passcode.'); }
+  });
+  $('lockBtn').addEventListener('click', function () { pass = ''; try { sessionStorage.removeItem(KEY); } catch (e) {} showGate(''); });
+
+  async function load() {
+    try {
+      var d = await api('/api/admin/suggestions');
+      state.candidates = d.candidates || [];
+      state.pinned = d.pinned || [];
+      state.pinned.forEach(function (p) { if (p.slot == null) p.slot = freeSlot(); });
+      state.hidden = d.hidden || [];
+      state.platformMix = d.platformMix || state.platformMix;
+      $('mixFb').value = state.platformMix.facebook;
+      $('mixTt').value = state.platformMix.tiktok;
+      $('mixIg').value = state.platformMix.instagram;
+      updateMixTotal();
+      render();
+    } catch (err) { setMsg('saveMsg', err.message); }
+  }
+
+  function readMix() {
+    return { facebook: Number($('mixFb').value), tiktok: Number($('mixTt').value), instagram: Number($('mixIg').value) };
+  }
+  function updateMixTotal() {
+    var m = readMix(), t = m.facebook + m.tiktok + m.instagram;
+    $('mixTotal').textContent = 'Total: ' + t + ' of 6' + (t === 6 ? '' : ' (must be 6)');
+    $('mixTotal').style.color = t === 6 ? '' : 'var(--red)';
+  }
+  ['mixFb', 'mixTt', 'mixIg'].forEach(function (id) { $(id).addEventListener('input', updateMixTotal); });
+
+  function isPinned(key) { return state.pinned.some(function (p) { return p.key === key; }); }
+  function isHidden(key) { return state.hidden.indexOf(key) > -1; }
+
+  function render() {
+    // Pinned list: each item shows its card number, logo, name and price
+    var sorted = state.pinned.map(function (p, i) { return { p: p, i: i }; }).sort(function (x, y) { return x.p.slot - y.p.slot; });
+    $('pinned').innerHTML = sorted.length ? sorted.map(function (o) {
+      var p = o.p, opts = '';
+      for (var n = 0; n < 6; n++) opts += '<option value="' + n + '"' + (n === p.slot ? ' selected' : '') + '>Card ' + (n + 1) + '</option>';
+      var img = p.picture ? '<img class="th" src="' + esc(p.picture) + '" alt="" onerror="this.style.visibility=\'hidden\'"/>' : '<span class="th"></span>';
+      return '<div class="prow">' + img + '<span class="grow"><b>' + esc(p.label) + '</b><small>' + esc(p.sub || '') + (p.price ? ' · from \u20a6' + Math.ceil(p.price).toLocaleString('en-NG') : '') + '</small></span>' +
+        '<select data-slot-i="' + o.i + '" aria-label="Card position">' + opts + '</select>' +
+        '<button type="button" class="bad" data-act="unpin" data-i="' + o.i + '">Remove</button></div>';
+    }).join('') : '<p class="mut">Nothing pinned. All 6 cards are filled automatically.</p>';
+    fillSlotSelect();
+
+    // Best sellers
+    $('candidates').innerHTML = state.candidates.length ? state.candidates.map(function (c, i) {
+      var hidden = isHidden(c.key);
+      return '<div class="row"><span><b>' + esc(c.label) + '</b><br><span class="mut">' + esc(c.sub) + ' · ' + c.count + ' sold in 30 days</span></span>' +
+        '<span style="display:flex;gap:6px">' +
+        '<button type="button" class="good" data-act="pinCand" data-i="' + i + '"' + (isPinned(c.key) ? ' disabled' : '') + '>' + (isPinned(c.key) ? 'Pinned' : 'Pin') + '</button>' +
+        '<button type="button" data-act="hideCand" data-i="' + i + '">' + (hidden ? 'Show' : 'Hide') + '</button></span></div>';
+    }).join('') : '<p class="mut">No sales in the last 30 days yet.</p>';
+
+    // Hidden list
+    $('hiddenList').innerHTML = state.hidden.length ? state.hidden.map(function (k, i) {
+      var c = state.candidates.find(function (x) { return x.key === k; });
+      return '<div class="row"><span>' + esc(c ? c.label : k) + '</span><button type="button" data-act="unhide" data-i="' + i + '">Show again</button></div>';
+    }).join('') : '<p class="mut">Nothing hidden.</p>';
+  }
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-act]');
+    if (!b || b.disabled) return;
+    var act = b.dataset.act, i = Number(b.dataset.i);
+    if (act === 'unpin') state.pinned.splice(i, 1);
+    if (act === 'pinCand') {
+      var c = state.candidates[i];
+      if (state.pinned.length >= 6) return setMsg('saveMsg', 'You can pin up to 6 items. Remove one first.');
+      state.pinned.push({ key: c.key, label: c.label, sub: c.sub, href: c.href, slot: freeSlot() });
+      state.hidden = state.hidden.filter(function (k) { return k !== c.key; });
+    }
+    if (act === 'hideCand') {
+      var h = state.candidates[i].key;
+      if (isHidden(h)) state.hidden = state.hidden.filter(function (k) { return k !== h; });
+      else { state.hidden.push(h); state.pinned = state.pinned.filter(function (p) { return p.key !== h; }); }
+    }
+    if (act === 'unhide') state.hidden.splice(i, 1);
+    render();
+  });
+
+  $('customForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var href = $('cHref').value.trim();
+    if (href.charAt(0) !== '/') return setMsg('saveMsg', 'The link must start with /, e.g. /boost');
+    if (state.pinned.length >= 6) return setMsg('saveMsg', 'You can pin up to 6 items. Remove one first.');
+    state.pinned.push({ key: 'custom:' + Date.now(), label: $('cLabel').value.trim(), sub: $('cSub').value.trim(), href: href, slot: freeSlot() });
+    $('customForm').reset();
+    render();
+    setMsg('saveMsg', 'Added. Click Save changes to publish.', true);
+  });
+
+  // ── Slot helpers + marketplace product picker ──
+  var MK = {
+    m1: { name: 'Marketplace One', url: '/api/logs?type=log', page: '/marketplace' },
+    m2: { name: 'Marketplace Two', url: '/api/market2/products', page: '/marketplace2' },
+    m3: { name: 'Marketplace Three', url: '/api/market3/products', page: '/marketplace3' },
+    m4: { name: 'Marketplace Four', url: '/api/market4/products', page: '/marketplace4' }
+  };
+  var mkCache = {}, picked = null, searchTimer = null;
+
+  function freeSlot() {
+    for (var n = 0; n < 6; n++) if (!state.pinned.some(function (p) { return p.slot === n; })) return n;
+    return 5;
+  }
+  function fillSlotSelect() {
+    var sel = $('addSlot'), cur = sel.value;
+    var html = '';
+    for (var n = 0; n < 6; n++) {
+      var o = state.pinned.find(function (p) { return p.slot === n; });
+      html += '<option value="' + n + '">Card ' + (n + 1) + (o ? ' (now: ' + esc(o.label.slice(0, 22)) + ')' : ' (empty)') + '</option>';
+    }
+    sel.innerHTML = html; sel.value = cur || '0';
+  }
+  function loadMk(k) {
+    if (mkCache[k]) return Promise.resolve(mkCache[k]);
+    return fetch(MK[k].url, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('This marketplace is unavailable right now.'); return r.json(); })
+      .then(function (d) { mkCache[k] = Array.isArray(d) ? d : []; return mkCache[k]; });
+  }
+  function itemId(it) { return it._id != null ? it._id : it.id; }
+  function runSearch() {
+    var k = $('addMk').value, q = $('addSearch').value.trim().toLowerCase();
+    picked = null; $('addBtn').disabled = true; $('addInfo').textContent = 'Nothing selected yet.';
+    if (!q) { $('addResults').innerHTML = ''; return; }
+    $('addResults').innerHTML = '<div class="ri mut">Searching\u2026</div>';
+    loadMk(k).then(function (list) {
+      var words = q.split(/\s+/), seen = {}, out = [];
+      list.forEach(function (it) {
+        if (!it || it.soldOut || it.inStock === false || it.enabled === false) return;
+        var t = String(it.title || it.name || '').toLowerCase();
+        if (!t || !words.every(function (w) { return t.indexOf(w) > -1; })) return;
+        var price = Number(it.price != null ? it.price : it.priceFrom) || 0;
+        var prev = seen[t];
+        if (prev && prev.price <= price) return;             // duplicate name: keep one (the cheapest)
+        var row = { it: it, price: price, id: String(itemId(it)) };
+        if (prev) out[out.indexOf(prev)] = row; else out.push(row);
+        seen[t] = row;
+      });
+      out = out.slice(0, 25);
+      $('addResults').innerHTML = out.length ? out.map(function (r, i) {
+        var img = r.it.picture ? '<img class="th" src="' + esc(r.it.picture) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"/>' : '<span class="th"></span>';
+        return '<div class="ri" data-r="' + i + '">' + img + '<span><b>' + esc(r.it.title || r.it.name) + '</b><small>' + esc(r.it.category || '') + (r.price ? ' \u00b7 from \u20a6' + Math.ceil(r.price).toLocaleString('en-NG') : '') + '</small></span></div>';
+      }).join('') : '<div class="ri mut">No product with that name in ' + esc(MK[k].name) + '.</div>';
+      $('addResults')._rows = out;
+    }).catch(function (e) { $('addResults').innerHTML = '<div class="ri mut">' + esc(e.message) + '</div>'; });
+  }
+  $('addSearch').addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 250); });
+  $('addMk').addEventListener('change', runSearch);
+  $('addResults').addEventListener('click', function (e) {
+    var row = e.target.closest('.ri[data-r]'); if (!row) return;
+    var r = ($('addResults')._rows || [])[Number(row.dataset.r)]; if (!r) return;
+    picked = r;
+    Array.prototype.forEach.call($('addResults').children, function (c) { c.classList.remove('sel'); });
+    row.classList.add('sel');
+    $('addBtn').disabled = false;
+    $('addInfo').textContent = 'Selected: ' + (r.it.title || r.it.name);
+  });
+  $('addBtn').addEventListener('click', function () {
+    if (!picked) return;
+    var k = $('addMk').value, m = MK[k], slot = Number($('addSlot').value), it = picked.it, id = picked.id;
+    var cat = it.category ? String(it.category) : '';
+    var key = 'plat:' + m.name + ':' + id;
+    state.pinned = state.pinned.filter(function (p) { return p.slot !== slot && p.key !== key; });   // one product per card
+    state.pinned.push({
+      key: key, label: String(it.title || it.name).slice(0, 80), sub: m.name, slot: slot, mk: k, pid: id, price: picked.price || undefined,
+      picture: it.picture || '',
+      href: m.page + '?' + (k === 'm4' ? 'category=' + encodeURIComponent(cat) + '&' : '') + 'item=' + encodeURIComponent(id)
+    });
+    picked = null; $('addBtn').disabled = true; $('addInfo').textContent = 'Added to card ' + (slot + 1) + '. Click Save changes to publish.';
+    $('addSearch').value = ''; $('addResults').innerHTML = '';
+    render();
+    setMsg('saveMsg', 'Added. Click Save changes to publish.', true);
+  });
+  $('pinned').addEventListener('change', function (e) {
+    var sel = e.target.closest('select[data-slot-i]'); if (!sel) return;
+    var i = Number(sel.dataset.slotI), to = Number(sel.value), from = state.pinned[i].slot;
+    var other = state.pinned.find(function (p, j) { return j !== i && p.slot === to; });
+    if (other) other.slot = from;                                // swap places
+    state.pinned[i].slot = to; render();
+  });
+
+  $('saveBtn').addEventListener('click', async function () {
+    var mix = readMix();
+    if (mix.facebook + mix.tiktok + mix.instagram !== 6) return setMsg('saveMsg', 'Facebook + TikTok + Instagram must add up to exactly 6.');
+    $('saveBtn').disabled = true;
+    try {
+      await api('/api/admin/suggestions', { method: 'PUT', body: { pinned: state.pinned, hidden: state.hidden, platformMix: mix } });
+      setMsg('saveMsg', 'Saved. The site shows the new cards within 5 minutes.', true);
+      await load();
+    } catch (err) { setMsg('saveMsg', err.message); }
+    finally { $('saveBtn').disabled = false; }
+  });
+
+  if (pass) { api('/api/admin/suggestions').then(showApp).catch(function () { showGate(''); }); }
+  else { showGate(''); }
+})();
+</script>
+</body>
+</html>

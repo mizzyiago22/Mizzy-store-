@@ -1,0 +1,78 @@
+/* Mizzy Sales — buy-number page: minimal header, number cards, confirm popup */
+:root{--nf-a:#00b4f8;--nf-a2:#0084d6;--nf-ok:#18c277}
+/* remove the long explanatory text — only the controls and a few links remain */
+#numHowToCard,#numRulesCard,#numServerIntro,#srvNote,.number-overline,.pool-guide,#numHero .chip,#numHero p{display:none!important}
+.nf-hero{padding:6px 0 4px!important;background:none!important;border:0!important;text-align:left}
+.nf-hero h1{font:800 clamp(24px,5vw,32px)/1.1 'Sora','Plus Jakarta Sans',sans-serif!important;letter-spacing:-.02em;margin:0 0 12px!important}
+.nf-links{display:flex;flex-wrap:wrap;gap:8px}
+.nf-links a{padding:8px 14px;border-radius:999px;border:1px solid var(--border2,#2a2f45);color:var(--t1,#fff);font-weight:700;font-size:13px;text-decoration:none;background:var(--card,#131320)}
+.nf-links a:hover{border-color:var(--nf-a);color:var(--nf-a)}
+.nf-h{margin:0 0 12px;font-size:16px}
+.step-label{font-size:12px!important;font-weight:800!important;letter-spacing:.1em;text-transform:uppercase;color:var(--nf-a)!important;margin:14px 0 8px!important}
+#numPickerForm .select-tile,#numPickerForm2 .select-tile{border-radius:16px}
+#numBuyBtn,#g2BuyBtn{border-radius:14px;font-weight:800;background:linear-gradient(135deg,var(--nf-a),var(--nf-a2))!important;color:#fff!important;border:0}
+
+/* ---------- the number card (service chip · status · country · number · code) ---------- */
+.nf-card,.nf-mini{background:var(--card,#131320);border:1px solid var(--border2,#262b40);border-radius:24px;padding:24px 22px;box-shadow:0 20px 44px -28px rgba(0,0,0,.6)}
+.nf-card{max-width:520px;margin:0 auto}
+.nf-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.nf-svc{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;border-radius:999px;background:rgba(24,194,119,.12);color:var(--nf-ok);font-weight:800;font-size:14px;max-width:62%}
+.nf-svc i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--nf-ok);color:#fff;font-style:normal;font-size:13px;flex:none}
+.nf-svc b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nf-status{padding:7px 14px;border-radius:999px;font-weight:800;font-size:13px;background:rgba(24,194,119,.14);color:var(--nf-ok)}
+.nf-status--wait{background:rgba(245,166,35,.15);color:#f5a623}
+.nf-status--warn{background:rgba(255,71,87,.14);color:#ff6b78}
+.nf-country{text-align:center;color:var(--t2,#9aa3b8);font-size:15px;margin:22px 0 8px}
+.nf-country:empty{display:none}
+.nf-numrow{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px}
+.nf-numrow .phone-num,.nf-mini .phone-num{font:800 clamp(24px,6.5vw,32px)/1.1 'Sora','Plus Jakarta Sans',sans-serif!important;letter-spacing:-.01em;color:var(--t1,#fff)!important;margin:0!important;background:none!important}
+.nf-copy{width:44px;height:44px;border-radius:13px;border:1px solid var(--border2,#2a2f45);background:var(--bg3,#1a1f33);color:var(--t1,#fff);display:grid;place-items:center;cursor:pointer;flex:none}
+.nf-copy:hover{border-color:var(--nf-a);color:var(--nf-a)}
+.nf-copy svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nf-count{text-align:center;font:700 14px/1 'JetBrains Mono',ui-monospace,monospace;color:var(--t2,#9aa3b8);margin-top:10px}
+.nf-done .nf-count{display:none}
+.nf-hr{border:0;border-top:1px solid var(--border,#232842);margin:20px 0}
+.nf-codelabel{display:flex;align-items:center;justify-content:center;gap:9px;color:var(--t2,#9aa3b8);font-size:15px}
+.nf-codelabel svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.nf-codebox{background:none!important;border:0!important;padding:0!important;margin:12px 0 4px!important;text-align:center}
+.nf-codebox .code{font:800 clamp(38px,12vw,56px)/1.1 'Sora','Plus Jakarta Sans',sans-serif!important;letter-spacing:.12em;color:var(--nf-ok)!important;background:none!important;text-shadow:0 0 28px rgba(24,194,119,.25)}
+.nf-note{text-align:center;font-size:13px;margin:10px 0 2px}
+.nf-lock{text-align:center;font-size:12.5px;color:var(--t2,#9aa3b8);margin:6px 0 0}
+.nf-more{margin-top:14px;font-size:13px}
+.nf-more summary{cursor:pointer;color:var(--nf-a);font-weight:700;text-align:center;list-style:none}
+.nf-actions-top{margin-top:16px}
+.nf-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.nf-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:50px;border-radius:14px;font:800 14.5px/1 'Plus Jakarta Sans',sans-serif;cursor:pointer;text-decoration:none!important;border:1px solid var(--border2,#2a2f45);transition:transform .15s}
+.nf-btn:hover{transform:translateY(-2px)}
+.nf-btn--ghost{background:transparent;color:var(--t1,#fff)!important}
+.nf-btn--solid{background:linear-gradient(135deg,var(--nf-a),var(--nf-a2));color:#fff!important;border-color:transparent;box-shadow:0 12px 26px -12px rgba(0,180,248,.8)}
+.nf-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- active numbers list ---------- */
+.nf-active-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+#activeNumbersList{display:grid;gap:14px}
+.nf-mini{padding:18px 18px 16px;cursor:pointer;transition:border-color .2s,transform .2s}
+.nf-mini:hover{border-color:var(--nf-a);transform:translateY(-2px)}
+.nf-mini .nf-country{margin:14px 0 4px;font-size:14px}
+.nf-mini .nf-numrow{margin-top:6px}
+.nf-mini .phone-num{font-size:clamp(20px,5.4vw,26px)!important}
+.nf-mini .nf-copy{width:38px;height:38px;border-radius:11px}
+.nf-minifoot{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border,#232842);font-size:13px}
+.nf-minicode{font:800 22px/1 'Sora',sans-serif;letter-spacing:.12em;color:var(--nf-ok)}
+.nf-minifoot .an-time{font-family:'JetBrains Mono',ui-monospace,monospace;color:var(--t2,#9aa3b8)}
+
+/* ---------- confirmation popup ---------- */
+.nf-modal{position:fixed;inset:0;z-index:100000;background:rgba(5,8,16,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;padding:16px}
+@media(min-width:560px){.nf-modal{align-items:center}}
+.nf-sheet{width:100%;max-width:420px;background:var(--card,#131320);border:1px solid var(--border2,#262b40);border-radius:24px;padding:24px 22px 20px;box-shadow:0 40px 80px -30px rgba(0,0,0,.8);animation:nfUp .22s ease-out}
+@keyframes nfUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+.nf-sheet h3{margin:0 0 14px;font:800 20px/1.2 'Sora','Plus Jakarta Sans',sans-serif}
+.nf-sum{border:1px solid var(--border,#232842);border-radius:16px;overflow:hidden}
+.nf-sum>div{display:flex;justify-content:space-between;gap:14px;padding:13px 16px;font-size:14px;border-bottom:1px solid var(--border,#232842)}
+.nf-sum>div:last-child{border-bottom:0}
+.nf-sum span{color:var(--t2,#9aa3b8)}
+.nf-sum b{text-align:right;word-break:break-word}
+.nf-sum-total{background:rgba(0,180,248,.08)}
+.nf-sum-total b{color:var(--nf-a);font-size:16px}
+.nf-msg{font-size:13px;line-height:1.6;color:var(--t2,#9aa3b8);margin:14px 2px 16px}
+.nf-modal-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}

@@ -1,0 +1,149 @@
+/* Standard site header, menu drawer and Recommended row.
+   Loaded last on pages that use /js/site-header.js. */
+
+.navbar { display: none !important; }
+
+/* ── Top bar ── */
+.std-header {
+  position: sticky; top: 0; z-index: 900;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 58px; padding: 0 14px;
+  background: var(--bg-card, #0f1626);
+  border-bottom: 1px solid rgba(148, 163, 184, .14);
+}
+.std-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; color: inherit; text-decoration: none; }
+.std-brand img { border-radius: 10px; display: block; }
+
+.std-burger {
+  width: 44px; height: 44px; border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, .22); background: rgba(148, 163, 184, .08);
+  color: inherit; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+}
+.std-burger span { display: block; width: 18px; height: 2px; border-radius: 2px; background: currentColor; transition: transform .22s, opacity .22s; }
+.std-burger[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.std-burger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.std-burger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── Drawer ── */
+.std-overlay {
+  position: fixed; inset: 0; z-index: 950; background: rgba(2, 6, 16, .6);
+  opacity: 0; transition: opacity .24s;
+}
+.std-overlay.open { opacity: 1; }
+
+.std-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 980;
+  width: min(88vw, 340px); display: flex; flex-direction: column;
+  background: linear-gradient(180deg, #0f1a2e 0%, #0a1222 100%); color: #e8eefc;
+  border-radius: 26px 0 0 26px;
+  transform: translateX(105%); transition: transform .26s cubic-bezier(.2, .8, .2, 1);
+  box-shadow: -18px 0 40px rgba(0, 0, 0, .45);
+}
+.std-drawer.open { transform: translateX(0); }
+.std-drawer-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 22px 18px 16px; border-bottom: 1px solid rgba(148, 163, 184, .12);
+}
+.std-drawer-head img { border-radius: 12px; }
+.std-drawer-head div { flex: 1; min-width: 0; }
+.std-drawer-head b { display: block; font-size: 16px; font-weight: 800; }
+.std-drawer-head small { color: #8ea0c2; font-size: 12px; }
+.std-close {
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(148, 163, 184, .22);
+  background: transparent; color: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.std-close svg { width: 18px; height: 18px; }
+
+.std-drawer-body { flex: 1; overflow-y: auto; padding: 8px 12px 24px; }
+.std-group { margin-top: 14px; }
+.std-group-title {
+  font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+  color: #7f91b4; padding: 0 8px 6px;
+}
+.std-link {
+  display: flex; align-items: center; gap: 12px; padding: 9px 10px; margin: 2px 0;
+  border-radius: 14px; color: inherit; text-decoration: none; transition: background .15s;
+}
+.std-link:hover, .std-link:active { background: rgba(148, 163, 184, .08); }
+.std-link.active { background: rgba(59, 130, 246, .16); }
+.std-link-ico {
+  width: 36px; height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+}
+.std-link-ico svg { width: 19px; height: 19px; }
+.std-link-txt { flex: 1; font-weight: 600; font-size: 15px; }
+.std-link-chev { color: #5d6e8f; display: flex; }
+.std-link-chev svg { width: 16px; height: 16px; }
+.std-link.active .std-link-txt { color: #7dd3fc; }
+
+.std-logout {
+  margin: 18px 4px 0; width: calc(100% - 8px); height: 48px; border-radius: 14px;
+  border: 1px solid rgba(248, 113, 113, .45); background: rgba(248, 113, 113, .08); color: #fca5a5;
+  font: inherit; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;
+}
+.std-logout svg { width: 18px; height: 18px; }
+body.std-menu-open { overflow: hidden; }
+
+/* ── Recommended row (sideways scroll, product cards) ── */
+.std-recommended { margin: 4px 0 16px; }
+.std-rec-head { display: flex; align-items: baseline; justify-content: space-between; padding: 12px 16px 8px; }
+.std-rec-head h3 { margin: 0; font-size: 17px; font-weight: 800; }
+.std-rec-head a { font-size: 13px; font-weight: 700; color: #60a5fa; text-decoration: none; }
+.std-rec-row {
+  display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+  padding: 4px 16px 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.std-rec-row::-webkit-scrollbar { display: none; }
+.std-rec-card {
+  flex: 0 0 158px; scroll-snap-align: start; display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 20px; border: 1px solid rgba(148, 163, 184, .16); background: rgba(148, 163, 184, .06);
+  color: inherit; text-decoration: none;
+}
+.std-rec-card:hover { border-color: #3b82f6; }
+.std-rec-art { height: 92px; display: flex; align-items: center; justify-content: center; color: #fff; }
+.std-rec-art svg { width: 38px; height: 38px; }
+.std-rec-body { display: flex; flex-direction: column; gap: 3px; padding: 11px 12px 13px; min-height: 92px; }
+.std-rec-body b { font-size: 14px; font-weight: 700; line-height: 1.25; }
+.std-rec-body small { font-size: 12px; color: #8ea0c2; line-height: 1.3; }
+.std-rec-price { margin-top: auto; padding-top: 6px; font-size: 14px; font-weight: 800; color: #4ade80; }
+
+/* Pages that use the standard header hide their old top bar */
+body[data-std-recommended] .mz-nav,
+body[data-std-recommended] .navbar,
+body[data-std-recommended] .bottom-tabbar { display: none !important; }
+
+/* Standard pages use the one bottom bar from smooth-nav.js */
+body[data-std-recommended] .mz-dock { display: none !important; }
+
+/* Wallet balance cards are removed on every standard page (the balance stays in the Wallet page). */
+body[data-std-recommended]:not(.std-keep-wallet) .bal-card,
+body[data-std-recommended]:not(.std-keep-wallet) .mp-wallet,
+body[data-std-recommended]:not(.std-keep-wallet) .mz-wallet,
+body[data-std-recommended]:not(.std-keep-wallet) .nav-balance-btn,
+body[data-std-recommended]:not(.std-keep-wallet) [aria-label="Wallet balance"],
+body[data-std-recommended]:not(.std-keep-wallet) .std-hide-balance { display: none !important; }
+
+/* Recommended cards that show a listing's own picture */
+.std-rec-img { background: #0b1220; }
+.std-rec-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ── Fund wallet page: same width as the other standard pages, room for the bottom bar ── */
+.std-fund-page #page-deposit { padding-bottom: 110px; }
+.std-fund-page #page-deposit .deposit-wrap { padding-left: 0; padding-right: 0; max-width: 100%; }
+.std-fund-page #page-deposit .wallet-card { max-width: 100%; }
+
+/* ── Compact balance strip on the Buy number pages ── */
+.std-numbal {
+  display: flex; align-items: center; gap: 10px;
+  max-width: 720px; margin: 12px auto 0; width: calc(100% - 28px);
+  padding: 9px 10px 9px 12px; border-radius: 14px;
+  background: var(--bg-card, #0f1626); border: 1px solid rgba(148, 163, 184, .18);
+}
+.std-numbal-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: none; color: #fff; background: linear-gradient(135deg, #19c1ff, #0084d6); }
+.std-numbal-ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.std-numbal-txt { flex: 1; min-width: 0; line-height: 1.2; }
+.std-numbal-txt small { display: block; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: #8ea0c2; }
+.std-numbal-txt b { font-size: 16px; font-weight: 800; white-space: nowrap; }
+.std-numbal-eye { width: 32px; height: 32px; border-radius: 10px; border: 1px solid rgba(148, 163, 184, .22); background: rgba(148, 163, 184, .08); color: inherit; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.std-numbal-eye svg { width: 16px; height: 16px; }
+.std-numbal-add { font-size: 12.5px; font-weight: 700; padding: 8px 12px; border-radius: 10px; color: #fff !important; text-decoration: none !important; white-space: nowrap; background: linear-gradient(135deg, #19c1ff, #0084d6); }

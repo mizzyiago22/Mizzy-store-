@@ -1,0 +1,7 @@
+/* Buy-number page clean-up: hides the hero block, quick links, wallet card and
+   the Dashboard / History buttons in the top bar. Loaded last so it wins. */
+.navbar > div { display: none !important; }
+#numHero,
+#nfLinks,
+.bal-card { display: none !important; }
+.wrap { padding-top: 12px !important; }

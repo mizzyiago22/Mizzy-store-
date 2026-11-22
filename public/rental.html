@@ -1,0 +1,72 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rentals | Mizzy Sales</title>
+<link rel="icon" type="image/png" href="/favicon.png"><link rel="manifest" href="/manifest.json"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b0f19">
+<script>try{var t=localStorage.getItem('ksl_theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark')}catch(e){}</script>
+<link rel="stylesheet" href="/style.css?v=20260918"><link rel="stylesheet" href="/theme.css?v=20260918"><link rel="stylesheet" href="/css/mizzy-unified.css?v=2"><link rel="stylesheet" href="/css/mz-pages.css?v=1">
+<link rel="stylesheet" href="/css/smooth.css?v=1"/>
+<script src="/js/smooth-nav.js?v=2" defer></script>
+  <link rel="stylesheet" href="/css/site-header.css?v=1"/>
+</head><body data-std-recommended>
+<main class="mzp"><a href="/buy-number">← All number services</a><h1>Rent a Number</h1><p class="muted">Keep a number for days or months and receive as many SMS messages as you need. Paid from your NGN wallet.</p>
+<div class="panel"><div class="tabs"><button type="button" id="tabA" class="on">Number rental</button><button type="button" id="tabB">Dedicated (one service)</button></div>
+<div id="paneA"><label for="cA">Step 1 — Pick the country</label><select id="cA"><option value="">Loading…</option></select><label for="pA">Step 2 — Pick the period</label><select id="pA" disabled><option value="">Select a country first</option></select><div id="noteA" class="muted" style="margin-top:8px"></div></div>
+<div id="paneB" class="hide"><label for="cB">Step 1 — Pick the country</label><select id="cB"><option value="">Loading…</option></select><label for="pB">Step 2 — Pick the service &amp; period</label><select id="pB" disabled><option value="">Select a country first</option></select><div class="muted" style="margin-top:8px">A dedicated number works for one service only and cannot be cancelled after purchase.</div></div>
+<div id="price" class="muted" style="margin:12px 0"></div><button id="buy" disabled>Rent Number</button><div id="notice" role="status" class="msg" style="display:none"></div></div>
+<div class="panel"><h2>My Rentals</h2><p class="muted">Open "Messages" to read incoming SMS. Messages refresh automatically while the panel is open.</p><div id="orders">Loading…</div></div>
+<div class="panel"><h2>How It Works &amp; Refund Rules</h2><ul class="guide-list"><li>Your wallet is charged when you rent; the number is yours until the period ends</li><li>Number rental: you can cancel for a refund only shortly after purchase (20 minutes or 2 hours, shown for each option) and only if no SMS has arrived</li><li>Dedicated rentals have no cancellation once purchased</li><li>Renew any time before it ends to keep the same number</li></ul></div></main>
+<script>// Site banners and confirm boxes (same look as the rest of the site); browser boxes only as a last resort
+const MizzyUI = {
+  confirm: (msg, o) => (typeof mzConfirm === 'function')
+    ? mzConfirm({ type: 'info', title: (o && o.title) || 'Confirm', message: msg, confirmText: (o && o.okText) || 'OK', cancelText: 'Cancel' })
+    : Promise.resolve(window.confirm(msg)),
+  loading: () => {},
+  banner: (msg, kind) => (typeof mzBanner === 'function')
+    ? mzBanner(msg, kind === 'err' ? 'err' : (kind === 'success' ? 'ok' : 'info'))
+    : notice(msg)
+};
+function kset(el, html) { el.innerHTML = html; }
+async function kswr(url, apiFn, ok, fail) { try { ok(await apiFn(url)); } catch (x) { fail(x); } }
+function kpeek() { return false; }
+
+const token=()=>localStorage.getItem('ksl_token')||localStorage.getItem('token')||'';
+const $=id=>document.getElementById(id);
+function money(n){return '₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token(),...(opts.headers||{})}});let d={};try{d=await r.json()}catch{}if(r.status===401){throw Error('Could not verify your login. Refresh the page; if it keeps happening, open the dashboard and tap Home.')}if(!r.ok)throw Error(d.error||'Request failed.');return d}
+function notice(t){$('notice').style.display='block';$('notice').textContent=t}
+function copyLiteral(t){navigator.clipboard?.writeText(String(t||'')).then(()=>notice('Copied to clipboard.')).catch(()=>notice('Could not copy automatically.'))}
+function copyValue(id){copyLiteral($(id)?.textContent||'')}
+let mode='A',rows={A:[],B:[]},orders=[],open=new Set(),timer=null;
+const sel=()=>mode==='A'?{c:$('cA'),p:$('pA')}:{c:$('cB'),p:$('pB')};
+function setMode(m){mode=m;$('tabA').classList.toggle('on',m==='A');$('tabB').classList.toggle('on',m==='B');$('paneA').classList.toggle('hide',m!=='A');$('paneB').classList.toggle('hide',m!=='B');$('buy').textContent=m==='A'?'Rent Number':'Rent Dedicated Number';upd()}
+$('tabA').onclick=()=>setMode('A');$('tabB').onclick=()=>setMode('B');
+async function loadCountries(){await kswr('/api/rentals/countries',api,l=>{const h='<option value="">Choose country</option>'+l.map(c=>`<option value="${esc(c.code)}">${esc(c.name)}</option>`).join('');kset($('cA'),h);kset($('cB'),h)},e=>{$('cA').innerHTML=$('cB').innerHTML='<option value="">Could not load</option>';notice(e.message)})}
+async function loadPeriods(m){const s=m==='A'?{c:$('cA'),p:$('pA')}:{c:$('cB'),p:$('pB')};rows[m]=[];s.p.disabled=true;if(!s.c.value){s.p.innerHTML='<option value="">Select a country first</option>';upd();return}const c=s.c.value,u=(m==='A'?'/api/rentals/pricing?country=':'/api/rentals/ps/services?country=')+encodeURIComponent(c);if(!kpeek(u))s.p.innerHTML='<option value="">Loading…</option>';
+await kswr(u,api,d=>{if(s.c.value!==c)return;rows[m]=d.map(r=>m==='A'?({...r,id:r.provider+'|'+r.hours,text:`Server ${r.provider} · ${r.label} — ${money(r.price)}`}):({...r,id:r.code+'|'+r.preset,text:`${r.name} · ${r.label} — ${money(r.price)}`}));kset(s.p,rows[m].length?'<option value="">Choose…</option>'+rows[m].map(r=>`<option value="${esc(r.id)}">${esc(r.text)}</option>`).join(''):'<option value="">Nothing available for this country</option>');s.p.disabled=!rows[m].length;upd()},e=>{s.p.innerHTML='<option value="">Could not load</option>';notice(e.message)});upd()}
+function cur(){return rows[mode].find(r=>r.id===sel().p.value)}
+function upd(){const r=cur();$('price').textContent=r?'Price: '+money(r.price)+' (NGN).':'Choose an option to see its price.';$('noteA').textContent=(mode==='A'&&r)?r.cancelNote:'';$('buy').disabled=!r}
+$('cA').onchange=()=>loadPeriods('A');$('cB').onchange=()=>loadPeriods('B');$('pA').onchange=upd;$('pB').onchange=upd;
+$('buy').onclick=async()=>{const r=cur();if(!r)return;const btn=$('buy');if(!(await MizzyUI.confirm('Rent this number for '+money(r.price)+'?\nThe amount will be taken from your wallet.',{title:'Confirm rental',okText:'Rent'})))return;btn.disabled=true;btn.textContent='Processing…';MizzyUI.loading(true,'Getting your number…');
+try{const body=mode==='A'?{country:sel().c.value,provider:r.provider,hours:r.hours}:{country:sel().c.value,serviceCode:r.code,preset:r.preset};body.clientRef=crypto.randomUUID();const d=await api(mode==='A'?'/api/rentals/buy':'/api/rentals/ps/buy',{method:'POST',body:JSON.stringify(body)});notice(d.pending?d.message:'Number rented. It is listed below.');MizzyUI.banner(d.pending?d.message:'Number rented successfully.',d.pending?'info':'success');await loadOrders();const id=d.order?.id;if(id)setTimeout(()=>document.getElementById('order-'+id)?.scrollIntoView({behavior:'smooth',block:'center'}),150)}
+catch(e){notice(e.message);MizzyUI.banner(e.message,'err')}finally{MizzyUI.loading(false);btn.textContent=mode==='A'?'Rent Number':'Rent Dedicated Number';upd()}};
+const fmt=d=>d?new Date(d).toLocaleString('en-NG'):'—';
+function renderOrders(){if(!orders.length){$('orders').innerHTML='<p class="muted">No rentals yet.</p>';return}
+$('orders').innerHTML=orders.map(o=>{const live=o.status==='active';const id=esc(o.id);
+return `<div class="order active-order" id="order-${id}"><div class="order-light ${live?'received':''}"><span class="led"></span><span>${esc(o.status).toUpperCase()}</span></div><div><b>${esc(o.service)} · ${esc(o.country)}</b></div><div class="order-phone" id="ph-${id}">${esc(o.number||'Preparing…')}</div><div>Price: <b>${money(o.price)}</b> · Messages: <b>${o.smsCount}</b></div><div class="muted">Expires: ${fmt(o.expiresAt)}</div>
+<div class="order-actions"><button type="button" class="mini" onclick="copyValue('ph-${id}')" ${o.number?'':'disabled'}>Copy number</button><button type="button" class="mini" onclick="toggleMsgs('${id}')">Messages</button>${o.canRenew?`<button type="button" class="mini" onclick="renewOpts('${id}')">Renew</button>`:''}${o.canCancel?`<button type="button" class="danger mini" onclick="cancelOne('${id}')">Cancel &amp; Refund</button>`:''}</div>
+<div class="msgs ${open.has(o.id)?'':'hide'}" id="ms-${id}"><span class="muted">Loading messages…</span></div><div class="msgs hide" id="rn-${id}"></div></div>`}).join('');open.forEach(id=>loadMsgs(id))}
+async function loadOrders(){try{orders=await api('/api/rentals/orders');renderOrders();if(timer)clearInterval(timer);timer=setInterval(()=>open.forEach(id=>loadMsgs(id,true)),6000)}catch(e){$('orders').textContent=e.message}}
+function toggleMsgs(id){if(open.has(id)){open.delete(id);$('ms-'+id).classList.add('hide')}else{open.add(id);$('ms-'+id).classList.remove('hide');loadMsgs(id)}}
+async function loadMsgs(id,silent){try{const d=await api('/api/rentals/sms/'+encodeURIComponent(id));const el=$('ms-'+id);if(!el)return;el.innerHTML=d.messages.length?d.messages.map(m=>`<div>${m.sender?'<b>'+esc(m.sender)+'</b> · ':''}${esc(m.content)}${m.at?'<br><span class="muted">'+esc(m.at)+'</span>':''}</div>`).join(''):'<span class="muted">No messages yet.</span>';const i=orders.findIndex(o=>o.id===id);if(i>=0&&orders[i].smsCount!==d.order.smsCount){orders[i]=d.order}}catch(e){if(!silent&&$('ms-'+id))$('ms-'+id).textContent=e.message}}
+async function renewOpts(id){const box=$('rn-'+id);box.classList.remove('hide');box.innerHTML='<span class="muted">Loading options…</span>';try{const l=await api('/api/rentals/renew-options/'+encodeURIComponent(id));box.innerHTML=l.length?`<select id="rs-${id}">${l.map(x=>`<option value="${esc(x.value)}">${esc(x.label)} — ${money(x.price)}</option>`).join('')}</select><button type="button" style="margin-top:8px" onclick="doRenew('${id}')">Confirm renewal</button>`:'<span class="muted">No renewal options available.</span>'}catch(e){box.textContent=e.message}}
+async function doRenew(id){const v=$('rs-'+id).value;if(!(await MizzyUI.confirm('Renew this number? The price is taken from your wallet.',{title:'Confirm renewal',okText:'Renew'})))return;MizzyUI.loading(true,'Renewing…');try{const d=await api('/api/rentals/renew/'+encodeURIComponent(id),{method:'POST',body:JSON.stringify({value:v})});notice(d.pending?d.message:'Renewed successfully.');MizzyUI.banner(d.pending?d.message:'Rental renewed.',d.pending?'info':'success');await loadOrders()}catch(e){notice(e.message);MizzyUI.banner(e.message,'err')}finally{MizzyUI.loading(false)}}
+async function cancelOne(id){if(!(await MizzyUI.confirm('Cancel this rental and get a refund?',{title:'Cancel & refund',okText:'Cancel rental'})))return;try{const d=await api('/api/rentals/cancel/'+encodeURIComponent(id),{method:'POST',body:'{}'});const i=orders.findIndex(o=>o.id===id);if(i>=0)orders[i]=d.order;renderOrders();notice('Cancelled — your refund was added to your wallet.')}catch(e){notice(e.message)}}
+if(!token())location.href='/login?next=/rental';else{loadCountries();loadOrders()}
+</script>
+<script src="/js/mz-banner.js?v=2" defer></script>
+<script src="/js/mz-select.js?v=1" defer></script>
+<script src="/js/app-shell.js?v=4" defer></script>
+<script src="/js/site-header.js?v=3" defer></script>
+</body></html>

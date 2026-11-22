@@ -1,0 +1,172 @@
+/* ═══ MIZZY SALES — theme: blue accent on navy (dark default) + light option ═══
+   Palette ported from the Mizzlesale site. Loaded last on every page.          */
+:root,html[data-theme="dark"]{
+  --ms-accent:#00b4f8; --ms-accent2:#0084d6; --ms-accent3:#a9eaff; --ms-soft:rgba(0,180,248,.14);
+  --ms-on-accent:#04121a;
+  --ms-bg:#0b0f19; --ms-bg2:#101827; --ms-bg3:#172237; --ms-bg4:#1c2a40;
+  --ms-card:#131b2e; --ms-card2:#19253a; --ms-border:#29394f; --ms-border2:#35475e;
+  --ms-t1:#f0f6fc; --ms-t2:#a6b5cb; --ms-t3:#8293ae; --ms-err:#f87171;
+  --ms-sh:0 12px 32px rgba(2,12,28,.22); --ms-sh2:0 4px 16px rgba(2,12,28,.12);
+  --ms-overlay:rgba(2,8,20,.62); --ms-nav:rgba(11,15,25,.94);
+  color-scheme:dark;
+}
+html[data-theme="light"]{
+  --ms-accent:#0084d6; --ms-accent2:#0066ae; --ms-accent3:#d0f2fe; --ms-soft:rgba(0,132,214,.10);
+  --ms-on-accent:#ffffff;
+  --ms-bg:#f4f8fc; --ms-bg2:#ffffff; --ms-bg3:#edf5fb; --ms-bg4:#e6f0f8;
+  --ms-card:#ffffff; --ms-card2:#f5faff; --ms-border:#dce8f2; --ms-border2:#c8dbea;
+  --ms-t1:#0e1726; --ms-t2:#536680; --ms-t3:#657c96; --ms-err:#d92d3f;
+  --ms-sh:0 12px 32px rgba(24,70,110,.08); --ms-sh2:0 3px 12px rgba(24,70,110,.06);
+  --ms-overlay:rgba(14,23,38,.45); --ms-nav:rgba(255,255,255,.94);
+  color-scheme:light;
+}
+/* push the palette into every variable name the site's older CSS/JS uses */
+:root,html[data-theme]{
+  --bg:var(--ms-bg) !important; --bg2:var(--ms-bg2) !important; --bg3:var(--ms-bg3) !important; --bg4:var(--ms-bg4) !important;
+  --card:var(--ms-card) !important; --card2:var(--ms-card2) !important;
+  --border:var(--ms-border) !important; --border2:var(--ms-border2) !important;
+  --t1:var(--ms-t1) !important; --t2:var(--ms-t2) !important; --t3:var(--ms-t3) !important;
+  --text:var(--ms-t1) !important; --text2:var(--ms-t2) !important; --text3:var(--ms-t3) !important;
+  --gold:var(--ms-accent) !important; --gold2:var(--ms-accent2) !important; --gold3:var(--ms-accent3) !important;
+  --blue:var(--ms-accent) !important; --green:var(--ms-accent) !important; --accent:var(--ms-accent) !important; --primary:var(--ms-accent) !important;
+  --white:var(--ms-card) !important; --blue-light:var(--ms-soft) !important;
+  --app-blue:var(--ms-accent) !important; --app-blue2:var(--ms-accent2) !important; --app-blue-soft:var(--ms-soft) !important;
+  --sh:var(--ms-sh) !important; --sh2:var(--ms-sh2) !important;
+  --kb-cyan:var(--ms-accent) !important; --kb-blue:var(--ms-accent) !important; --kb-pink:var(--ms-accent) !important;
+  --kb-ink:var(--ms-bg) !important; --kb-control:var(--ms-card) !important; --kb-surface:var(--ms-card) !important; --kb-glass:var(--ms-card) !important;
+  --kb-edge:var(--ms-border) !important; --kb-ov:none !important;
+  --market-accent:var(--ms-accent) !important; --brand-primary:var(--ms-accent) !important;
+  --mys-surface:var(--ms-card) !important; --mys-surface-2:var(--ms-card2) !important; --mys-line:var(--ms-border) !important;
+  --mys-text:var(--ms-t1) !important; --mys-text-muted:var(--ms-t2) !important; --mys-accent:var(--ms-accent) !important;
+  --glass-bg:var(--ms-card) !important; --glass-bg-hover:var(--ms-card2) !important;
+  --glass-border:var(--ms-border) !important; --glass-border-hover:var(--ms-accent) !important;
+  --glass-glow:var(--ms-sh2) !important; --glass-glow-hover:var(--ms-sh2) !important;
+  --pill-bg:var(--ms-card) !important; --pill-border:var(--ms-border) !important;
+  --pill-active-bg:var(--ms-soft) !important; --pill-active-fg:var(--ms-accent) !important; --pill-idle-fg:var(--ms-t3) !important;
+}
+
+html{background:var(--ms-bg) !important}
+body{background:var(--ms-bg) !important;background-color:var(--ms-bg) !important;background-image:none !important;color:var(--ms-t1) !important}
+body::before,body::after{background-image:none !important}
+body::before{background:var(--ms-bg) !important}
+
+/* header */
+.navbar,.topbar,.app-header,.sidebar,header.nav,.dsh-topbar{background:var(--ms-nav) !important;border-color:var(--ms-border) !important;color:var(--ms-t1) !important;box-shadow:none}
+.brand-ksl,.brand-name,.site-brand{background:none !important;-webkit-text-fill-color:var(--ms-t1) !important;color:var(--ms-t1) !important}
+.brand-icon,.dbfl-crown-svg{border-color:var(--ms-border) !important;box-shadow:0 2px 10px var(--ms-soft) !important}
+
+/* surfaces */
+.card,.mys-card,.stat-card,.panel,.box,.glass,.section-card,.tool-card,.log-card,.prod-card,.modal-content,.settings-card,.wallet-card,
+.modal,.dsh-card,.dsh-section,.bst-card,.pc-card,.review-item,.detail-box,.api-key-box,.mys-gate-box,.wal-card,.wal-row{
+  background:var(--ms-card) !important;color:var(--ms-t1) !important;border-color:var(--ms-border) !important;box-shadow:var(--ms-sh) !important;border-radius:8px}
+.dsh-shell,.app-shell,.main,main,.page,.container{background:transparent !important}
+input,select,textarea,.bst-input,.nh-input,.as-search,.bst-input-search,#passInput,.fg input{background:var(--ms-bg2) !important;color:var(--ms-t1) !important;border-color:var(--ms-border2) !important}
+input[type="file"]{background:var(--ms-bg3) !important}
+input::placeholder,textarea::placeholder{color:var(--ms-t3) !important}
+input:focus,select:focus,textarea:focus{border-color:var(--ms-accent) !important;box-shadow:0 0 0 3px var(--ms-soft) !important;outline:none}
+table,th,td{border-color:var(--ms-border) !important}
+th{background:var(--ms-bg3) !important;color:var(--ms-t1) !important}
+td{color:var(--ms-t1)}
+h1,h2,h3,h4,h5,label,p,li,span,small,b,strong{border-color:var(--ms-border)}
+a{color:var(--ms-accent)}
+
+/* buttons */
+.btn-primary,.btn-gold,.btn-nav-reg,.hero-cta,.buy-btn,.prod-select-btn,button.primary,.btn-blue{
+  background:linear-gradient(115deg,var(--ms-accent2),var(--ms-accent)) !important;color:var(--ms-on-accent) !important;border:1px solid var(--ms-accent) !important;
+  box-shadow:0 8px 22px var(--ms-soft) !important}
+.btn-nav-login,.btn-secondary,.btn-outline,.btn-ghost{background:var(--ms-card) !important;color:var(--ms-accent) !important;border:1px solid var(--ms-border2) !important}
+.nav-balance-btn,.ph-chip{background:var(--ms-soft) !important;color:var(--ms-accent) !important;border-color:var(--ms-border) !important}
+.dsh-balance-card,.dsh-promo,.wal-hero{color:var(--ms-on-accent) !important;background:linear-gradient(135deg,var(--ms-accent2) 0%,var(--ms-accent) 60%,var(--ms-accent3) 140%) !important}
+.dsh-balance-card *,.dsh-promo *,.wal-hero *{color:var(--ms-on-accent)}
+.dsh-balance-card .dsh-add-btn,.dsh-balance-card button{color:var(--ms-accent2) !important;background:#fff !important}
+
+/* hero */
+.hero-p,.welcome-hero p{text-shadow:none !important;color:var(--ms-t2) !important}
+.hero,.welcome-hero,.hero h1,.welcome-hero h1{color:var(--ms-t1) !important}
+
+/* bottom nav pill */
+.bottom-tabbar,.dsh-bottom-nav{background:var(--ms-nav) !important;border:1px solid var(--ms-border) !important;box-shadow:var(--ms-sh) !important}
+
+/* chips / tabs */
+.mkt-chip{background:var(--ms-card) !important;color:var(--ms-t2) !important;border-color:var(--ms-border2) !important}
+.mkt-chip.active{background:var(--ms-accent) !important;border-color:var(--ms-accent) !important;color:var(--ms-on-accent) !important}
+.online-pill,.dsh-stat-dot,.pdot{color:var(--ms-accent) !important}
+.dsh-nav-item,.bt-item,.hm-tab{background:var(--ms-card) !important;color:var(--ms-t3) !important;border-color:var(--ms-border) !important}
+.dsh-nav-item.active,.dsh-nav-item.on,.bt-item.active,.bt-item.on,.hm-tab.active,.hm-tab.on,.hm-tab[aria-selected="true"]{background:var(--ms-accent) !important;color:var(--ms-on-accent) !important}
+
+/* overlays */
+.mys-gate{background:var(--ms-overlay) !important}
+::selection{background:var(--ms-accent3);color:#0e1726}
+h1,h2,h3,h4,.sec-title,p,.hero-p,.sub,.desc{text-shadow:none !important}
+.wrap>a:first-child{color:var(--ms-accent) !important;background:var(--ms-soft) !important}
+
+/* selector bottom-sheet */
+.ks-sheet-trigger{background:var(--ms-card) !important;color:var(--ms-t1) !important;border:1px solid var(--ms-border2) !important;box-shadow:var(--ms-sh2) !important}
+.ks-sheet-subtitle{color:var(--ms-t3) !important}
+.ks-sheet{background:var(--ms-card) !important;color:var(--ms-t1) !important;border-color:var(--ms-border) !important}
+.ks-sheet-overlay{background:var(--ms-overlay) !important}
+.ks-sheet *{border-color:var(--ms-border) !important}
+.ks-sheet-grab{background:var(--ms-border2) !important}
+.ks-sheet input{background:var(--ms-bg3) !important}
+.ks-sheet button,.ks-sheet [class*="option"],.ks-sheet [class*="item"]{color:var(--ms-t1) !important}
+.ks-sheet [class*="option"],.ks-sheet [class*="item"]{background:var(--ms-card) !important}
+.ks-sheet [class*="option"]:hover,.ks-sheet [class*="item"]:hover,.ks-sheet [aria-selected="true"]{background:var(--ms-soft) !important}
+
+/* loader */
+#kb-loader{background:var(--ms-bg) !important}
+#kb-loader .kb-logo{width:76px !important;height:76px !important;box-shadow:0 6px 24px var(--ms-soft) !important}
+#kb-loader .kb-logo::after{border-color:var(--ms-soft) !important;border-top-color:var(--ms-accent) !important}
+
+/* text helpers */
+.wrap li,.wrap b,.wrap i,.wrap .notice,.wrap .msg,.how-sum+*{color:var(--ms-t1)}
+.msg.err,p.msg.err,.err{color:var(--ms-err) !important}
+.tb-link,.tb-back,.tb-title,summary.how-sum,a.back,.back,.badge{color:var(--ms-accent) !important}
+.txn-seg-opt{color:var(--ms-t2) !important}
+.txn-seg-opt.active,.txn-seg-opt.on,.lock-role-tab.active,a[aria-current="page"]{color:var(--ms-on-accent) !important}
+.txt-muted,.muted,.sub,small{color:var(--ms-t3)}
+html body button.txn-seg-opt{color:var(--ms-t2) !important}
+html body button.txn-seg-opt.active{color:var(--ms-on-accent) !important}
+html body a.tb-link,html body button.tb-back{color:var(--ms-accent) !important}
+
+/* beat older high-specificity rules that hard-coded white in dark mode */
+html[data-theme] .navbar,html[data-theme] .app-header,html[data-theme] .topbar,html[data-theme] .dsh-topbar{background:var(--ms-nav) !important;border-color:var(--ms-border) !important;color:var(--ms-t1) !important}
+html[data-theme] .brand-ksl,html[data-theme] .brand-name,html[data-theme] .site-brand{-webkit-text-fill-color:var(--ms-t1) !important;color:var(--ms-t1) !important}
+html[data-theme] .kw-dock a:not(.kw-primary){background:var(--ms-card) !important;border-color:var(--ms-border) !important;color:var(--ms-t1) !important}
+html[data-theme] .bottom-tabbar,html[data-theme] .dsh-bottom-nav{background:var(--ms-nav) !important;border-color:var(--ms-border) !important}
+
+/* ── second pass: surfaces that older page-level CSS painted white ── */
+html body #kslBackBar,html body header.dsh-header,html body nav.navbar,html body .srv-topbar,html body nav.dsh-bottom-nav,
+html body .dsh-support-fab,html body .sfab-menu,html body .sfab-panel{background:var(--ms-nav) !important;border-color:var(--ms-border) !important;color:var(--ms-t1) !important}
+html body .dsh-card,html body .dsh-features-card,html body a.dsh-svc-item,html body .dsh-stat-cell,html body .dsh-empty{background:var(--ms-card) !important;border-color:var(--ms-border) !important;color:var(--ms-t1) !important}
+html body .dsh-card *:not(svg):not(path):not(.dsh-svc-icon):not(.dsh-promo-btn):not(.dsh-add-money){color:inherit}
+html body .dsh-card h1,html body .dsh-card h2,html body .dsh-card h3,html body .dsh-svc-item span,html body .dsh-header *{color:var(--ms-t1)}
+html body .dsh-svc-icon{background:var(--ms-soft) !important;color:var(--ms-accent) !important}
+html body .dsh-svc-icon svg{color:var(--ms-accent) !important;stroke:currentColor}
+html body .dsh-promo-btn{background:#fff !important;color:#0066ae !important}
+html body .dsh-toast{background:var(--ms-card2) !important;color:var(--ms-t1) !important}
+html body button.bt-item,html body button.dsh-nav-item,html body button.mys-menu-trigger,html body button.toggle,html body button.gbtn,html body button.bal-refresh{background:var(--ms-card) !important;border-color:var(--ms-border) !important;color:var(--ms-t2) !important}
+html body button.bt-item.active,html body button.bt-item.on,html body button.dsh-nav-item.active,html body button.dsh-nav-item.on{background:var(--ms-accent) !important;color:var(--ms-on-accent) !important}
+html body button.txn-seg-opt,html body button.hm-tab,html body #txnSegmented button,html body #txnSegmented a{background:var(--ms-card) !important;border-color:var(--ms-border2) !important;color:var(--ms-t2) !important}
+html body button.txn-seg-opt.active,html body button.hm-tab.active,html body #txnSegmented .active{background:var(--ms-accent) !important;color:var(--ms-on-accent) !important}
+html body input,html body select,html body textarea,html body #page-login input,html body #page-register input,html body #page-login select,html body #page-register select{background:var(--ms-bg2) !important;color:var(--ms-t1) !important;border:1px solid var(--ms-border2) !important}
+html body select option,html body select optgroup{background:var(--ms-card) !important;color:var(--ms-t1) !important}
+html body #page-login,html body #page-register{background:var(--ms-bg) !important;color:var(--ms-t1) !important}
+html body #page-login .auth-card,html body #page-register .auth-card,html body #page-login .auth-box,html body #page-register .auth-box{background:var(--ms-card) !important;border-color:var(--ms-border) !important}
+html body span.badge{background:var(--ms-soft) !important;color:var(--ms-accent) !important}
+html body .mkt-chip.active,html body .tb-link{color:var(--ms-accent)}
+
+/* third pass: beat the :not()-chained input rule and nav-button rules */
+html body input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+html body select:not([multiple]),html body textarea{background:var(--ms-bg2) !important;background-color:var(--ms-bg2) !important;color:var(--ms-t1) !important;border-color:var(--ms-border2) !important}
+html body .bottom-tabbar .bt-item,html body .bottom-tabbar button{background:var(--ms-card) !important;color:var(--ms-t2) !important;border-color:var(--ms-border) !important}
+html body .bottom-tabbar .bt-item.active,html body .bottom-tabbar .bt-item.on{background:var(--ms-accent) !important;color:var(--ms-on-accent) !important}
+html body .dsh-bottom-nav .dsh-nav-item{background:var(--ms-card) !important;color:var(--ms-t2) !important}
+html body .dsh-bottom-nav .dsh-nav-item.active,html body .dsh-bottom-nav .dsh-nav-item.on{background:var(--ms-accent) !important;color:var(--ms-on-accent) !important}
+html body .hm-tab{background:var(--ms-card) !important;color:var(--ms-t2) !important;border-color:var(--ms-border2) !important}
+html body .hm-tab.active,html body .hm-tab.on{background:var(--ms-accent) !important;color:var(--ms-on-accent) !important}
+
+/* ── brightness / theme toggle: visible in the top bar ── */
+html body .navbar .theme-toggle-wrap,html body .navbar .nav-right{display:flex !important;align-items:center;margin-left:auto}
+html body .theme-btn,html body #dshThemeBtn,html body #mThemeToggle{display:inline-flex !important;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;
+  background:var(--ms-card) !important;border:1px solid var(--ms-border2) !important;color:var(--ms-accent) !important;cursor:pointer;padding:0}
+html body .theme-btn svg,html body #dshThemeBtn svg{color:var(--ms-accent) !important}

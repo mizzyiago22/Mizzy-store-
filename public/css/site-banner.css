@@ -1,0 +1,7 @@
+.ms-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(90deg,#00b4f8,#0084d6);color:#fff;font:600 13.5px/1.35 'Plus Jakarta Sans',system-ui,sans-serif;position:relative;z-index:50}
+.ms-banner__t{flex:1;min-width:0}
+.ms-banner__b{background:#fff;color:#0f172a;border-radius:999px;padding:6px 14px;font-weight:800;text-decoration:none;white-space:nowrap}
+.ms-banner__x{background:none;border:0;color:#fff;font-size:20px;line-height:1;cursor:pointer;opacity:.8}
+body.wa-off .wa-only{display:none!important}
+.ms-banner__bs{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:520px){.ms-banner{flex-wrap:wrap}.ms-banner__t{flex-basis:70%}}

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Instant Numbers · Admin</title>
+<style>
+:root{--bg:#0b1020;--card:#121a2e;--line:#22304a;--txt:#e6ecf7;--mut:#8b9ab5;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--amber:#f59e0b}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4f6fb;--card:#fff;--line:#dfe5f0;--txt:#0f172a;--mut:#64748b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.top h1{font-size:17px;margin:0}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 4px}
+.hint{color:var(--mut);font-size:12.5px;margin:0 0 12px}
+input,select{background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit}
+input[type=number]{width:120px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+button{background:var(--blue);color:#fff;border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+button.danger{background:transparent;color:var(--red);border:1px solid var(--red)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 12px;max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:10px}
+.grid label{display:flex;gap:6px;align-items:center;font-size:13px}
+.msg{font-size:13px;margin-left:8px}
+.ok{color:var(--green)}.bad{color:var(--red)}
+.gate{max-width:360px;margin:80px auto;text-align:center}
+.gate input{width:100%;margin:10px 0}
+#app{display:none}
+</style>
+</head>
+<body>
+<div class="top"><h1>Instant Numbers — settings</h1><button class="ghost" id="lockBtn">Lock</button></div>
+
+<div id="gate" class="gate card">
+  <h2>Admin passcode</h2>
+  <input type="password" id="passIn" placeholder="Passcode"/>
+  <button id="passBtn">Open</button>
+  <p class="msg bad" id="gateMsg"></p>
+</div>
+
+<div id="app" class="wrap">
+  <div class="card">
+    <h2>Status</h2>
+    <p class="hint">When off, customers see "Instant Numbers is closed" and nothing can be bought.</p>
+    <label class="row"><input type="checkbox" id="enabled"/> Instant Numbers is open to customers</label>
+  </div>
+
+  <div class="card">
+    <h2>Markup (how much you add to the cost)</h2>
+    <p class="hint">Pick one general markup for every Instant number. Prices are rounded up to the nearest ₦ set below.</p>
+    <div class="row"><select id="mMode">
+      <option value="tiers">Profit ladder (different profit per price range)</option>
+      <option value="fixed">Fixed amount: cost + ₦ (e.g. +500)</option>
+      <option value="percent">Percentage: cost + % (e.g. 25%)</option>
+    </select></div>
+    <div class="row" id="mFixedRow">Add ₦ <input type="number" id="mFixed" min="0" step="1"/> to every number</div>
+    <div class="row" id="mPctRow">Add <input type="number" id="mPct" min="0" step="0.5"/> % to every number</div>
+    <div class="row">Round every price up to the nearest ₦ <input type="number" id="roundTo" min="1" step="1"/> <span class="hint" style="margin:0">(use 1 for an exact +500)</span></div>
+    <h2 style="margin-top:16px">Markup for one service only</h2>
+    <p class="hint">Example: WhatsApp +₦700 or Telegram +30%. This beats the general markup above.</p>
+    <div id="svcMarkups"></div>
+    <div class="row"><button class="ghost" id="addSvcMarkup">+ Add service markup</button></div>
+  </div>
+
+  <div class="card" id="ladderCard">
+    <h2>Profit ladder</h2>
+    <p class="hint">Added on top of Tiger's cost, by cost in ₦. Each row: costs up to this amount get this profit. Costs above the last row get the percentage below.</p>
+    <div id="tiers"></div>
+    <div class="row"><button class="ghost" id="addTier">+ Add tier</button></div>
+    <div class="row">High-cost markup % <input type="number" id="highPct" min="0" step="1"/></div>
+  </div>
+
+  <div class="card">
+    <h2>Hidden countries</h2>
+    <p class="hint">Ticked countries do not show to customers and cannot be bought.</p>
+    <div class="row"><input id="cSearch" placeholder="Search countries"/></div>
+    <div class="grid" id="cGrid"></div>
+  </div>
+
+  <div class="card">
+    <h2>Hidden services</h2>
+    <p class="hint">Ticked services are hidden in every country.</p>
+    <div class="row"><input id="sSearch" placeholder="Search services"/></div>
+    <div class="grid" id="sGrid"></div>
+  </div>
+
+  <div class="card">
+    <h2>Exact prices</h2>
+    <p class="hint">Set a fixed ₦ price for one country and service. It replaces the profit ladder for that item only.</p>
+    <div id="overrides"></div>
+    <div class="row"><button class="ghost" id="addOverride">+ Add exact price</button></div>
+  </div>
+
+  <div class="row"><button id="saveBtn">Save changes</button><span class="msg" id="saveMsg"></span></div>
+</div>
+
+<script>
+(function () {
+  var KEY = 'ksl_admin_pass', pass = '';
+  try { pass = sessionStorage.getItem(KEY) || ''; } catch (e) {}
+  var $ = function (id) { return document.getElementById(id); };
+  var S = null, CAT = { countries: [], services: [] };
+  var hiddenC = new Set(), hiddenS = new Set();
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function api(path, opts) {
+    opts = opts || {};
+    var h = { 'x-admin-passcode': pass };
+    if (opts.body) h['Content-Type'] = 'application/json';
+    return fetch(path, { method: opts.method || 'GET', headers: h, body: opts.body ? JSON.stringify(opts.body) : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw new Error(d.error || ('Error ' + r.status)); return d; }); });
+  }
+
+  function showApp() { $('gate').style.display = 'none'; $('app').style.display = 'block'; load(); }
+  function showGate(msg) { $('app').style.display = 'none'; $('gate').style.display = 'block'; $('gateMsg').textContent = msg || ''; }
+
+  function load() {
+    Promise.all([api('/api/admin/instant-settings'), api('/api/admin/instant-catalog')]).then(function (r) {
+      S = r[0]; CAT = r[1];
+      hiddenC = new Set((S.hiddenCountries || []).map(Number));
+      hiddenS = new Set(S.hiddenServices || []);
+      $('enabled').checked = !!S.enabled;
+      $('highPct').value = S.highCostMarkupPercent;
+      $('roundTo').value = S.roundTo;
+      $('tiers').innerHTML = '';
+      (S.markupTiers || []).forEach(addTierRow);
+      $('mMode').value = S.markupMode || 'tiers'; $('mFixed').value = S.markupFixed; $('mPct').value = S.markupPercent;
+      $('svcMarkups').innerHTML = ''; (S.serviceMarkups || []).forEach(addSvcMarkupRow); toggleMode();
+      drawCountries(); drawServices(); drawOverrides();
+    }).catch(function (e) { $('saveMsg').innerHTML = '<span class="bad">' + esc(e.message) + '</span>'; });
+  }
+
+  function addTierRow(t) {
+    var d = document.createElement('div'); d.className = 'row tier';
+    d.innerHTML = 'Cost up to ₦ <input type="number" class="tUp" min="1" step="1" value="' + esc(t ? t.upTo : '') + '"/> ' +
+      'Add profit ₦ <input type="number" class="tPr" min="0" step="1" value="' + esc(t ? t.profit : '') + '"/> ' +
+      '<button type="button" class="danger tDel">Remove</button>';
+    d.querySelector('.tDel').onclick = function () { d.remove(); };
+    $('tiers').appendChild(d);
+  }
+  $('addTier').onclick = function () { addTierRow({ upTo: '', profit: '' }); };
+
+  function drawCountries() {
+    var q = ($('cSearch').value || '').toLowerCase();
+    $('cGrid').innerHTML = CAT.countries.filter(function (c) { return c.name.toLowerCase().indexOf(q) >= 0; }).map(function (c) {
+      return '<label><input type="checkbox" data-c="' + c.id + '"' + (hiddenC.has(Number(c.id)) ? ' checked' : '') + '/> ' + esc(c.name) + '</label>';
+    }).join('');
+    $('cGrid').querySelectorAll('input').forEach(function (i) {
+      i.onchange = function () { var id = Number(i.getAttribute('data-c')); i.checked ? hiddenC.add(id) : hiddenC.delete(id); };
+    });
+  }
+  function drawServices() {
+    var q = ($('sSearch').value || '').toLowerCase();
+    $('sGrid').innerHTML = CAT.services.filter(function (s) { return (s.name + ' ' + s.code).toLowerCase().indexOf(q) >= 0; }).map(function (s) {
+      return '<label><input type="checkbox" data-s="' + esc(s.code) + '"' + (hiddenS.has(s.code) ? ' checked' : '') + '/> ' + esc(s.name) + '</label>';
+    }).join('');
+    $('sGrid').querySelectorAll('input').forEach(function (i) {
+      i.onchange = function () { var c = i.getAttribute('data-s'); i.checked ? hiddenS.add(c) : hiddenS.delete(c); };
+    });
+  }
+  $('cSearch').oninput = drawCountries;
+  $('sSearch').oninput = drawServices;
+
+  function countrySelect(sel) {
+    return '<select class="oC" style="max-width:200px"><option value="">Country</option>' + CAT.countries.map(function (c) {
+      return '<option value="' + c.id + '"' + (Number(sel) === Number(c.id) ? ' selected' : '') + '>' + esc(c.name) + '</option>';
+    }).join('') + '</select>';
+  }
+  function serviceSelect(sel) {
+    return '<select class="oS" style="max-width:200px"><option value="">Service</option>' + CAT.services.map(function (s) {
+      return '<option value="' + esc(s.code) + '"' + (sel === s.code ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+    }).join('') + '</select>';
+  }
+  function toggleMode() { var m = $('mMode').value; $('mFixedRow').style.display = m === 'fixed' ? '' : 'none'; $('mPctRow').style.display = m === 'percent' ? '' : 'none'; $('ladderCard').style.display = m === 'tiers' ? '' : 'none'; }
+  $('mMode').onchange = toggleMode;
+  function addSvcMarkupRow(m) {
+    var d = document.createElement('div'); d.className = 'row sm';
+    d.innerHTML = serviceSelect(m ? m.service : '').replace('class="oS"', 'class="smS"') + ' + ' +
+      '<input type="number" class="smV" min="0" step="any" style="max-width:110px" value="' + esc(m ? m.value : '') + '"/> ' +
+      '<select class="smT" style="max-width:110px"><option value="fixed"' + (m && m.type === 'fixed' ? ' selected' : '') + '>₦ (naira)</option><option value="percent"' + (m && m.type === 'percent' ? ' selected' : '') + '>% (percent)</option></select> ' +
+      '<button type="button" class="danger smDel">Remove</button>';
+    d.querySelector('.smDel').onclick = function () { d.remove(); };
+    $('svcMarkups').appendChild(d);
+  }
+  $('addSvcMarkup').onclick = function () { addSvcMarkupRow(null); };
+
+  function addOverrideRow(o) {
+    var d = document.createElement('div'); d.className = 'row ov';
+    d.innerHTML = countrySelect(o ? o.country : '') + ' ' + serviceSelect(o ? o.service : '') +
+      ' ₦ <input type="number" class="oP" min="1" step="1" value="' + esc(o ? o.priceNgn : '') + '"/> ' +
+      '<button type="button" class="danger oDel">Remove</button>';
+    d.querySelector('.oDel').onclick = function () { d.remove(); };
+    $('overrides').appendChild(d);
+  }
+  function drawOverrides() { $('overrides').innerHTML = ''; (S.priceOverrides || []).forEach(addOverrideRow); }
+  $('addOverride').onclick = function () { addOverrideRow(null); };
+
+  $('saveBtn').onclick = function () {
+    var tiers = [];
+    document.querySelectorAll('.tier').forEach(function (r) {
+      tiers.push({ upTo: r.querySelector('.tUp').value, profit: r.querySelector('.tPr').value });
+    });
+    var overrides = [];
+    document.querySelectorAll('.ov').forEach(function (r) {
+      overrides.push({ country: r.querySelector('.oC').value, service: r.querySelector('.oS').value, priceNgn: r.querySelector('.oP').value });
+    });
+    var sms = [];
+    document.querySelectorAll('.sm').forEach(function (r) {
+      sms.push({ service: r.querySelector('.smS').value, type: r.querySelector('.smT').value, value: r.querySelector('.smV').value });
+    });
+    var body = {
+      markupMode: $('mMode').value, markupFixed: $('mFixed').value, markupPercent: $('mPct').value, serviceMarkups: sms,
+      enabled: $('enabled').checked,
+      markupTiers: tiers,
+      highCostMarkupPercent: $('highPct').value,
+      roundTo: $('roundTo').value,
+      hiddenCountries: Array.from(hiddenC),
+      hiddenServices: Array.from(hiddenS),
+      priceOverrides: overrides
+    };
+    $('saveMsg').textContent = 'Saving…';
+    api('/api/admin/instant-settings', { method: 'PUT', body: body }).then(function () {
+      $('saveMsg').innerHTML = '<span class="ok">Saved. Customers see this now.</span>';
+      load();
+    }).catch(function (e) { $('saveMsg').innerHTML = '<span class="bad">' + esc(e.message) + '</span>'; });
+  };
+
+  $('passBtn').onclick = function () {
+    pass = $('passIn').value.trim();
+    api('/api/admin/instant-settings').then(function () { try { sessionStorage.setItem(KEY, pass); } catch (e) {} showApp(); })
+      .catch(function () { pass = ''; showGate('Wrong passcode.'); });
+  };
+  $('lockBtn').onclick = function () { pass = ''; try { sessionStorage.removeItem(KEY); } catch (e) {} showGate(''); };
+  if (pass) showApp(); else showGate('');
+})();
+</script>
+</body>
+</html>
