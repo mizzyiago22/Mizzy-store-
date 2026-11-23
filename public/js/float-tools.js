@@ -129,6 +129,7 @@
     get('/api/market2/products').then(function (a) { addItems(a, '/marketplace2', 'Marketplace Two', function (l) { return l.title; }); });
     get('/api/market3/products').then(function (a) { addItems(a, '/marketplace3', 'Marketplace Three', function (l) { return l.title; }); });
     get('/api/market4/products').then(function (a) { addItems(a, '/marketplace4', 'Marketplace Four', function (l) { return l.title; }); });
+    get('/api/market5/products').then(function (a) { addItems(a, '/marketplace5', 'Marketplace Five', function (l) { return l.title; }); });
     // Buy Number services (e.g. Facebook, WhatsApp...)
     get('/api/numbers/server2/services').then(function (a) { addItems(a, '/buy-number', 'Buy Number', function (n) { return n.name ? n.name + ' number' : ''; }); });
     // Boosting services (needs login)

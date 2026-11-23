@@ -36,36 +36,45 @@
     return '<svg class="' + (cls || '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICON[name] || '') + '</svg>';
   }
 
-  // Menu: one consolidated service directory shared by the header and Services dock.
+  // Menu: grouped, always fully open (no collapsing arrows), every active page listed.
   var MENU = [
     { title: 'Home', items: [
-      { href: '/dashboard', label: 'Dashboard', icon: 'home', color: '#6366f1' }
+      { href: '/', label: 'Home', icon: 'home', color: '#6366f1' },
+      { href: '/dashboard', label: 'Dashboard', icon: 'grid', color: '#6366f1' }
     ] },
     { title: 'Marketplace', items: [
-      { href: '/marketplace', label: 'Marketplace', icon: 'cart', color: '#10b981' }
-    ] },
-    { title: 'Numbers & Email', items: [
-      { href: '/buy-number', label: 'Buy Numbers', icon: 'phone', color: '#3b82f6' },
-      { href: '/instant-numbers', label: 'Fast SMS', icon: 'phone', color: '#3b82f6' },
-      { href: '/rental', label: 'Rentals', icon: 'key', color: '#f59e0b' },
-      { href: '/temp-email', label: 'Temporary Email', icon: 'mail', color: '#8b5cf6' },
-      { href: '/number-history', label: 'Number history', icon: 'clock', color: '#3b82f6' }
-    ] },
-    { title: 'Boost & Tools', items: [
-      { href: '/boost', label: 'Social Boost', icon: 'rocket', color: '#ec4899' },
-      { href: '/boost-services', label: 'Boost Services', icon: 'list', color: '#ec4899' },
-      { href: '/tools', label: 'Tools & FMT', icon: 'tool', color: '#10b981' },
-      { href: '/vtu', label: 'Airtime & Data', icon: 'zap', color: '#06b6d4' },
+      { href: '/marketplace', label: 'Marketplace 1', icon: 'cart', color: '#10b981' },
+      { href: '/marketplace2', label: 'Marketplace 2', icon: 'cart', color: '#10b981' },
+      { href: '/marketplace3', label: 'Marketplace 3', icon: 'cart', color: '#10b981' },
+      { href: '/marketplace4', label: 'Marketplace 4', icon: 'cart', color: '#10b981' },
+      { href: '/marketplace5', label: 'Marketplace 5', icon: 'cart', color: '#10b981' },
+      { href: '/tools', label: 'Format & tools', icon: 'tool', color: '#10b981' },
       { href: '/working-pics', label: 'Working Pics', icon: 'image', color: '#10b981' }
     ] },
-    { title: 'More Services', items: [
+    { title: 'Buy Number', items: [
+      { href: '/buy-number-app?server=server1', label: 'Buy Number 1', icon: 'phone', color: '#3b82f6' },
+      { href: '/buy-number-app?server=server2', label: 'Buy Number 2', icon: 'phone', color: '#3b82f6' },
+      { href: '/instant-numbers', label: 'Fast SMS', icon: 'phone', color: '#3b82f6' },
+      { href: '/rental', label: 'Rentals', icon: 'key', color: '#f59e0b' },
+      { href: '/temp-email', label: 'Temp email', icon: 'mail', color: '#8b5cf6' },
+      { href: '/number-history', label: 'Number history', icon: 'clock', color: '#3b82f6' }
+    ] },
+    { title: 'Boost', items: [
+      { href: '/boost', label: 'Boost', icon: 'rocket', color: '#ec4899' },
+      { href: '/boost1', label: 'Boost 1', icon: 'bolt', color: '#ec4899' },
+      { href: '/boost2', label: 'Boost 2', icon: 'bolt', color: '#ec4899' },
+      { href: '/boost-services', label: 'All boost services', icon: 'list', color: '#ec4899' },
+      { href: '/boost-history', label: 'Boost history', icon: 'clock', color: '#ec4899' }
+    ] },
+    { title: 'More services', items: [
+      { href: '/vtu', label: 'Airtime & data', icon: 'zap', color: '#06b6d4' },
       { href: '/games', label: 'Games', icon: 'game', color: '#f97316' },
       { href: '/giveaways', label: 'Giveaways', icon: 'gift', color: '#84cc16' },
-      { href: '/tutorials', label: 'Tutorials', icon: 'book', color: '#a855f7' }
-    ] },
-    { title: 'Community', items: [
       { href: '/groups', label: 'Groups', icon: 'users', color: '#6366f1' },
       { href: '/messages', label: 'Messages', icon: 'chat', color: '#6366f1' }
+    ] },
+    { title: 'Learn', items: [
+      { href: '/tutorials', label: 'Tutorials', icon: 'book', color: '#a855f7' }
     ] },
     { title: 'Account', items: [
       { href: '/purchases', label: 'My Orders', icon: 'bag', color: '#22c55e' },
@@ -95,67 +104,16 @@
     var old = document.querySelector('nav.navbar');
     if (old) old.style.display = 'none';
 
-    var header = document.querySelector('.dsh-header');
-    var burger;
-    if (header) {
-      burger = header.querySelector('.std-burger');
-      if (!burger) {
-        burger = document.createElement('button');
-        burger.type = 'button';
-        burger.className = 'std-burger';
-        burger.setAttribute('aria-label', 'Open menu');
-        burger.setAttribute('aria-expanded', 'false');
-        burger.setAttribute('aria-controls', 'stdDrawer');
-        burger.innerHTML = '<span></span><span></span><span></span>';
-        (header.querySelector('.dsh-header-right') || header).appendChild(burger);
-      }
-    } else {
-      header = document.createElement('header');
-      header.className = 'std-header';
-      header.innerHTML =
-        '<a class="std-brand" href="/buy-number">' +
-          '<img src="/img/mizzy-logo.jpg" alt="" width="36" height="36"/>' +
-          '<span>Mizzy Sales</span>' +
-        '</a>' +
-        '<button type="button" class="std-burger" aria-label="Open menu" aria-expanded="false" aria-controls="stdDrawer">' +
-          '<span></span><span></span><span></span>' +
-        '</button>';
-      document.body.insertBefore(header, document.body.firstChild);
-      burger = header.querySelector('.std-burger');
-    }
-
-    // Back button lives inside the header (left of the logo) - never a separate block.
-    (function addBack() {
-      var path = location.pathname.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
-      if (['/', '/dashboard', '/login', '/register', '/welcome', '/terms'].indexOf(path) > -1 || /admin/i.test(path)) return;
-      if (header.querySelector('.std-back')) return;
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'std-back'; b.setAttribute('aria-label', 'Go back');
-      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
-      b.addEventListener('click', function () {
-        var depOpen = ['depScreen1', 'depScreen2'].some(function (id) {
-          var e = document.getElementById(id);
-          return e && e.style.display !== 'none' && e.offsetParent !== null;
-        });
-        if (depOpen && typeof window.depGoHome === 'function') { window.depGoHome(); return; }
-        if (path === '/boost1' || path === '/boost2') { location.href = '/boost'; return; }
-        if (path === '/boost') { location.href = '/dashboard'; return; }
-        var sameSite = document.referrer && document.referrer.indexOf(location.origin) === 0;
-        if (sameSite && history.length > 1) history.back(); else location.href = '/dashboard';
-      });
-      header.insertBefore(b, header.firstChild);
-      // The page's own "Back" links become redundant: remove them so nothing is doubled up.
-      var kill = /^\s*(\u2190|<-)?\s*(back|back to dashboard|all number services|back to menu)\s*$/i;
-      Array.prototype.forEach.call(document.querySelectorAll('main a, .page a, .container a, body > a'), function (a) {
-        if (header.contains(a) || a.closest('.std-drawer')) return;
-        if (kill.test(a.textContent || '')) a.style.display = 'none';
-      });
-      var old = document.getElementById('kslBackBar'); if (old) old.remove();
-    })();
-
-    var dashboardHeader = !!(header && header.classList.contains('dsh-header'));
-    var burgerHome = burger.parentNode;
-    var burgerBefore = burger.nextSibling;
+    var header = document.createElement('header');
+    header.className = 'std-header';
+    header.innerHTML =
+      '<a class="std-brand" href="/buy-number">' +
+        '<img src="/img/mizzy-logo.jpg" alt="" width="36" height="36"/>' +
+        '<span>Mizzy Sales</span>' +
+      '</a>' +
+      '<button type="button" class="std-burger" aria-label="Open menu" aria-expanded="false" aria-controls="stdDrawer">' +
+        '<span></span><span></span><span></span>' +
+      '</button>';
 
     var overlay = document.createElement('div');
     overlay.className = 'std-overlay';
@@ -186,61 +144,32 @@
       '<button type="button" class="std-logout">' + svg('logout') + '<span>Log out</span></button>' +
       '</div>';
 
+    document.body.insertBefore(header, document.body.firstChild);
     document.body.appendChild(overlay);
     document.body.appendChild(drawer);
 
+    var burger = header.querySelector('.std-burger');
     var closeBtn = drawer.querySelector('.std-close');
-    var closeTimer = null;
-    var menuOpen = false;
-    var transitionId = 0;
-
-    function liftDashboardBurger() {
-      if (!dashboardHeader || burger.classList.contains('std-burger-floating')) return;
-      burger.classList.add('std-burger-floating');
-      document.body.appendChild(burger);
-    }
-
-    function restoreDashboardBurger() {
-      if (!dashboardHeader || !burger.classList.contains('std-burger-floating')) return;
-      burger.classList.remove('std-burger-floating');
-      var parent = burgerHome && document.documentElement.contains(burgerHome)
-        ? burgerHome
-        : (header.querySelector('.dsh-header-right') || header);
-      if (burgerBefore && burgerBefore.parentNode === parent) parent.insertBefore(burger, burgerBefore);
-      else parent.appendChild(burger);
-    }
 
     function open() {
-      menuOpen = true;
-      var thisTransition = ++transitionId;
-      if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
       drawer.hidden = false; overlay.hidden = false;
-      liftDashboardBurger();
       requestAnimationFrame(function () {
-        if (!menuOpen || thisTransition !== transitionId) return;
         drawer.classList.add('open'); overlay.classList.add('open');
       });
       burger.setAttribute('aria-expanded', 'true');
       document.body.classList.add('std-menu-open');
     }
     function close() {
-      menuOpen = false;
-      transitionId++;
       drawer.classList.remove('open'); overlay.classList.remove('open');
       burger.setAttribute('aria-expanded', 'false');
       document.body.classList.remove('std-menu-open');
-      if (closeTimer) clearTimeout(closeTimer);
-      closeTimer = setTimeout(function () {
-        drawer.hidden = true; overlay.hidden = true;
-        restoreDashboardBurger();
-        closeTimer = null;
-      }, 260);
+      setTimeout(function () { drawer.hidden = true; overlay.hidden = true; }, 240);
     }
 
     burger.addEventListener('click', function () {
-      menuOpen ? close() : open();
+      drawer.classList.contains('open') ? close() : open();
     });
-    closeBtn.addEventListener('click', function (e) { e.preventDefault(); close(); });
+    closeBtn.addEventListener('click', close);
     overlay.addEventListener('click', close);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
     drawer.addEventListener('click', function (e) {
@@ -279,7 +208,8 @@
     { name: 'Marketplace One', url: '/api/logs?type=log', page: '/marketplace' },
     { name: 'Marketplace Two', url: '/api/market2/products', page: '/marketplace2' },
     { name: 'Marketplace Three', url: '/api/market3/products', page: '/marketplace3' },
-    { name: 'Marketplace Four', url: '/api/market4/products', page: '/marketplace4' }
+    { name: 'Marketplace Four', url: '/api/market4/products', page: '/marketplace4' },
+    { name: 'Marketplace Five', url: '/api/market5/products', page: '/marketplace5' }
   ];
 
   function platformOf(text) {
@@ -354,11 +284,11 @@
     return out;
   }
 
-  var BUY_MK = { 'Marketplace One': 'm1', 'Marketplace Two': 'm2', 'Marketplace Three': 'm3', 'Marketplace Four': 'm4' };
+  var BUY_MK = { 'Marketplace One': 'm1', 'Marketplace Two': 'm2', 'Marketplace Three': 'm3', 'Marketplace Four': 'm4', 'Marketplace Five': 'm5' };
   function buyMeta(marketName, item, price) {
     var mk = BUY_MK[marketName];
     if (!mk) return null;
-    var id = mk === 'm1' ? (item._id != null ? item._id : item.id) : item.id;
+    var id = mk === 'm1' ? (item._id != null ? item._id : item.id) : ((mk === 'm2' || mk === 'm5') && item.productKey ? item.productKey : item.id);
     if (id == null) return null;
     return { mk: mk, id: String(id), price: Number(price) || 0 };
   }
@@ -432,7 +362,8 @@
       if (!ok) return;
       var url, body;
       if (mk === 'm1') { url = '/api/logs/buy/' + encodeURIComponent(id); body = {}; }
-      else if (mk === 'm2') { url = '/api/market2/buy'; body = { productId: parseInt(id, 10), quantity: 1 }; }
+      else if (mk === 'm2') { url = '/api/market2/buy'; body = { productId: id, quantity: 1, clientRef: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random()) }; }
+      else if (mk === 'm5') { url = '/api/market5/buy'; body = { productId: id, quantity: 1, clientRef: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random()) }; }
       else if (mk === 'm3') { url = '/api/market3/buy'; body = { productId: parseInt(id, 10), quantity: 1 }; }
       else if (mk === 'm4') { url = '/api/market4/buy'; body = { productId: parseInt(id, 10), quantity: 1, clientRef: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random()) }; }
       else return;

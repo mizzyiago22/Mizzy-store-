@@ -13,7 +13,6 @@
      5. Add a "Back to menu" control on inner pages.
    Pure add-on: nothing in the original scripts is modified.
    ──────────────────────────────────────────────────────────────────────── */
-(function(){if(window.MizzyUI||document.getElementById('mizzy-ui-js'))return;var s=document.createElement('script');s.id='mizzy-ui-js';s.src='/js/mizzy-ui.js?v=1';(document.head||document.documentElement).appendChild(s);})(); // MIZZY-UPGRADE
 (function () {
   'use strict';
 
@@ -46,7 +45,6 @@
       .catch(function () { return null; });
   }
 
-  if (!window.__mysDock && !document.querySelector('script[src*="mys-dock.js"]')) { var ds = document.createElement('script'); ds.src = '/js/mys-dock.js?v=2'; (document.head || document.documentElement).appendChild(ds); }
   /* ── 1. Shell + drawer removal ─────────────────────────────────────────── */
   function initShell() {
     document.body.classList.add('app-shell');
@@ -61,79 +59,35 @@
         '<rect x="14" y="14" width="7" height="7" rx="1.5"/></g></symbol></svg>';
       document.body.appendChild(sp);
     }
+    if (!document.getElementById('i-image') || !document.getElementById('i-video')) {
+      var sp2 = document.createElement('div');
+      sp2.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+      sp2.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+        (document.getElementById('i-image') ? '' : '<symbol id="i-image" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M21 16l-5.5-5.5L4 21"/></g></symbol>') +
+        (document.getElementById('i-video') ? '' : '<symbol id="i-video" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></g></symbol>') + '</svg>';
+      document.body.appendChild(sp2);
+    }
     ['mobileMenu', 'drawerBackdrop', 'hamburger'].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.remove();
     });
-    // One standard header (logo left, hamburger right) on every customer page.
-    var pth = location.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/';
-    var skipHdr = ['/', '/index', '/login', '/register', '/welcome', '/terms', '/apidocs', '/api-docs'].indexOf(pth) > -1 || /admin/i.test(pth);
-    if (skipHdr) { if (!document.body.hasAttribute('data-std-recommended')) buildHamburgerMenu(); return; }
-    if (!document.querySelector('script[src*="site-header.js"]')) {
-      if (!document.querySelector('link[href*="site-header.css"]')) {
-        var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/css/site-header.css?v=2'; document.head.appendChild(l);
-      }
-      var sc = document.createElement('script'); sc.src = '/js/site-header.js?v=5'; document.body.appendChild(sc);
-    }
-  }
-
-
-  /* Expandable customer hamburger menu: service groups keep each provider flow separate. */
-  function buildHamburgerMenu() {
-    if (document.getElementById('mysDrawer')) return;
-    var navInner = document.querySelector('.nav-inner');
-    var trigger = document.createElement('button');
-    trigger.type = 'button'; trigger.id = 'mysMenuTrigger'; trigger.className = 'mys-menu-trigger';
-    trigger.setAttribute('aria-label', 'Open navigation menu'); trigger.setAttribute('aria-controls', 'mysDrawer'); trigger.setAttribute('aria-expanded', 'false');
-    trigger.innerHTML = '<span class="mys-burger" aria-hidden="true"><i></i><i></i><i></i></span><span class="mys-menu-word">Menu</span>';
-    if (navInner) navInner.insertBefore(trigger, navInner.firstChild);
-    else { trigger.style.cssText = 'position:fixed;top:12px;left:12px;z-index:500'; document.body.appendChild(trigger); }
-
-    var backdrop = document.createElement('div'); backdrop.className = 'mys-menu-backdrop'; backdrop.id = 'mysMenuBackdrop';
-    var drawer = document.createElement('aside'); drawer.className = 'mys-drawer'; drawer.id = 'mysDrawer'; drawer.setAttribute('aria-label','Mizzy Sales navigation');
-    drawer.innerHTML = '<div class="mys-drawer-head"><div class="mys-drawer-brand">Mizzy Sales</div><button class="mys-drawer-close" type="button" aria-label="Close menu">×</button></div>' +
-      '<a class="mys-drawer-link" href="/dashboard">🏠 <span>Home</span></a>' +
-      '<div class="mys-drawer-label">Services</div>' +
-      '<a class="mys-drawer-link" href="/marketplace">🛍️ <span>Marketplace</span></a>' +
-      '<button class="mys-menu-toggle" type="button" aria-expanded="false" aria-controls="mysNumbersSub">📱 <span>Numbers &amp; Email</span><span class="mys-chevron">⌄</span></button>' +
-      '<div class="mys-submenu" id="mysNumbersSub"><a class="mys-sub-link" href="/buy-number">Buy Numbers</a><a class="mys-sub-link" href="/instant-numbers">Fast SMS</a><a class="mys-sub-link" href="/temp-email">Temporary Email</a><a class="mys-sub-link" href="/rental">Rentals</a><a class="mys-sub-link" href="/number-history">Number History</a></div>' +
-      '<button class="mys-menu-toggle" type="button" aria-expanded="false" aria-controls="mysBoostSub">🚀 <span>Boost &amp; Tools</span><span class="mys-chevron">⌄</span></button>' +
-      '<div class="mys-submenu" id="mysBoostSub"><a class="mys-sub-link" href="/boost">Social Boost</a><a class="mys-sub-link" href="/boost1">Boost 1</a><a class="mys-sub-link" href="/boost2">Boost 2</a><a class="mys-sub-link" href="/boost-services">Boost Services</a><a class="mys-sub-link" href="/tools">Tools &amp; FMT</a><a class="mys-sub-link" href="/vtu">Airtime &amp; Data</a><a class="mys-sub-link" href="/working-pics">Working Pics</a><a class="mys-sub-link" href="/tutorials">Tutorials</a><a class="mys-sub-link" href="/giveaways">Giveaways</a></div>' +
-      '<div class="mys-drawer-label">Wallet, Orders &amp; Community</div>' +
-      '<a class="mys-drawer-link" href="/deposit">💰 <span>Add Money</span></a><a class="mys-drawer-link" href="/purchases">📦 <span>My Orders</span></a>' +
-      '<a class="mys-drawer-link" href="/transactions">📊 <span>Transactions</span></a><a class="mys-drawer-link" href="/referrals">🎁 <span>Referrals</span></a>' +
-      '<a class="mys-drawer-link" href="/groups">👥 <span>Groups</span></a><a class="mys-drawer-link" href="/messages">💬 <span>Messages</span></a>' +
-      '<a class="mys-drawer-link" href="/notifications">🔔 <span>Notifications</span></a><a class="mys-drawer-link" href="/settings">👤 <span>Settings</span></a>' +
-      '<div class="mys-drawer-label">Support</div><a class="mys-drawer-link" href="/support">💬 <span>Contact Support</span></a>' +
-      '<a class="mys-drawer-link" href="/help">❓ <span>Help Center</span></a><a class="mys-drawer-link" href="/about">ℹ️ <span>About</span></a>' +
-      '<button class="mys-drawer-link" id="mysLogout" type="button">🚪 <span>Log Out</span></button>';
-    document.body.appendChild(backdrop); document.body.appendChild(drawer);
-    var mysY=0,mysLocked=false; function mysLock(){ if(mysLocked)return; mysLocked=true; mysY=window.pageYOffset||0; var s=document.body.style; s.position='fixed'; s.top=(-mysY)+'px'; s.left='0'; s.right='0'; s.width='100%'; document.documentElement.classList.add('mys-locked'); } function mysUnlock(){ if(!mysLocked)return; mysLocked=false; var s=document.body.style; s.position=''; s.top=''; s.left=''; s.right=''; s.width=''; document.documentElement.classList.remove('mys-locked'); var de=document.documentElement,sb=de.style.scrollBehavior; de.style.scrollBehavior='auto'; window.scrollTo(0,mysY); de.style.scrollBehavior=sb; } function closeMenu(){ mysUnlock(); drawer.classList.remove('open'); backdrop.classList.remove('open'); document.body.classList.remove('mys-menu-open'); trigger.setAttribute('aria-expanded','false'); }
-    function openMenu(){ mysLock(); drawer.classList.add('open'); backdrop.classList.add('open'); document.body.classList.add('mys-menu-open'); trigger.setAttribute('aria-expanded','true'); }
-    trigger.addEventListener('click',function(){ drawer.classList.contains('open') ? closeMenu() : openMenu(); });
-    backdrop.addEventListener('click',closeMenu); drawer.querySelector('.mys-drawer-close').addEventListener('click',closeMenu);
-    drawer.querySelectorAll('.mys-menu-toggle').forEach(function(btn){ btn.addEventListener('click',function(){ var sub=document.getElementById(btn.getAttribute('aria-controls')); var isOpen=btn.getAttribute('aria-expanded')==='true'; btn.setAttribute('aria-expanded',String(!isOpen)); if(sub) sub.classList.toggle('open',!isOpen); }); });
-    drawer.querySelectorAll('a').forEach(function(a){ a.addEventListener('click',closeMenu); });
-    var logout=document.getElementById('mysLogout'); if(logout) logout.addEventListener('click',function(){ closeMenu(); if(typeof window.logout==='function') window.logout(); else { var t=''; try { t=localStorage.getItem('ksl_token')||''; } catch(e){} try { if(t) fetch('/api/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+t},keepalive:true}).catch(function(){}); } catch(e){} try { localStorage.removeItem('ksl_token'); localStorage.removeItem('ksl_user'); } catch(e){} location.href='/login'; } });
-    document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeMenu(); });
   }
 
   /* ── 2. Bottom tab bar ─────────────────────────────────────────────────── */
   var TABS = [
     { href: '/dashboard', label: 'Home', icon: 'i-home', match: ['/', '/index.html', '/dashboard'] },
     { href: '/marketplace', label: 'Logs', icon: 'i-grid', match: ['/marketplace', '/purchases'] },
-    { href: '/boost', label: 'Boost', icon: 'i-zap', match: ['/boost', '/boost-services', '/boost-history'] },
-    { href: '/buy-number', label: 'Numbers', icon: 'i-smartphone', match: ['/buy-number', '/number-history', '/order-status'] },
-    { href: '/settings', label: 'Me', icon: 'i-user', match: ['/settings', '/transactions', '/wallet', '/referrals', '/notifications'] }
+    { href: '/boost', label: 'Boost', icon: 'i-zap', match: ['/boost', '/boost1', '/boost1/order', '/boost2', '/boost-services', '/boost-history'] },
+    { href: '/buy-number', label: 'Numbers', icon: 'i-smartphone', match: ['/buy-number', '/buy-number-app', '/number-history', '/order-status'] },
+    { href: '/temp-email', label: 'Temp Mail', icon: 'i-mail', match: ['/temp-email'] },
+    { href: '/rental', label: 'Rentals', icon: 'i-smartphone', match: ['/rental'] },
+    { href: '/settings', label: 'Me', icon: 'i-user', match: ['/settings', '/transactions', '/wallet', '/referrals', '/notifications', '/support'] }
   ];
   function currentPath() {
     var p = location.pathname.replace(/\.html$/, '');
     return p.length > 1 ? p.replace(/\/$/, '') : '/';
   }
   function renderTabs() {
-    /* Bottom tab bar (Home / Logs / Boost / Numbers / Me) removed on every page. */
-    Array.prototype.forEach.call(document.querySelectorAll('.app-tabbar'), function (n) { n.remove(); });
-    return;
     if (!TOKEN()) return;
     if (document.querySelector('.app-tabbar')) return;
     var here = currentPath();
@@ -274,11 +228,17 @@
           '<a href="/dashboard"><span class="hm-g-ico">' + ico('i-grid') + '</span>Dashboard</a>' +
           '<a href="/marketplace"><span class="hm-g-ico">' + ico('i-cart') + '</span>Logs</a>' +
           '<a href="/buy-number"><span class="hm-g-ico">' + ico('i-smartphone') + '</span>Numbers</a>' +
+          '<a href="/temp-email"><span class="hm-g-ico">' + ico('i-mail') + '</span>Temp Mail</a>' +
+          '<a href="/rental"><span class="hm-g-ico">' + ico('i-smartphone') + '</span>Rentals</a>' +
+          '<a href="/vtu"><span class="hm-g-ico">' + ico('i-smartphone') + '</span>Airtime &amp; Data</a>' +
           '<a href="/boost"><span class="hm-g-ico">' + ico('i-zap') + '</span>Boost</a>' +
-          '<a href="/tools"><span class="hm-g-ico">' + ico('i-wrench') + '</span>Tools &amp; FMT</a>' +
+          '<a href="/working-pics"><span class="hm-g-ico">' + ico('i-image') + '</span>Working Pics</a>' +
+          '<a href="/tutorials"><span class="hm-g-ico">' + ico('i-video') + '</span>Tutorials</a>' +
+          '<a href="/tools"><span class="hm-g-ico">' + ico('i-wrench') + '</span>Format &amp; tools</a>' +
           '<a href="/games"><span class="hm-g-ico">' + ico('i-gamepad') + '</span>Games</a>' +
           '<a href="/giveaways"><span class="hm-g-ico">' + ico('i-gift') + '</span>Giveaways</a>' +
           '<a href="/referrals"><span class="hm-g-ico">' + ico('i-link') + '</span>Referrals</a>' +
+          '<a href="/instant-numbers"><span class="hm-g-ico">' + ico('i-smartphone') + '</span>Fast SMS</a>' +
           '<a href="/settings"><span class="hm-g-ico">' + ico('i-settings') + '</span>Settings</a>' +
         '</div>' +
       '</div>' +
@@ -391,13 +351,16 @@
 
   /* ── 6. Back to menu on inner pages ────────────────────────────────────── */
   function addBackToMenu() {
-    /* the old "Back to menu" bar is removed - the single green Back pill is used everywhere */
-    if (window.__kslBackBar || window.__kslBackLoader2) return;
-    window.__kslBackLoader2 = true;
-    var sc = document.createElement('script');
-    sc.src = '/js/back-button.js?v=4';
-    sc.defer = true;
-    document.head.appendChild(sc);
+    return; // removed: pages already have their own Back, and a second one looked doubled
+    if (!TOKEN()) return;
+    var here = currentPath();
+    if (here === '/' || here === '/dashboard' || document.querySelector('.app-backbar')) return;
+    var bar = document.createElement('div');
+    bar.className = 'app-backbar';
+    bar.innerHTML = '<a class="app-back" href="/">' + ico('i-arrow-left') + ' Back to menu</a>';
+    var nav = document.querySelector('.navbar');
+    if (nav && nav.parentNode) nav.parentNode.insertBefore(bar, nav.nextSibling);
+    else document.body.insertBefore(bar, document.body.firstChild);
   }
 
   function boot() {
