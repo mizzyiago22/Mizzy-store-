@@ -502,7 +502,7 @@ const userSchema = new mongoose.Schema({
  deliverableFile: String,
  deliverableFileName: String,
  pricePaid: Number,
- source: { type: String, default: 'market1' }, // 'market1' manual logs · 'market2' RakibSocials API · 'market3' Sujan Department API
+ source: { type: String, default: 'market1' }, // 'market1' manual logs · 'market2' Sameeha Social Hub API · 'market3' Sujan Department API
  purchasedAt: { type: Date, default: Date.now }
  }],
  createdAt: { type: Date, default: Date.now }
@@ -1635,8 +1635,12 @@ const anyAdminAuth = async (req, res, next) => {
 const { brandLogoFor } = require('./lib/brand-logos').register({
  app, mongoose, adminAuth, cloudinary, cloudinaryConfigured
 });
-// Marketplace 2 (RakibSocials API) + marketplace on/off switches — see lib/market2.js
+// Marketplace 2 (Sameeha Social Hub API) + marketplace on/off switches — see lib/market2.js
 require('./lib/market2').register(app, { mongoose, User, Transaction, auth, anyAdminAuth, sendAdminEmail, brandLogoFor });
+// Marketplace 5 (ExpressLogs API) - see lib/market5.js
+try {
+  require('./lib/market5').register(app, { mongoose, User, Transaction, auth, anyAdminAuth, sendAdminEmail, brandLogoFor });
+} catch (m5Err) { console.error('[market5] failed to load:', m5Err.message); }
 // Marketplace 3 (Sujan Department reseller API) - see lib/market3.js
 require('./lib/market3').register(app, { mongoose, User, Transaction, auth, anyAdminAuth, sendAdminEmail, brandLogoFor });
 require('./lib/otp-suite')(app, { mongoose, User, Transaction, auth, anyAdminAuth });
@@ -1652,18 +1656,20 @@ app.get('/api/admin/providers/status', anyAdminAuth, async (req, res) => {
       const M = mongoose.models[name];
       return M ? await M.findOne(query).lean().catch(() => null) : null;
     };
-    const [numberCfg, otpCfg, market2Cfg, market3Cfg, boostCfg] = await Promise.all([
+    const [numberCfg, otpCfg, market2Cfg, market3Cfg, market5Cfg, boostCfg] = await Promise.all([
       getNumberServerConfig().catch(() => null),
       getDoc('OtpSuiteConfig', { key: 'main' }),
       getDoc('Market2Config', { key: 'main' }),
       getDoc('Market3Config', { key: 'main' }),
+      getDoc('Market5Config', { key: 'main' }),
       getDoc('BoostSettings', { _id: 'singleton' })
     ]);
     const rows = [
       { id: 'grizzly', name: 'Grizzly SMS — Buy Number 1', configured: !!String(process.env.GRIZZLY_API_KEY || '').trim(), enabled: numberCfg?.server2Enabled !== false, credentialSource: 'Render environment: GRIZZLY_API_KEY' },
       { id: 'otpSuite', name: 'OTP Suite — Buy Number 2', configured: !!(otpCfg?.apiKeyCipher || process.env.OTP_SUITE_API_KEY), enabled: otpCfg?.enabled !== false, credentialSource: 'Admin provider settings or Render environment' },
-      { id: 'rakib', name: 'RakibSocials — Marketplace 2', configured: !!(market2Cfg?.apiKeyCipher || process.env.RAKIB_API_KEY), enabled: market2Cfg?.market2Enabled !== false, credentialSource: 'Admin Marketplace 2 settings or Render environment' },
+      { id: 'rakib', name: 'Sameeha Social Hub — Marketplace 2', configured: !!((market2Cfg?.apiKeyCipher && market2Cfg?.provider === 'sameeha') || process.env.SAMEEHA_API_KEY), enabled: market2Cfg?.market2Enabled !== false, credentialSource: 'Admin Marketplace 2 settings or Render environment' },
       { id: 'sujan', name: 'Sujan Department — Marketplace 3', configured: !!(market3Cfg?.sujanKeyCipher || process.env.SUJAN_API_KEY), enabled: market3Cfg?.market3Enabled !== false, credentialSource: 'Admin Marketplace 3 settings or Render environment' },
+      { id: 'expressLogs', name: 'ExpressLogs — Marketplace 5', configured: !!((market5Cfg?.apiKeyCipher && market5Cfg?.provider === 'expresslogs') || process.env.EXPRESSLOGS_API_KEY), enabled: market5Cfg?.market5Enabled !== false, credentialSource: 'Admin Marketplace 5 settings or Render environment' },
       { id: 'reallySimpleSocial', name: 'Really Simple Social — Boosting 1', configured: !!(boostCfg?.apiKey || process.env.BOOST_API_KEY), enabled: !!boostCfg?.enabled, credentialSource: 'Admin Boosting settings or Render environment' },
     ].map(x => ({ ...x, ready: !!x.configured && !!x.enabled, state: !x.configured ? 'missing_credentials' : (!x.enabled ? 'disabled' : 'ready') }));
     res.set('Cache-Control', 'no-store');
@@ -7829,6 +7835,7 @@ app.get('/number-history', (req, res) => (res.set('Cache-Control', 'no-store, mu
 app.get('/order-status', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'order-status.html'))));
 app.get('/marketplace2', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace2.html'))));
 app.get('/marketplace3', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace3.html'))));
+app.get('/marketplace5', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace5.html'))));
 app.get('/marketplace4', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace4.html'))));
 app.get('/marketplace', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace.html'))));
 app.get('/tools', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'tools.html'))));

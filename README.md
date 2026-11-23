@@ -26,7 +26,8 @@ Mizzy Sales is a Node.js, Express, and MongoDB application. This guide describes
 | Buy Number 2 | OTP Suite | Active integration mounted from `lib/otp-suite.js`; uses `OTP_SUITE_API_KEY` and `OTP_SUITE_BASE_URL`, or credentials configured in the admin settings. |
 | Buy Number 3 | NovaSolution | Active number-provider integration in `server.js`; uses `NOVA_API_KEY` and `NOVA_BASE_URL`. |
 | Marketplace 1 | Admin-managed inventory | The core application manages the manual marketplace inventory. |
-| Marketplace 2 | RakibSocials | Active integration mounted from `lib/market2.js`; uses `RAKIB_API_KEY` and `RAKIB_BASE_URL`, with admin configuration support. |
+| Marketplace 2 | Sameeha Social Hub | Active integration mounted from `lib/market2.js`; uses `SAMEEHA_API_KEY` and `SAMEEHA_BASE_URL`, with admin configuration support. |
+| Marketplace 5 | ExpressLogs | `lib/market5.js`; uses `EXPRESSLOGS_API_KEY` / `EXPRESSLOGS_BASE_URL` or the key saved in Admin → Marketplace 5. |
 | Marketplace 3 | Sujan Department | Active integration mounted from `lib/market3.js`; uses `SUJAN_API_KEY` and `SUJAN_BASE_URL`, with admin configuration support. |
 | Marketplace 4 | No provider integration mounted | The `marketplace4` page route exists, but the reviewed `server.js` does not mount a Marketplace 4 provider API. Do not treat it as a working provider integration until one is added. |
 | Boosting 1 | Really Simple Social | Active integration mounted from `lib/boost.js`; uses `BOOST_API_KEY` and `BOOST_API_URL`, with admin-managed settings. |
