@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Prices · Admin</title>
+<style>
+:root{--bg:#0b1020;--card:#121a2e;--line:#22304a;--txt:#e6ecf7;--mut:#8b9ab5;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--amber:#f59e0b}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4f6fb;--card:#fff;--line:#dfe5f0;--txt:#0f172a;--mut:#64748b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.top h1{font-size:17px;margin:0}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 2px}
+.hint{color:var(--mut);font-size:12.5px;margin:0 0 10px}
+input,select{background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font:inherit}
+input[type=number]{width:110px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+button{background:var(--blue);color:#fff;border:0;border-radius:8px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+button.minus{background:var(--amber);color:#111}
+button.danger{background:transparent;color:var(--red);border:1px solid var(--red)}
+button:disabled{opacity:.5}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.cur{font-weight:700;font-size:15px;white-space:nowrap}
+.cur.up{color:var(--green)}.cur.down{color:var(--amber)}.cur.zero{color:var(--mut)}
+.msg{font-size:13px;margin-left:6px}.ok{color:var(--green)}.bad{color:var(--red)}
+.gate{max-width:360px;margin:80px auto;text-align:center}.gate input{width:100%;margin:10px 0}
+#app{display:none}
+table{width:100%;border-collapse:collapse;font-size:12.5px}td{padding:6px 4px;border-top:1px solid var(--line);vertical-align:top}
+.note{background:rgba(245,158,11,.1);border:1px solid var(--amber);border-radius:10px;padding:10px 12px;font-size:12.5px;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="top"><h1>Prices — add or subtract on a service</h1><button class="ghost" id="lockBtn">Lock</button></div>
+
+<div id="gate" class="gate card">
+  <h2>Owner passcode</h2>
+  <input type="password" id="passIn" placeholder="Passcode"/>
+  <button id="passBtn">Open</button>
+  <p class="msg bad" id="gateMsg"></p>
+</div>
+
+<div id="app" class="wrap">
+  <div class="note">One change here moves <b>every</b> price of that service, and it is what customers see <b>and</b> what is charged. It is added on top of your normal pricing. <b>Restore default</b> puts the service back exactly as it was. Subtracting never takes a price below your supplier cost.</div>
+  <div id="list"></div>
+  <div class="card"><h2>Recent changes</h2><div id="log" class="hint">Loading…</div></div>
+</div>
+
+<script>
+(function () {
+  var KEY = 'ksl_admin_pass', pass = '';
+  try { pass = sessionStorage.getItem(KEY) || ''; } catch (e) {}
+  var $ = function (id) { return document.getElementById(id); };
+  // Only services that are connected to this control are shown.
+  var LIVE = ['bn1', 'bn2', 'email', 'rental', 'boost1', 'm2', 'm3', 'm4'];
+  var NAMES = { bn1: 'Buy Number 1', bn2: 'Buy Number 2', email: 'Temp Email', rental: 'Rentals', boost1: 'Boosting 1', m2: 'Marketplace 2', m3: 'Marketplace 3', m4: 'Marketplace 4' };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function api(path, opts) {
+    opts = opts || {};
+    var h = { 'x-admin-passcode': pass };
+    if (opts.body) h['Content-Type'] = 'application/json';
+    return fetch(path, { method: opts.method || 'GET', headers: h, body: opts.body ? JSON.stringify(opts.body) : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw new Error(d.error || ('Error ' + r.status)); return d; }); });
+  }
+  function fmt(p) {
+    var parts = [];
+    if (p.amountNgn) parts.push((p.amountNgn > 0 ? '+' : '−') + '₦' + Math.abs(p.amountNgn).toLocaleString());
+    if (p.percent) parts.push((p.percent > 0 ? '+' : '−') + Math.abs(p.percent) + '%');
+    return parts.length ? parts.join(' and ') : 'No change (default)';
+  }
+  function cls(p) { var t = (p.amountNgn || 0) + (p.percent || 0); return t > 0 ? 'up' : t < 0 ? 'down' : 'zero'; }
+
+  function showApp() { $('gate').style.display = 'none'; $('app').style.display = 'block'; load(); }
+  function showGate(m) { $('app').style.display = 'none'; $('gate').style.display = 'block'; $('gateMsg').textContent = m || ''; }
+
+  function draw(providers) {
+    var box = $('list'); box.innerHTML = '';
+    providers.filter(function (p) { return LIVE.indexOf(p.key) > -1; }).forEach(function (p) {
+      var d = document.createElement('div'); d.className = 'card'; d.dataset.key = p.key;
+      d.innerHTML =
+        '<div class="head"><div><h2>' + esc(NAMES[p.key] || p.label) + '</h2><p class="hint">' + esc(p.label) + ' · ' + esc(p.unit) + '</p></div>' +
+        '<div class="cur ' + cls(p) + '">' + esc(fmt(p)) + '</div></div>' +
+        '<div class="row"><select class="t"><option value="amount">₦ Naira</option><option value="percent">% Percent</option></select>' +
+        '<input type="number" class="v" step="any" min="0" placeholder="Amount"/></div>' +
+        '<div class="row"><button data-a="add">+ Add</button><button class="minus" data-a="subtract">− Subtract</button>' +
+        '<button class="ghost" data-a="set">Set exactly</button><button class="danger" data-a="reset">Restore default</button><span class="msg"></span></div>';
+      box.appendChild(d);
+    });
+  }
+  function drawLog(log) {
+    if (!log || !log.length) { $('log').textContent = 'No changes yet.'; return; }
+    var rows = log.map(function (l) {
+      var what = l.action === 'reset' ? 'Restored default' : (l.action === 'add' ? 'Added ' : l.action === 'subtract' ? 'Subtracted ' : 'Set to ') + (l.type === 'percent' ? l.value + '%' : '₦' + l.value);
+      return '<tr><td>' + esc(new Date(l.at).toLocaleString()) + '</td><td>' + esc(l.label) + '</td><td>' + esc(what) + '</td><td>' + esc(fmt(l.after || {})) + '</td></tr>';
+    }).join('');
+    $('log').innerHTML = '<table>' + rows + '</table>';
+  }
+  function load() {
+    api('/api/admin/price-adjust').then(function (d) { draw(d.providers); drawLog(d.log); })
+      .catch(function (e) { try { sessionStorage.removeItem(KEY); } catch (x) {} showGate(e.message); });
+  }
+
+  $('list').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-a]'); if (!b) return;
+    var card = b.closest('.card'), key = card.dataset.key, action = b.dataset.a;
+    var type = card.querySelector('.t').value, val = card.querySelector('.v').value, msg = card.querySelector('.msg');
+    if (action !== 'reset' && (val === '' || isNaN(Number(val)))) { msg.className = 'msg bad'; msg.textContent = 'Enter a number first.'; return; }
+    if (action === 'reset' && !confirm('Restore ' + (NAMES[key] || key) + ' to its normal prices?')) return;
+    b.disabled = true; msg.className = 'msg'; msg.textContent = 'Saving…';
+    api('/api/admin/price-adjust', { method: 'POST', body: { keys: [key], action: action, type: type, value: action === 'reset' ? 0 : Number(val) } })
+      .then(function () { load(); })
+      .catch(function (e) { msg.className = 'msg bad'; msg.textContent = e.message; b.disabled = false; });
+  });
+
+  $('passBtn').onclick = function () { pass = $('passIn').value.trim(); try { sessionStorage.setItem(KEY, pass); } catch (e) {} load(); showApp(); };
+  $('passIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('passBtn').click(); });
+  $('lockBtn').onclick = function () { try { sessionStorage.removeItem(KEY); } catch (e) {} pass = ''; showGate(''); };
+  if (pass) showApp(); else showGate('');
+})();
+</script>
+</body>
+</html>
