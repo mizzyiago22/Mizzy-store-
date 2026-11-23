@@ -44,6 +44,8 @@ select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--li
 .prow select{width:auto}
 html.embed .top { display: none; }
 </style>
+<link rel="stylesheet" href="/admin-embed.css?v=1"/>
+<script src="/admin-embed.js?v=1"></script>
 </head>
 <body>
 <div class="top"><b>Suggestions</b><button type="button" id="lockBtn">Lock</button></div>
@@ -145,7 +147,7 @@ html.embed .top { display: none; }
     return d;
   }
 
-  function showGate(err) { $('app').classList.add('hidden'); $('gate').classList.remove('hidden'); setMsg('gateMsg', err || ''); $('passIn').focus(); }
+  function showGate(err){ if(window.__admExpired) window.__admExpired(err); } function __unusedGate(err) { $('app').classList.add('hidden'); $('gate').classList.remove('hidden'); setMsg('gateMsg', err || ''); $('passIn').focus(); }
   function showApp() { $('gate').classList.add('hidden'); $('app').classList.remove('hidden'); load(); }
 
   $('gateForm').addEventListener('submit', async function (e) {

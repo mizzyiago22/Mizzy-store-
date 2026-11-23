@@ -48,6 +48,8 @@ th{color:var(--mut);font-weight:700}
 .back{margin-bottom:12px}
 html.embed .top { display: none; }
 </style>
+<link rel="stylesheet" href="/admin-embed.css?v=1"/>
+<script src="/admin-embed.js?v=1"></script>
 </head>
 <body>
 <div class="top">
@@ -132,7 +134,7 @@ html.embed .top { display: none; }
   }
 
   // ---------- passcode gate ----------
-  function showGate(err) {
+  function showGate(err){ if(window.__admExpired) window.__admExpired(err); } function __unusedGate(err) {
     $('app').classList.add('hidden');
     $('gate').classList.remove('hidden');
     $('gateMsg').textContent = err || '';

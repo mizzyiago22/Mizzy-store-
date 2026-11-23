@@ -126,6 +126,17 @@ label{display:block;margin-bottom:5px;font-size:12px;color:var(--t2);font-weight
   .item-card-fields{grid-template-columns:repeat(4,1fr)}
 }
 .sec-title{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:16px;display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+/* ── ADMIN POLISH: embedded sections + consistent spacing ── */
+.adm-embed{display:block;width:100%;height:calc(100vh - 150px);height:calc(100dvh - 150px);min-height:620px;border:1px solid var(--border);border-radius:var(--r16);background:var(--bg)}
+.main{width:100%;max-width:1180px}
+.tab-panel .sec{padding:22px}
+.tab-panel .sec-title{font-size:15px;line-height:1.35;flex-wrap:wrap}
+.tab-panel .fg{margin-bottom:14px}
+.tab-panel .info-box{line-height:1.6}
+.tab-panel input:not([type=checkbox]):not([type=radio]):not([type=file]),.tab-panel select,.tab-panel textarea{max-width:100%}
+.tab-panel h3{margin:0 0 10px;line-height:1.35}
+@media(max-width:900px){.main{padding:14px 12px}.adm-embed{height:calc(100dvh - 130px);min-height:540px}}
+@media(max-width:600px){.tab-panel .sec{padding:14px}.stat-row{grid-template-columns:repeat(2,1fr);gap:10px}.sc-val{font-size:22px}}
 /* TAB PANELS */
 .tab-panel{display:none}
 .tab-panel.active{display:block}
@@ -1751,12 +1762,12 @@ tr:hover td{background:rgba(255,255,255,.035)}
     </div>
     <!-- ══ SOCIAL BOOSTING (SMM) ═════════════════════════════════════════ -->
     <!-- ══ PORTED PANELS (Mizzysales feature update) ══ -->
-<div id="tab-custusers" class="tab-panel"><iframe class="adm-embed" src="/admin-users.html" title="Users"></iframe></div>
-<div id="tab-custhistory" class="tab-panel"><iframe class="adm-embed" src="/admin-history.html" title="Order history"></iframe></div>
-<div id="tab-instantadm" class="tab-panel"><iframe class="adm-embed" src="/admin-instant.html" title="Instant Numbers"></iframe></div>
-<div id="tab-pricesadm" class="tab-panel"><iframe class="adm-embed" src="/admin-prices.html" title="Prices"></iframe></div>
-<div id="tab-market5adm" class="tab-panel"><iframe class="adm-embed" src="/admin-market5.html" title="Marketplace 5"></iframe></div>
-<div id="tab-custsugg" class="tab-panel"><iframe class="adm-embed" src="/admin-suggestions.html" title="Recommended items"></iframe></div>
+<div id="tab-custusers" class="tab-panel"><iframe class="adm-embed" src="/admin-users.html?v=2" title="Users"></iframe></div>
+<div id="tab-custhistory" class="tab-panel"><iframe class="adm-embed" src="/admin-history.html?v=2" title="Order history"></iframe></div>
+<div id="tab-instantadm" class="tab-panel"><iframe class="adm-embed" src="/admin-instant.html?v=2" title="Instant Numbers"></iframe></div>
+<div id="tab-pricesadm" class="tab-panel"><iframe class="adm-embed" src="/admin-prices.html?v=2" title="Prices"></iframe></div>
+<div id="tab-market5adm" class="tab-panel"><iframe class="adm-embed" src="/admin-market5.html?v=2" title="Marketplace 5"></iframe></div>
+<div id="tab-custsugg" class="tab-panel"><iframe class="adm-embed" src="/admin-suggestions.html?v=2" title="Recommended items"></iframe></div>
     <div id="tab-orderlookup" class="tab-panel">
       <div class="sec">
  <div class="sec-title"><svg class="icon i-receipt" aria-hidden="true"><use href="#i-receipt"/></svg> Order lookup</div>

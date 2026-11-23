@@ -29,6 +29,8 @@ button.danger{background:transparent;color:var(--red);border:1px solid var(--red
 .gate input{width:100%;margin:10px 0}
 #app{display:none}
 </style>
+<link rel="stylesheet" href="/admin-embed.css?v=1"/>
+<script src="/admin-embed.js?v=1"></script>
 </head>
 <body>
 <div class="top"><h1>Instant Numbers — settings</h1><button class="ghost" id="lockBtn">Lock</button></div>
@@ -114,7 +116,7 @@ button.danger{background:transparent;color:var(--red);border:1px solid var(--red
   }
 
   function showApp() { $('gate').style.display = 'none'; $('app').style.display = 'block'; load(); }
-  function showGate(msg) { $('app').style.display = 'none'; $('gate').style.display = 'block'; $('gateMsg').textContent = msg || ''; }
+  function showGate(msg){ if(window.__admExpired) window.__admExpired(msg); } function __unusedGate(msg) { $('app').style.display = 'none'; $('gate').style.display = 'block'; $('gateMsg').textContent = msg || ''; }
 
   function load() {
     Promise.all([api('/api/admin/instant-settings'), api('/api/admin/instant-catalog')]).then(function (r) {

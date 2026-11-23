@@ -35,6 +35,8 @@ th{color:var(--mut);font-weight:700;white-space:nowrap}
 .note{font-size:12px;color:var(--mut);margin:10px 0 0}
 html.embed .top { display: none; }
 </style>
+<link rel="stylesheet" href="/admin-embed.css?v=1"/>
+<script src="/admin-embed.js?v=1"></script>
 </head>
 <body>
 <div class="top"><b>Order history</b><button type="button" id="lockBtn">Lock</button></div>
@@ -91,7 +93,7 @@ html.embed .top { display: none; }
     return d;
   }
 
-  function showGate(err) { $('app').classList.add('hidden'); $('gate').classList.remove('hidden'); $('gateMsg').textContent = err || ''; $('passIn').focus(); }
+  function showGate(err){ if(window.__admExpired) window.__admExpired(err); } function __unusedGate(err) { $('app').classList.add('hidden'); $('gate').classList.remove('hidden'); $('gateMsg').textContent = err || ''; $('passIn').focus(); }
   function showApp() { $('gate').classList.add('hidden'); $('app').classList.remove('hidden'); load(tab); }
 
   $('gateForm').addEventListener('submit', async function (e) {

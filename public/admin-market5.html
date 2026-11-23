@@ -38,6 +38,8 @@ td input[type=number]{width:96px}
 .attn{border:1px solid var(--amber);background:rgba(245,158,11,.08);border-radius:10px;padding:10px;margin:8px 0}
 textarea{width:100%;min-height:70px}
 </style>
+<link rel="stylesheet" href="/admin-embed.css?v=1"/>
+<script src="/admin-embed.js?v=1"></script>
 </head>
 <body>
 <div class="top"><h1>Marketplace 5 — ExpressLogs</h1><button class="ghost" id="lockBtn">Lock</button></div>
@@ -110,7 +112,7 @@ textarea{width:100%;min-height:70px}
   }
   function say(id, text, bad) { var e = $(id); e.className = 'msg ' + (bad ? 'bad' : 'ok'); e.textContent = text || ''; }
   function showApp() { $('gate').style.display = 'none'; $('app').style.display = 'block'; loadAll(); }
-  function showGate(m) { $('app').style.display = 'none'; $('gate').style.display = 'block'; $('gateMsg').textContent = m || ''; }
+  function showGate(m){ if(window.__admExpired) window.__admExpired(m); } function __unusedGate(m) { $('app').style.display = 'none'; $('gate').style.display = 'block'; $('gateMsg').textContent = m || ''; }
 
   function drawCfg() {
     var on = CFG.market5Enabled !== false;
