@@ -29,15 +29,21 @@
       $('m4Back').onclick = function () { view = 'cats'; curCat = ''; q = ''; $('m4Search').value = ''; render(); window.scrollTo(0, 0); };
       $('m4Search').oninput = function () { q = this.value.trim().toLowerCase(); if (q && view === 'cats') { view = 'search'; } else if (!q && view === 'search') { view = 'cats'; } render(); };
     }
-    if (!$('m4CartBar')) {
-      var bar = document.createElement('div'); bar.id = 'm4CartBar'; bar.className = 'm4-cartbar'; bar.style.display = 'none';
-      bar.innerHTML = '<div><b id="m4CartCount">0 items</b><span id="m4CartTotal"></span></div><button type="button" id="m4CartBtn">Review &amp; Buy</button>';
-      document.body.appendChild(bar);
-      $('m4CartBtn').onclick = openCheckout;
+    if (!$('m4Overlay')) {
       var ov = document.createElement('div'); ov.id = 'm4Overlay'; ov.className = 'm4-overlay';
       ov.innerHTML = '<div class="m4-sheet" role="dialog" aria-modal="true"><div id="m4SheetBody"></div></div>';
       ov.addEventListener('click', function (e) { if (e.target === ov && !busy) closeSheet(); });
       document.body.appendChild(ov);
+    }
+    if (!$('m5Style')) {
+      var st = document.createElement('style'); st.id = 'm5Style';
+      st.textContent = '.m5-logo{width:44px;height:44px;border-radius:12px;object-fit:cover;flex:0 0 44px;background:#fff;border:1px solid var(--border2,#dbe6f6)}' +
+        '.m5-logo-ph{display:flex;align-items:center;justify-content:center;background:var(--gold,#0b7cf5);color:#fff;font-weight:900;font-size:18px;border:0}' +
+        '.m5-head{display:flex;gap:10px;align-items:center;min-width:0}.m5-head .m4-card-head{flex:1;min-width:0}' +
+        '.m4-cat-ico.m5-ico-img{padding:0;overflow:hidden;background:#fff;border:1px solid var(--border2,#dbe6f6)}.m4-cat-ico.m5-ico-img img{width:100%;height:100%;object-fit:cover}' +
+        '.m5-buy{flex:1;min-height:40px;border:0;border-radius:10px;font-weight:800;font-size:14px;color:#fff;background:linear-gradient(135deg,#155EEF,#38BDF8);cursor:pointer}' +
+        '.m5-buy:active{transform:scale(.98)}.m5-buy[disabled]{opacity:.5;cursor:not-allowed}';
+      document.head.appendChild(st);
     }
   }
 
@@ -73,10 +79,10 @@
     if (view === 'cats') {
       title.textContent = 'Choose a category';
       var map = {};
-      items.forEach(function (i) { var g = groupOf(i); (map[g] = map[g] || { n: 0, stock: 0 }); map[g].n++; if (i.inStock) map[g].stock += i.stock; });
+      items.forEach(function (i) { var g = groupOf(i); (map[g] = map[g] || { n: 0, stock: 0, pic: '' }); map[g].n++; if (!map[g].pic && i.picture) map[g].pic = i.picture; if (i.inStock) map[g].stock += i.stock; });
       var names = Object.keys(map).sort(function (a, b) { return a.localeCompare(b); });
       grid.innerHTML = names.length ? names.map(function (g) {
-        return '<button type="button" class="m4-cat" data-cat="' + E(g) + '"><span class="m4-cat-ico">' + E(g.charAt(0).toUpperCase()) + '</span><span class="m4-cat-name">' + E(g) + '</span><span class="m4-cat-n">' + map[g].n + ' product' + (map[g].n === 1 ? '' : 's') + '</span></button>';
+        return '<button type="button" class="m4-cat" data-cat="' + E(g) + '">' + (map[g].pic ? '<span class="m4-cat-ico m5-ico-img"><img src="' + E(map[g].pic) + '" alt="" loading="lazy" onerror="this.parentNode.className=\'m4-cat-ico\';this.parentNode.textContent=\'' + E(g.charAt(0).toUpperCase()) + '\'"/></span>' : '<span class="m4-cat-ico">' + E(g.charAt(0).toUpperCase()) + '</span>') + '<span class="m4-cat-name">' + E(g) + '</span><span class="m4-cat-n">' + map[g].n + ' product' + (map[g].n === 1 ? '' : 's') + '</span></button>';
       }).join('') : '<div class="no-items" style="grid-column:1/-1">No products available yet</div>';
       Array.prototype.forEach.call(grid.querySelectorAll('.m4-cat'), function (b) { b.onclick = function () { curCat = b.getAttribute('data-cat'); view = 'cat'; render(); window.scrollTo(0, 0); }; });
     } else {
@@ -85,59 +91,48 @@
       list.sort(function (a, b) { return Number(b.inStock) - Number(a.inStock) || a.price - b.price; });
       title.textContent = view === 'search' ? 'Search results' : curCat;
       grid.innerHTML = list.length ? list.map(card).join('') : '<div class="no-items" style="grid-column:1/-1">No products found</div>';
-      Array.prototype.forEach.call(grid.querySelectorAll('[data-add]'), function (b) { b.onclick = function () { addFromCard(+b.getAttribute('data-add')); }; });
+      Array.prototype.forEach.call(grid.querySelectorAll('[data-buy]'), function (b) { b.onclick = function () { buyNow(+b.getAttribute('data-buy')); }; });
       Array.prototype.forEach.call(grid.querySelectorAll('[data-step]'), function (b) { b.onclick = function () { step(b); }; });
     }
     updateBar();
   }
 
   function card(i) {
-    var out = !i.inStock, inCart = cart[i.id] || 0, max = Math.min(i.stock, 100);
-    return '<div class="m4-card"><div class="m4-card-head"><div class="m4-card-title">' + E(i.title) + '</div><div class="m4-card-price">' + money(i.price) + '</div></div>' +
+    var out = !i.inStock, max = Math.min(i.stock, 100);
+    var logo = i.picture
+      ? '<img class="m5-logo" src="' + E(i.picture) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<div class=&quot;m5-logo m5-logo-ph&quot;>' + E(i.title.charAt(0).toUpperCase()) + '</div>\'"/>'
+      : '<div class="m5-logo m5-logo-ph">' + E(i.title.charAt(0).toUpperCase()) + '</div>';
+    return '<div class="m4-card"><div class="m5-head">' + logo + '<div class="m4-card-head"><div class="m4-card-title">' + E(i.title) + '</div><div class="m4-card-price">' + money(i.price) + '</div></div></div>' +
       '<div class="m4-card-desc">' + E(i.description || 'Instant delivery after purchase.') + '</div>' +
       '<div class="m4-card-stock" style="color:' + (out ? '#e74c3c' : '#18a0fb') + '">' + (out ? 'Sold out' : i.stock + ' available') + '</div>' +
-      (out ? '' : '<div class="m4-card-act"><div class="m4-qty"><button type="button" data-step="-1" data-id="' + i.id + '" aria-label="Less">−</button><input type="number" inputmode="numeric" min="1" max="' + max + '" value="' + (inCart || 1) + '" id="q' + i.id + '"/><button type="button" data-step="1" data-id="' + i.id + '" aria-label="More">+</button></div>' +
-        '<button type="button" class="m4-add' + (inCart ? ' in' : '') + '" data-add="' + i.id + '">' + (inCart ? 'Update cart' : 'Add to cart') + '</button></div>') + '</div>';
+      (out ? '<div class="m4-card-act"><button type="button" class="m5-buy" disabled>Sold out</button></div>'
+           : '<div class="m4-card-act"><div class="m4-qty"><button type="button" data-step="-1" data-id="' + i.id + '" aria-label="Less">−</button><input type="number" inputmode="numeric" id="q' + i.id + '" min="1" max="' + max + '" value="1"/><button type="button" data-step="1" data-id="' + i.id + '" aria-label="More">+</button></div>' +
+             '<button type="button" class="m5-buy" data-buy="' + i.id + '">Buy now</button></div>') + '</div>';
   }
   function step(b) {
     var id = +b.getAttribute('data-id'), it = byId(id), inp = $('q' + id); if (!it || !inp) return;
     var v = (parseInt(inp.value, 10) || 1) + (+b.getAttribute('data-step'));
     inp.value = Math.max(1, Math.min(Math.min(it.stock, 100), v));
   }
-  function addFromCard(id) {
-    var it = byId(id), inp = $('q' + id); if (!it || !inp) return;
-    var v = Math.max(1, Math.min(Math.min(it.stock, 100), parseInt(inp.value, 10) || 1));
-    var had = !!cart[id]; cart[id] = v; refs = {};
-    toast((had ? 'Cart updated: ' : 'Added: ') + v + ' × ' + it.title, 'ok');
-    render();
-  }
 
-  // ───── Checkout banner ─────
+  // ───── Buy now: one tap buys straight away (no cart, no confirmation step) ─────
   function closeSheet() { $('m4Overlay').classList.remove('open'); document.body.classList.remove('m4-lock'); }
   function openSheet() { $('m4Overlay').classList.add('open'); document.body.classList.add('m4-lock'); }
 
-  function openCheckout() {
-    if (!cartInfo().n) return;
+  async function buyNow(id) {
+    if (busy) return;
+    var it = byId(id), inp = $('q' + id); if (!it) return;
     if (typeof token === 'undefined' || !token) { toast('Please log in to buy', 'err'); setTimeout(function () { location.href = '/login'; }, 800); return; }
-    drawCheckout(); openSheet();
-  }
-  function drawCheckout() {
-    var c = cartInfo();
-    if (!c.n) { closeSheet(); render(); return; }
-    var rows = Object.keys(cart).map(function (id) {
-      var it = byId(+id), qty = cart[id], max = Math.min(it.stock, 100);
-      return '<div class="m4-line"><div class="m4-line-t"><b>' + E(it.title) + '</b><span>' + money(it.price) + ' each</span></div>' +
-        '<div class="m4-qty sm"><button type="button" data-cs="-1" data-id="' + id + '">−</button><input readonly value="' + qty + '"/><button type="button" data-cs="1" data-id="' + id + '">+</button></div>' +
-        '<div class="m4-line-sum">' + money(it.price * qty) + '</div><button type="button" class="m4-x" data-rm="' + id + '" aria-label="Remove">✕</button></div>';
-    }).join('');
-    $('m4SheetBody').innerHTML = '<h3 class="m4-sh-title">Confirm your purchase</h3><p class="m4-sh-sub">Do you want to buy these products? The total will be taken from your wallet and your credentials appear immediately.</p>' +
-      '<div class="m4-lines">' + rows + '</div><div class="m4-total"><span>Total</span><b>' + money(c.total) + '</b></div>' +
-      '<div class="m4-sh-btns"><button type="button" class="m4-ghost" id="m4Cancel">Keep shopping</button><button type="button" class="m4-buy" id="m4Confirm">Buy now</button></div>';
-    $('m4Cancel').onclick = closeSheet;
-    $('m4Confirm').onclick = checkout;
-    Array.prototype.forEach.call($('m4SheetBody').querySelectorAll('[data-cs]'), function (b) { b.onclick = function () {
-      var id = +b.getAttribute('data-id'), it = byId(id); cart[id] = Math.max(1, Math.min(Math.min(it.stock, 100), cart[id] + (+b.getAttribute('data-cs')))); refs = {}; drawCheckout(); updateBar(); }; });
-    Array.prototype.forEach.call($('m4SheetBody').querySelectorAll('[data-rm]'), function (b) { b.onclick = function () { delete cart[b.getAttribute('data-rm')]; refs = {}; drawCheckout(); render(); }; });
+    var qty = Math.max(1, Math.min(Math.min(it.stock, 100), parseInt(inp && inp.value, 10) || 1));
+    busy = true; openSheet();
+    $('m4SheetBody').innerHTML = '<div class="m4-wait"><div class="m4-spin"></div><p>Buying…<br/><small>' + E(it.title) + ' × ' + qty + '</small></p><p class="m4-warn">Please do not close this page until your credentials appear.</p></div>';
+    var res = await buyOne(id, qty);
+    res.title = it.title; res.qty = res.qty || qty;
+    if (res.ok) { delete refs[id]; it.stock = Math.max(0, it.stock - ((res.keys && res.keys.length) || qty)); it.inStock = it.stock > 0; }
+    else if (!res.pending) { delete refs[id]; }
+    busy = false;
+    if (typeof updateNav === 'function') try { updateNav(); } catch (e) {}
+    showResults([res]); render();
   }
 
   async function buyOne(id, qty) {
@@ -167,24 +162,6 @@
   function doneOne(r, ref) {
     if (r && r.pending) return { ok: false, pending: true, error: r.message || 'Order received, finalising delivery. Your credentials will appear in My Purchases shortly. Do not buy again.' };
     return { ok: true, keys: r.keys || [], paid: r.amountPaid, partial: !!r.partial, qty: r.quantity };
-  }
-
-  async function checkout() {
-    if (busy) return; busy = true;
-    var ids = Object.keys(cart).map(Number), results = [];
-    var body = $('m4SheetBody');
-    for (var k = 0; k < ids.length; k++) {
-      var it = byId(ids[k]), qty = cart[ids[k]];
-      body.innerHTML = '<div class="m4-wait"><div class="m4-spin"></div><p>Buying ' + (k + 1) + ' of ' + ids.length + '…<br/><small>' + E(it.title) + ' × ' + qty + '</small></p><p class="m4-warn">Please do not close this page.</p></div>';
-      var res = await buyOne(ids[k], qty);
-      res.title = it.title; res.qty = res.qty || qty; results.push(res);
-      if (res.ok) {
-        delete cart[ids[k]]; it.stock = Math.max(0, it.stock - (res.keys.length || qty)); it.inStock = it.stock > 0;
-      }
-    }
-    busy = false; refs = {};
-    if (typeof updateNav === 'function') try { updateNav(); } catch (e) {}
-    showResults(results); render();
   }
 
   function showResults(results) {
