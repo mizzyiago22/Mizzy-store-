@@ -1,44 +1,4 @@
 require('dotenv').config();
-// ── SECURITY: validate critical secrets before starting the service ──────────
-(function assertSecrets() {
-  const production = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
-  if (production) {
-    const problems = [];
-    if (!String(process.env.MONGODB_URI || '').trim()) problems.push('MONGODB_URI is required');
-    if (!String(process.env.JWT_SECRET || '').trim()) problems.push('JWT_SECRET is required');
-    else if (String(process.env.JWT_SECRET).length < 32) problems.push('JWT_SECRET must be at least 32 characters');
-    if (!String(process.env.ADMIN_PASSCODE || '').trim()) problems.push('ADMIN_PASSCODE is required');
-    else if (String(process.env.ADMIN_PASSCODE).length < 12) problems.push('ADMIN_PASSCODE must be at least 12 characters');
-    if (!String(process.env.ADMIN_SECRET_PATH || '').trim()) problems.push('ADMIN_SECRET_PATH is required');
-    else if (String(process.env.ADMIN_SECRET_PATH).trim() === 'ksl-admin-secret') problems.push('ADMIN_SECRET_PATH must not use the insecure default "ksl-admin-secret"');
-    if (problems.length) {
-      console.error('FATAL: production environment validation failed:');
-      for (const problem of problems) console.error(`  - ${problem}`);
-      console.error('Set the missing/invalid values in your Render Environment settings, then redeploy.');
-      process.exit(1);
-    }
-  } else {
-    // Keep the existing local-development requirement for JWT_SECRET.
-    if (!process.env.JWT_SECRET) { console.error('FATAL: JWT_SECRET is not set. Set it to a long random string (32+ chars).'); process.exit(1); }
-    if (process.env.JWT_SECRET.length < 32) console.warn('SECURITY WARNING: JWT_SECRET is shorter than 32 characters — replace it with a long random string.');
-    if (!process.env.ADMIN_PASSCODE) console.warn('SECURITY WARNING: ADMIN_PASSCODE is not set — admin endpoints are locked until you set it.');
-    else if (process.env.ADMIN_PASSCODE.length < 12) console.warn('SECURITY WARNING: ADMIN_PASSCODE is shorter than 12 characters — use a long random passcode.');
-    if (!String(process.env.ADMIN_SECRET_PATH || '').trim()) console.warn('SECURITY WARNING: ADMIN_SECRET_PATH is not set. Set a long, random private admin path before deployment.');
-    else if (String(process.env.ADMIN_SECRET_PATH).trim() === 'ksl-admin-secret') console.warn('SECURITY WARNING: ADMIN_SECRET_PATH uses the insecure default "ksl-admin-secret". Replace it before deployment.');
-  }
-  if ((process.env.FLW_CLIENT_ID || process.env.FLW_V3_SECRET_KEY) && !(process.env.FLW_SECRET_HASH || process.env.FLW_WEBHOOK_HASH)) {
-    console.error('SECURITY ERROR: Flutterwave is configured but FLW_SECRET_HASH is not set. Flutterwave webhooks are now REJECTED (deposits will not auto-credit) until you set FLW_SECRET_HASH to the same value as in the Flutterwave dashboard.');
-  }
-})();
-
-const _crypto = require('crypto');
-const { sealRef, openRef } = require('./lib/opaque-ref');
-// Constant-time string compare (stops timing attacks on passcodes / webhook hashes)
-function safeEqual(a, b) {
-  const x = Buffer.from(String(a == null ? '' : a)), y = Buffer.from(String(b == null ? '' : b));
-  if (x.length !== y.length) { _crypto.timingSafeEqual(x, x); return false; }
-  return _crypto.timingSafeEqual(x, y);
-}
 // ── Site branding / look-and-feel lives in ONE file: site.config.js ─────────
 // Clone the project, edit site.config.js (or the BRAND_* vars in .env), and the
 // whole site renames, recolours and re-titles itself. No need to dig in here.
@@ -57,37 +17,10 @@ const { OAuth2Client } = require('google-auth-library');
 const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
 if (!googleClient) console.warn(' GOOGLE_CLIENT_ID not set in .env — Google Sign-In will be disabled until configured.');
 const app = express();
-// Render's lightweight readiness probe; intentionally registered before all middleware/auth.
-app.get('/healthz', (req, res) => res.status(200).json({ ok: true }));
-// Shows whether each database is connected. No secrets are returned.
-app.get('/healthz/db', async (req, res) => {
-  const mysqlDb = require('./lib/mysql');
-  res.json({
-    mongo: require('mongoose').connection.readyState === 1,
-    mysql: mysqlDb.configured() ? await mysqlDb.ping() : 'not configured'
-  });
-});
 const rateLimit = require('express-rate-limit');
-// MYS-UPDATE-20 landing page for visitors
-app.get('/', (req, res) => { res.set('Cache-Control', 'no-store, must-revalidate'); res.sendFile(path.join(__dirname, 'public', 'home.html')); });
 app.use(cors({ origin: '*', methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'], allowedHeaders: ['Content-Type','Authorization','x-admin-passcode','x-subadmin-token'] }));
 app.options('*', cors()); // handle pre-flight OPTIONS requests
-app.set('trust proxy', 2);
-
-// Per-browser device id (cookie). Used by the sign-up limit so people who share
-// one IP (mobile networks, offices) are not blocked because of each other.
-app.use((req, res, next) => {
-  try {
-    const m = /(?:^|;\s*)mys_did=([a-f0-9]{32})/.exec(req.headers.cookie || '');
-    let id = m ? m[1] : '';
-    if (!id) {
-      id = require('crypto').randomBytes(16).toString('hex');
-      res.append('Set-Cookie', 'mys_did=' + id + '; Max-Age=63072000; Path=/; HttpOnly; SameSite=Lax' + (req.secure ? '; Secure' : ''));
-    }
-    req.deviceId = id;
-  } catch (e) {}
-  next();
-});
+app.set('trust proxy', 1);
 app.use((req, res, next) => {
  // Keep search engines out of the API, admin and account areas, but allow the
  // public marketing/shop pages to be indexed (Google was seeing a site-wide
@@ -100,10 +33,6 @@ app.use((req, res, next) => {
  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-admin-passcode,x-subadmin-token');
  next();
 });
-
-// Premium authentication pages served by the existing application.
-app.get(['/register', '/signup'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
-app.get(['/login', '/signin'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 
 // ── sitemap.xml (Search Console needs a real XML file at the root) ──────────
 app.get('/sitemap.xml', (req, res) => {
@@ -171,20 +100,14 @@ const apiLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 const registerLimiter = rateLimit({
  windowMs: 60 * 60 * 1000, // 1 hour
- max: 5, // 5 signups per IP per hour is generous for shared connections, brutal for bots
+ max: Math.max(1, Number(process.env.REGISTER_LIMIT_PER_HOUR || 10)), // signups per IP per hour (set REGISTER_LIMIT_PER_HOUR to change)
+ skipFailedRequests: true, // only successful signups count; typos, duplicate emails and validation errors do not
  standardHeaders: true,
  legacyHeaders: false,
  message: { error: 'Too many accounts created from this connection recently. Please try again later or contact support.' },
  trustProxy: true
 });
 app.use('/api/auth/register', registerLimiter);
-// Brute-force protection for the admin passcode: 20 FAILED attempts / 15 min / IP (successful calls are not counted)
-const adminFailLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, max: 40, standardHeaders: true, legacyHeaders: false,
-  skipSuccessfulRequests: true, skip: (req) => req.method === 'OPTIONS',
-  message: { error: 'Too many failed admin attempts. Try again later.' }, trustProxy: true
-});
-app.use('/api/admin', adminFailLimiter);
 const apiV1Limiter = rateLimit({
  windowMs: 60 * 1000,
  max: 60,
@@ -194,8 +117,8 @@ const apiV1Limiter = rateLimit({
  trustProxy: true
 });
 app.use('/api/v1/', apiV1Limiter);
-app.use(express.json({ limit: '20mb', verify: (req, res, buf) => { if ((req.originalUrl || '').startsWith('/api/webhooks/')) req.rawBody = buf; } })); // rawBody lets us verify Paystack's HMAC signature
-// ── MYS request console log ──────────────────────────────────────────────────
+app.use(express.json({ limit: '20mb', verify: (req, res, buf) => { if (req.originalUrl && (req.originalUrl.startsWith('/api/webhooks/paystack') || req.originalUrl.startsWith('/api/webhooks/tiger-sms'))) req.rawBody = buf; } }));
+// ── KLS request console log ──────────────────────────────────────────────────
 // Every API call is logged with method, path, status, duration and the caller,
 // so any "it works for me but not for him" report can be traced in the server
 // logs instead of guessed at.
@@ -204,7 +127,7 @@ app.use((req, res, next) => {
   const started = Date.now();
   res.on('finish', () => {
     const who = req.user?.email || req.user?._id || 'guest';
-    const line = `[MYS] ${req.method} ${req.originalUrl} -> ${res.statusCode} ${Date.now() - started}ms user=${who}`;
+    const line = `[KLS] ${req.method} ${req.originalUrl} -> ${res.statusCode} ${Date.now() - started}ms user=${who}`;
     if (res.statusCode >= 500) console.error(line);
     else if (res.statusCode >= 400) console.warn(line);
     else console.log(line);
@@ -213,25 +136,10 @@ app.use((req, res, next) => {
 });
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use((req, res, next) => { stripOperators(req.body); stripOperators(req.query); next(); });
-require('./lib/mizzy-upgrade').early(app, { mongoose }); // MIZZY-UPGRADE early
 // index:false so '/' reaches the SEO-meta-injecting route below instead of being auto-served raw.
 // HTML pages are never cached: visitors were still being served an old copy of
 // the home page (and other pages) out of the browser/CDN cache after a deploy.
 // Versioned assets (?v=...) keep their normal cache.
-// Pages load /js/mys-ui.js and /js/back-button.js. If those files were uploaded to public/ instead of public/js/,
-// serve them from there so confirm pop-ups (used by every Buy button) never 404.
-['mys-ui.js', 'back-button.js'].forEach(name => {
-  app.get('/js/' + name, (req, res, next) => {
-    const proper = path.join(__dirname, 'public', 'js', name), root = path.join(__dirname, 'public', name);
-    if (!fs.existsSync(proper) && fs.existsSync(root)) return res.sendFile(root);
-    next();
-  });
-});
-app.use((req, res, next) => { if ((req.path || '').toLowerCase() === '/admin.html') return res.status(404).send('Not found'); next(); });
-app.use((req, res, next) => {
-  if (/\.(?:bak|backup|old|orig|swp|tmp)$/i.test(req.path || '')) return res.sendStatus(404);
-  next();
-});
 app.use(express.static('public', {
   index: false,
   setHeaders(res, filePath) {
@@ -253,16 +161,12 @@ if (cloudinaryConfigured) {
  });
  console.log(' Cloudinary connected — uploaded pictures/files will persist permanently');
 } else {
- console.warn('WARNING: Cloudinary is not configured (missing CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, or CLOUDINARY_API_SECRET). Uploads will fall back to Render local disk and WILL BE LOST on restart/redeploy. Configure all three Cloudinary variables in Render for persistent production uploads.');
+ console.warn(' Cloudinary not configured (CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET missing in .env) — uploads will fall back to local disk and WILL BE LOST on Render restarts/redeploys.');
 }
 const uploadDir = path.join(__dirname, 'public', 'uploads');
 const receiptDir = path.join(__dirname, 'public', 'receipts');
 const fileDir = path.join(__dirname, 'public', 'files');
-[uploadDir, receiptDir, fileDir].forEach(d => {
-  // If a stray FILE sits where the folder should be, replace it; otherwise uploads fail with ENOTDIR.
-  try { if (fs.existsSync(d) && !fs.statSync(d).isDirectory()) fs.unlinkSync(d); } catch (e) { console.error('Could not clear non-directory at', d, e.message); }
-  if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
-});
+[uploadDir, receiptDir, fileDir].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true }); });
 function makeStorage(folder, resourceType) {
  if (cloudinaryConfigured) {
  return new CloudinaryStorage({
@@ -434,13 +338,11 @@ mongoose.connection.on('disconnected', () => {
  }, 3000);
 });
 mongoose.connection.on('reconnected', () => console.log(' MongoDB reconnected'));
-// ── MySQL (optional, runs beside MongoDB) ───────────────────────────────────
-const mysqlDb = require('./lib/mysql');
-mysqlDb.init().catch(e => console.error('[mysql] init error:', e.message));
 const userSchema = new mongoose.Schema({
  name: { type: String, required: true, trim: true },
  email: { type: String, required: true, unique: true, lowercase: true },
  password: { type: String }, // not required — Google-only accounts have no password
+ tempPassword: { hash: { type: String, default: '' }, expiresAt: { type: Date } }, // admin-set temporary password; works alongside the customer's own until it expires
  googleId: { type: String, unique: true, sparse: true },
  authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
  profilePicture: { type: String, default: '' },
@@ -450,7 +352,6 @@ const userSchema = new mongoose.Schema({
  balance: { type: Number, default: 0 },
  restricted: { type: Boolean, default: false },
  restrictedReason: { type: String, default: '' },
- tempPassword: { hash: { type: String, default: '' }, expiresAt: { type: Date } }, // admin-set temporary password; works alongside the customer's own
  restrictedAt: { type: Date },
  lastLoginAt: { type: Date },
  lastLoginIp: { type: String },
@@ -458,7 +359,7 @@ const userSchema = new mongoose.Schema({
  signupFingerprint: { type: String, default: '', index: true }, // ip+device hash — powers the 5-accounts-per-person rule
  signupIp: { type: String, default: '' }, // captured once at registration — used to detect referral/signup abuse (many accounts from one IP)
  lastActiveAt: { type: Date }, // updated (throttled) on authenticated requests — powers the "Active Now" list
- gameId: { type: String, unique: true, sparse: true }, // permanent, e.g. MYS-7F3A9K
+ gameId: { type: String, unique: true, sparse: true }, // permanent, e.g. KLS-7F3A9K
  apiKey: { type: String, unique: true, sparse: true },
  apiSecret: { type: String },
  apiEnabled: { type: Boolean, default: false },
@@ -474,16 +375,6 @@ const userSchema = new mongoose.Schema({
  bankName: { type: String, default: '' },
  accountName: { type: String, default: '' },
  flwRef: { type: String, default: '' }, // Flutterwave's own reference
- createdAt: { type: Date }
- },
- paystackVirtualAccount: { // dedicated virtual account issued by Paystack (Nigeria)
- enabled: { type: Boolean, default: false },
- accountNumber: { type: String, default: '' },
- bankName: { type: String, default: '' },
- accountName: { type: String, default: '' },
- customerCode: { type: String, default: '' }, // Paystack customer code (CUS_...) — how we match payments back to the user
- customerId: { type: String, default: '' },
- dedicatedAccountId: { type: String, default: '' },
  createdAt: { type: Date }
  },
  notificationsSeenAt: { type: Date, default: null },
@@ -502,7 +393,10 @@ const userSchema = new mongoose.Schema({
  deliverableFile: String,
  deliverableFileName: String,
  pricePaid: Number,
- source: { type: String, default: 'market1' }, // 'market1' manual logs · 'market2' Sameeha Social Hub API · 'market3' Sujan Department API
+ orderId: { type: String, default: '', index: true }, // our unique order ID (shown to buyer, searchable by admin)
+ providerOrderId: { type: String, default: '' }, // supplier's own order ID (markets 2/3/4) so buyers can trace an order with support
+ orderRef: { type: String, default: '' },        // our internal order reference (market 4)
+ source: { type: String, default: 'market1' }, // 'market1' manual logs · 'market2' Sameeha Social Hub API · 'market3' Sujan Logs API · 'market4' Novasolution API · 'market5' ExpressLogs API
  purchasedAt: { type: Date, default: Date.now }
  }],
  createdAt: { type: Date, default: Date.now }
@@ -594,6 +488,8 @@ const transactionSchema = new mongoose.Schema({
  // transaction: the unique+sparse index makes a second insert throw instead of
  // silently crediting the same deposit twice.
  txRef: { type: String, index: true, unique: true, sparse: true },
+ // Human-friendly unique order ID (MS261101-7KQ2X9TF). Never repeats; admin can search it.
+ orderId: { type: String, index: true, unique: true, sparse: true },
  reversed: { type: Boolean, default: false },
  reversedAt: { type: Date, default: null },
  reversalReason: { type: String, default: '' },
@@ -653,68 +549,95 @@ const depositTutorialSchema = new mongoose.Schema({
 });
 const DepositTutorial = mongoose.model('DepositTutorial', depositTutorialSchema);
 const paymentMethodSettingSchema = new mongoose.Schema({
- method: { type: String, enum: ['paymentlink'], required: true, unique: true },
+ method: { type: String, enum: ['paymentlink', 'paystack', 'flutterwave'], required: true, unique: true },
  enabled: { type: Boolean, default: true },
  disabledMessage: { type: String, default: '' }, // optional note shown to users, e.g. "Under maintenance"
  updatedAt: { type: Date, default: Date.now }
 });
 const PaymentMethodSetting = mongoose.model('PaymentMethodSetting', paymentMethodSettingSchema);
-// ── PAYMENT GATEWAYS (Flutterwave / Paystack) — switchable from the admin panel ──────────────
-// One row per gateway. No row yet = the built-in default: Flutterwave ON (so existing sites keep
-// working exactly as before) and Paystack OFF until an admin turns it on.
-const gatewaySettingSchema = new mongoose.Schema({
- gateway: { type: String, enum: ['flutterwave', 'paystack'], required: true, unique: true },
- enabled: { type: Boolean, default: true },
- disabledMessage: { type: String, default: '' },
- updatedAt: { type: Date, default: Date.now }
-});
-const GatewaySetting = mongoose.model('GatewaySetting', gatewaySettingSchema);
-const GATEWAY_LIST = ['flutterwave', 'paystack'];
-const GATEWAY_LABELS = { flutterwave: 'Flutterwave', paystack: 'Paystack' };
-const GATEWAY_DEFAULT_ENABLED = { flutterwave: true, paystack: false };
-function gatewayConfigured(g) {
- if (g === 'flutterwave') return !!process.env.FLW_V3_SECRET_KEY;
- if (g === 'paystack') return !!process.env.PAYSTACK_SECRET_KEY;
- return false;
-}
-// { flutterwave: { enabled, configured, available, disabledMessage }, paystack: {...} }
-// `available` = switched ON by the admin AND its API keys exist on the server.
-async function getGatewayStates() {
- let docs = [];
- try { docs = await GatewaySetting.find({}); }
- catch (e) { console.error('[MYS] getGatewayStates failed, using defaults:', e.message); }
- const out = {};
- for (const g of GATEWAY_LIST) {
-  const d = docs.find(x => x.gateway === g);
-  const enabled = d ? d.enabled !== false : GATEWAY_DEFAULT_ENABLED[g];
-  const configured = gatewayConfigured(g);
-  out[g] = { enabled, configured, available: enabled && configured, disabledMessage: (d && d.disabledMessage) || '' };
- }
- return out;
-}
 const siteLinksSchema = new mongoose.Schema({
  _id: { type: String, default: 'main' },
  whatsappNumber: { type: String, default: '2349065518402' }, // digits only, no + or spaces — used as wa.me/{number}
  adminPhone: { type: String, default: '2349065518402' }, // admin contact number shown on support/contact pages
- whatsappGroupLink: { type: String, default: '#' },
- whatsappChannelLink: { type: String, default: '#' },
+ whatsappGroupLink: { type: String, default: 'https://chat.whatsapp.com/HBqJeik773M1pqEmIjfpXr' },
+ whatsappChannelLink: { type: String, default: 'https://whatsapp.com/channel/0029Vb7ivq9HLHQcS4XgQu2Q' },
  // Telegram + support contact details are admin-editable (Admin → Site Links) and are
  // applied site-wide by applySiteLinks() in public/script.js. They MUST live on the
  // schema: Mongoose silently drops unknown paths, which is why saving a new Telegram
  // username used to appear to work but every page kept the old @klslogs link.
  telegramUsername: { type: String, default: 'klslogs' },
- telegramLink: { type: String, default: '#' },
-  telegramChannelLink: { type: String, default: '' },
-  telegramCommunityLink: { type: String, default: '' },
+ telegramLink: { type: String, default: 'https://t.me/klslogs' },
  whatsappChatLink: { type: String, default: '' },
- // Contact modes — admin can switch each method on/off (Admin → Site Links). Both ON by default.
+ supportHours: { type: String, default: '' },
  whatsappEnabled: { type: Boolean, default: true },
  telegramEnabled: { type: Boolean, default: true },
- supportHours: { type: String, default: '' },
- logoUrl: { type: String, default: '' },
+ telegramChannelLink: { type: String, default: '' },
+ telegramCommunityLink: { type: String, default: '' },
+ popupFrequency: { type: String, default: 'session' },
+ popupChannels: { type: String, default: 'both' },
+ bannerEnabled: { type: Boolean, default: false },
+ bannerText: { type: String, default: 'Join our Telegram channel for updates, restocks and offers.' },
+ bannerButton: { type: String, default: 'Join channel' },
+ bannerLink: { type: String, default: '' },
  updatedAt: { type: Date, default: Date.now }
 });
 const SiteLinks = mongoose.model('SiteLinks', siteLinksSchema);
+// Welcome pop-up: fully separate from site links / contact methods. Edited in Admin > Site Links > "Welcome pop-up".
+const welcomePopupSchema = new mongoose.Schema({
+ _id: { type: String, default: 'main' },
+ enabled: { type: Boolean, default: false },
+ title: { type: String, default: 'Welcome \ud83d\udc4b' },
+ message: { type: String, default: 'Join our WhatsApp channel for updates, new features and offers.' },
+ buttonText: { type: String, default: 'Join now' },
+ link: { type: String, default: '' },
+ frequency: { type: String, default: 'session' }, // session | everyPage | afterSignup
+ version: { type: Number, default: 1 }, // bumped on every save so customers see the updated pop-up again
+ updatedAt: { type: Date, default: Date.now }
+});
+const WelcomePopup = mongoose.model('WelcomePopup', welcomePopupSchema);
+
+// Product logo rules: admin types a name (e.g. "Facebook") + uploads a logo; every product whose title matches
+// (contains the word, or exactly equals the name) gets that logo on the customer side.
+const logoRuleSchema = new mongoose.Schema({
+ keyword: { type: String, required: true, trim: true },
+ match: { type: String, enum: ['contains', 'exact'], default: 'contains' },
+ logo: { type: String, required: true },
+ overrideExisting: { type: Boolean, default: false }, // also replace pictures products already have
+ markets: { type: [String], default: ['m1', 'm2', 'm3', 'm4', 'm5'] }, // which marketplaces this logo applies to
+ createdAt: { type: Date, default: Date.now }
+});
+const LogoRule = mongoose.model('LogoRule', logoRuleSchema);
+const parseLogoMarkets = (v) => { const ok = ['m1', 'm2', 'm3', 'm4', 'm5']; const a = (Array.isArray(v) ? v : String(v || '').split(',')).map(x => String(x).trim()).filter(x => ok.includes(x)); return [...new Set(a)]; };
+let _logoRulesCache = null, _logoRulesAt = 0;
+const normLogoText = (t) => String(t || '').toLowerCase().replace(/\s+/g, ' ').trim();
+async function getLogoRules() {
+ if (_logoRulesCache && Date.now() - _logoRulesAt < 30000) return _logoRulesCache;
+ try {
+  const rules = (await LogoRule.find().lean()).map(r => ({ ...r, k: normLogoText(r.keyword) })).filter(r => r.k);
+  // exact rules win over contains; longer (more specific) keywords win over shorter ones
+  rules.sort((a, b) => (a.match === 'exact' ? 0 : 1) - (b.match === 'exact' ? 0 : 1) || b.k.length - a.k.length);
+  _logoRulesCache = rules; _logoRulesAt = Date.now();
+ } catch (e) { _logoRulesCache = _logoRulesCache || []; }
+ return _logoRulesCache;
+}
+// Returns the same list with `picture` filled from the matching rule. Never throws.
+async function applyLogoRules(list, titleKey, market) {
+ try {
+  const rules = await getLogoRules();
+  if (!rules.length || !Array.isArray(list)) return list;
+  const key = titleKey || 'title';
+  const usable = market ? rules.filter(r => !r.markets || !r.markets.length || r.markets.includes(market)) : rules;
+  if (!usable.length) return list;
+  return list.map(item => {
+   if (!item || typeof item !== 'object') return item;
+   const t = normLogoText(item[key] || item.name);
+   if (!t) return item;
+   const hit = usable.find(r => (r.match === 'exact' ? t === r.k : t.includes(r.k)) && (r.overrideExisting || !item.picture));
+   return hit ? { ...item, picture: hit.logo } : item;
+  });
+ } catch (e) { return list; }
+}
+app.locals.applyLogoRules = applyLogoRules;
 const NUMBER_RENTAL_WINDOW_MS = 20 * 60 * 1000; // 20 minutes to receive a code before auto-refund
 const numberPricingSchema = new mongoose.Schema({
  provider: { type: String, required: true, trim: true },
@@ -723,6 +646,8 @@ const numberPricingSchema = new mongoose.Schema({
  apiPrice: { type: Number, default: 0 }, // 0/unset = not offered via the public developer API
  enabled: { type: Boolean, default: true },
  mode: { type: String, default: 'live' }, // kept for backward-compat with old records; always 'live' now
+ otpsuiteCountryCode: { type: String, default: '' }, // e.g. "US" — only used when mode === 'live'
+ otpsuiteServiceId: { type: String, default: '' }, // e.g. "69c05c2e27c5759c68a8135e"
  updatedAt: { type: Date, default: Date.now }
 });
 numberPricingSchema.index({ provider: 1, country: 1 }, { unique: true });
@@ -750,7 +675,7 @@ const numberListingSchema = new mongoose.Schema({
  phoneNumber: { type: String, required: true, trim: true },
  cost: { type: Number, default: 0 },
  sellPrice: { type: Number, required: true },
- status: { type: String, enum: ['available', 'sold', 'delivered', 'expired', 'cancelled', 'needs_review'], default: 'available', index: true },
+ status: { type: String, enum: ['available', 'sold', 'delivered', 'expired', 'cancelled'], default: 'available', index: true },
  soldTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
  createdAt: { type: Date, default: Date.now },
  soldAt: { type: Date },
@@ -758,7 +683,7 @@ const numberListingSchema = new mongoose.Schema({
  code: { type: String, default: '' },
  codeAddedAt: { type: Date },
  otpsuiteOrderId: { type: String, default: '' },
- // 'server1' = retired · 'server2' = GrizzlySMS
+ // 'server1' = otpsuite (USA WhatsApp only) · 'server2' = GrizzlySMS (all services/countries)
  server: { type: String, default: 'server1' },
  grizzlyActivationId: { type: String, default: '' },
  costUsd: { type: Number, default: 0 },
@@ -770,24 +695,23 @@ const numberListingSchema = new mongoose.Schema({
  // Lifecycle timestamps powering the live order-status timeline.
  cancelledAt: { type: Date },
  expiredAt: { type: Date },
- // Whether the provider confirmed the cancellation on their side.
+ // Whether the provider (Grizzly/otpsuite) confirmed the cancellation on their side.
  providerCancelled: { type: Boolean, default: false },
  providerCancelDetail: { type: String, default: '' },
- // How many times we retried the provider-side cancel after refunding the customer.
- providerCancelAttempts: { type: Number, default: 0 },
 
 });
 const NumberListing = mongoose.model('NumberListing', numberListingSchema);
-// Server 1 (otpsuite) is retired. These stubs keep the older code paths safe: they never call out and just report "retired".
-const OTPSUITE_PINNED = ['US', 'CA'];
-const _s1ServicesCache = new Map();
-async function otpsuiteRequest() { const err = new Error('This number server has been retired.'); err.otpsuiteStatus = 410; throw err; }
-async function getServer1Services() { return []; }
+const OTPSUITE_BASE_URL = process.env.OTPSUITE_BASE_URL || 'https://otpsuite.com/api/v1';
+const otpsuiteAxios = axios.create({
+ baseURL: OTPSUITE_BASE_URL,
+ timeout: 15000,
+ headers: { 'X-API-KEY': process.env.OTPSUITE_API_KEY || '' }
+});
 
 // ── GrizzlySMS Integration (Server 2) ────────────────────────────────────────
 // GrizzlySMS is sms-activate compatible: one endpoint, an `action` query param and
 // an `api_key`. Docs: https://grizzlysms.com/docs  (handler_api.php)
-const GRIZZLY_API_KEY = process.env.GRIZZLY_API_KEY || '';
+const GRIZZLY_API_KEY = process.env.GRIZZLY_API_KEY || '5ef2d6daed2387b1d8a7fb374162d56b';
 const GRIZZLY_BASE_URL = process.env.GRIZZLY_BASE_URL || 'https://api.grizzlysms.com/stubs/handler_api.php';
 const grizzlyAxios = axios.create({ timeout: 20000 });
 
@@ -806,7 +730,7 @@ const GRIZZLY_ERRORS = {
 // Every Grizzly call goes through here so logging + error shape stay consistent.
 async function grizzlyRequest(action, params = {}) {
   const query = { api_key: GRIZZLY_API_KEY, action, ...params };
-  console.log(`[grizzly] ${action} request`);
+  console.log(`[grizzly] ${action}`, JSON.stringify(params));
   let res;
   try {
     res = await grizzlyAxios.get(GRIZZLY_BASE_URL, { params: query });
@@ -816,7 +740,7 @@ async function grizzlyRequest(action, params = {}) {
     throw err;
   }
   const body = res.data;
-  console.log(`[grizzly] ${action} completed`);
+  console.log(`[grizzly] ${action} ->`, typeof body === 'string' ? body.slice(0, 200) : JSON.stringify(body).slice(0, 300));
   if (typeof body === 'string') {
     const trimmed = body.trim();
     // "ACCESS_BALANCE:12.34" / "STATUS_OK:1234" style answers are successes, not errors.
@@ -839,8 +763,8 @@ async function grizzlyRequest(action, params = {}) {
 // Grizzly's dollar cost, and the flat-naira profit ladder used for markup.
 const numberServerConfigSchema = new mongoose.Schema({
   key: { type: String, default: 'main', unique: true },
-  server1Enabled: { type: Boolean, default: false },   // retired server (always off)
-  // Legacy profit ladder (kept so older saved settings still load).
+  server1Enabled: { type: Boolean, default: false },   // otpsuite — USA/Canada + all API countries, many services
+  // Server 1 profit ladder (₦ added on top of the live otpsuite cost). Replaces manual price entry.
   server1MarkupTiers: {
     type: [{ upTo: Number, profit: Number }],
     default: [
@@ -900,7 +824,6 @@ const numberServerConfigSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 const NumberServerConfig = mongoose.model('NumberServerConfig', numberServerConfigSchema);
-
 
 async function getNumberServerConfig() {
   let cfg = await NumberServerConfig.findOne({ key: 'main' });
@@ -1051,7 +974,7 @@ async function notifyAdminOfAlert(alert) {
   ).catch(() => {});
   const result = await sendAdminEmail(
     cfg.balanceAlertEmail,
-    `[MYS Alert] ${alert.title}`,
+    `[KLS Alert] ${alert.title}`,
     `${alert.message}\n\nRaised: ${new Date(alert.raisedAt).toLocaleString()}\nOpen the admin panel → BuyNumber 2 tab to fix this.`
   );
   if (!result.sent) console.warn('[alert-email] not sent:', result.reason);
@@ -1127,10 +1050,63 @@ function applyNumberMarkup(costNgn, cfg) {
   return Math.ceil(raw / step) * step;
 }
 
+// ── Server 1 (otpsuite) live pricing: API cost (₦) + profit ladder. Never sells below cost. ──
+const SERVER1_DEFAULT_TIERS = [{ upTo: 499, profit: 300 }, { upTo: 999, profit: 400 }, { upTo: 4999, profit: 700 }, { upTo: 10000, profit: 1200 }];
+function server1Profit(costNgn, cfg) {
+  const tiers = ((cfg && cfg.server1MarkupTiers && cfg.server1MarkupTiers.length) ? cfg.server1MarkupTiers : SERVER1_DEFAULT_TIERS)
+    .slice().sort((a, b) => a.upTo - b.upTo);
+  for (const t of tiers) if (costNgn <= t.upTo) return Number(t.profit) || 0;
+  return Math.max(1200, Math.round(costNgn * (Number(cfg?.highCostMarkupPercent) || 20) / 100));
+}
+function server1PriceNgn(costNgn, cfg, { api = false } = {}) {
+  const cost = Math.max(0, Math.ceil(Number(costNgn) || 0));
+  let profit = server1Profit(cost, cfg);
+  if (api) profit = Math.max(50, Math.round(profit * (Number(cfg?.apiProfitPercent ?? 75) / 100)));
+  return { costNgn: cost, profit, price: cost + profit };
+}
+function otpsuiteServiceCost(s) {
+  for (const k of ['your_price', 'base_price', 'price', 'cost', 'amount', 'rate', 'service_price', 'selling_price']) {
+    const v = Number(s && s[k]);
+    if (Number.isFinite(v) && v > 0) return v;
+  }
+  return 0;
+}
+const OTPSUITE_PINNED = ['US', 'CA'];
+const _s1ServicesCache = new Map();
+// Live services for one otpsuite country with our ₦ price already applied (cached 2 min).
+async function getServer1Services(countryCode, cfg, { api = false } = {}) {
+  const key = String(countryCode || '').trim(); // keep otpsuite's exact code — never change its case
+  let cached = _s1ServicesCache.get(key);
+  if (!cached || Date.now() - cached.at > 2 * 60 * 1000) {
+    const r = await otpsuiteRequest('get', '/services', { params: { country: key } });
+    // Accept every envelope shape otpsuite may send: {services:[]}, {data:{services:[]}} or a bare array.
+    const rows = Array.isArray(r) ? r : (Array.isArray(r?.services) ? r.services : (Array.isArray(r?.data?.services) ? r.data.services : (Array.isArray(r?.data) ? r.data : [])));
+    cached = { at: Date.now(), rows };
+    console.log(`[otpsuite] /services ${key}: ${rows.length} rows`);
+    if (rows.length) _s1ServicesCache.set(key, cached);
+  }
+  const out = [];
+  for (const s of cached.rows) {
+    const cost = otpsuiteServiceCost(s);
+    if (!cost) continue; // no live cost = cannot price safely, so it is never shown
+    const rawStock = s.count ?? s.stock ?? s.available ?? s.quantity;
+    const stock = (rawStock === undefined || rawStock === null || rawStock === '') ? NaN : Number(rawStock);
+    if (Number.isFinite(stock) && stock <= 0) continue;
+    const name = prettifyServiceName(s.service_name || s.name);
+    const priced = server1PriceNgn(cost, cfg, { api });
+    out.push({
+      serviceId: String(s.service_id || s.id || s._id), provider: name, name,
+      icon: serviceIconUrl(null, name), emoji: serviceEmoji(null, name),
+      price: priced.price, costNgn: priced.costNgn, stock: Number.isFinite(stock) ? stock : null
+    });
+  }
+  out.sort((a, b) => a.name.localeCompare(b.name));
+  return out;
+}
+
 function grizzlyPriceNgn(costUsd, cfg) {
   const costNgn = Number(costUsd || 0) * (Number(cfg.usdToNgn) || 0);
-  let PAx; try { PAx = require('./lib/price-adjust'); } catch (e) { PAx = { apply: (_k, v) => v }; }
-  return { costNgn: Math.round(costNgn), price: PAx.apply('bn1', applyNumberMarkup(Math.round(costNgn), cfg), { floor: Math.round(costNgn) }) };
+  return { costNgn: Math.round(costNgn), price: applyNumberMarkup(Math.round(costNgn), cfg) };
 }
 
 // ── Emoji helpers so the buy page reads like an app, not a database dump ──────
@@ -1192,35 +1168,35 @@ const SERVICE_ICON_SLUGS = {
   qq: 'tencentqq', ya: 'yandex', bz: 'binance', bnb: 'binance', cb: 'coinbase',
   ts: 'twitch', yl: 'youtube', al: 'alibabadotcom', jl: 'shopee', sh: 'shopee',
   ki: 'kakaotalk', im: 'imgur', ab: 'airbnb', dh: 'booking', dr: 'lyft', mm: 'microsoft',
-  re: 'reddit', ew: 'ebay', ss: 'shopify', lf: 'tiktok', ot: 'simpleanalytics'
+  re: 'reddit', ew: 'ebay', ss: 'shopify', lf: 'tiktok'
 };
 const SERVICE_ICON_KEYWORDS = [
-  [/whats\s*app/i, 'whatsapp'], [/telegram/i, 'telegram'], [/viber/i, 'viber'], [/signal/i, 'signal'],
-  [/gmail/i, 'gmail'], [/google/i, 'google'], [/instagram/i, 'instagram'], [/facebook|meta/i, 'facebook'],
+  [/whats\s*app/i, 'whatsapp'], [/telegram/i, 'telegram'], [/viber/i, 'viber'], [/\bsignal\b/i, 'signal'],
+  [/gmail/i, 'gmail'], [/google/i, 'google'], [/instagram/i, 'instagram'], [/\bfacebook\b|\bmeta\b/i, 'facebook'],
   [/tiktok/i, 'tiktok'], [/twitter|^x$/i, 'x'], [/discord/i, 'discord'], [/snapchat/i, 'snapchat'],
-  [/linkedin/i, 'linkedin'], [/apple|icloud/i, 'apple'], [/outlook|hotmail/i, 'microsoftoutlook'],
+  [/linkedin/i, 'linkedin'], [/\bapple\b|icloud/i, 'apple'], [/outlook|hotmail/i, 'microsoftoutlook'],
   [/microsoft|azure/i, 'microsoft'], [/amazon/i, 'amazon'], [/paypal/i, 'paypal'], [/payoneer/i, 'payoneer'],
-  [/wise/i, 'wise'], [/revolut/i, 'revolut'], [/stripe/i, 'stripe'], [/skrill/i, 'skrill'],
+  [/\bwise\b/i, 'wise'], [/revolut/i, 'revolut'], [/stripe/i, 'stripe'], [/skrill/i, 'skrill'],
   [/binance/i, 'binance'], [/coinbase/i, 'coinbase'], [/okx/i, 'okx'], [/bybit/i, 'bybit'],
   [/kraken/i, 'kraken'], [/blockchain|bitcoin|crypto/i, 'bitcoin'], [/netflix/i, 'netflix'],
   [/spotify/i, 'spotify'], [/deezer/i, 'deezer'], [/youtube/i, 'youtube'], [/twitch/i, 'twitch'],
   [/disney/i, 'disneyplus'], [/hulu/i, 'hulu'], [/tinder/i, 'tinder'], [/badoo/i, 'badoo'],
-  [/bumble/i, 'bumble'], [/uber\s*eats/i, 'ubereats'], [/uber/i, 'uber'], [/bolt/i, 'bolt'],
-  [/lyft/i, 'lyft'], [/grab/i, 'grab'], [/doordash/i, 'doordash'], [/deliveroo/i, 'deliveroo'],
+  [/bumble/i, 'bumble'], [/uber\s*eats/i, 'ubereats'], [/uber/i, 'uber'], [/\bbolt\b/i, 'bolt'],
+  [/lyft/i, 'lyft'], [/\bgrab\b/i, 'grab'], [/doordash/i, 'doordash'], [/deliveroo/i, 'deliveroo'],
   [/glovo/i, 'glovo'], [/wechat|weixin/i, 'wechat'], [/^vk|vkontakte/i, 'vk'], [/yandex/i, 'yandex'],
   [/mail\.?ru/i, 'maildotru'], [/proton/i, 'protonmail'], [/yahoo/i, 'yahoo'], [/zoom/i, 'zoom'],
-  [/skype/i, 'skype'], [/line\b/i, 'line'], [/kakao/i, 'kakaotalk'], [/reddit/i, 'reddit'],
+  [/skype/i, 'skype'], [/\bline\b/i, 'line'], [/kakao/i, 'kakaotalk'], [/reddit/i, 'reddit'],
   [/pinterest/i, 'pinterest'], [/tumblr/i, 'tumblr'], [/quora/i, 'quora'], [/github/i, 'github'],
   [/gitlab/i, 'gitlab'], [/dropbox/i, 'dropbox'], [/steam/i, 'steam'], [/epic\s*games/i, 'epicgames'],
   [/playstation/i, 'playstation'], [/xbox/i, 'xbox'], [/roblox/i, 'roblox'], [/ebay/i, 'ebay'],
   [/aliexpress/i, 'aliexpress'], [/alibaba/i, 'alibabadotcom'], [/shopee/i, 'shopee'],
   [/lazada/i, 'lazada'], [/flipkart/i, 'flipkart'], [/olx/i, 'olx'], [/shopify/i, 'shopify'],
   [/airbnb/i, 'airbnb'], [/booking/i, 'bookingdotcom'], [/upwork/i, 'upwork'], [/fiverr/i, 'fiverr'],
-  [/truecaller/i, 'truecaller'], [/imo\b/i, 'imou'], [/naver/i, 'naver'], [/nike/i, 'nike'],
+  [/truecaller/i, 'truecaller'], [/naver/i, 'naver'], [/nike/i, 'nike'],
   [/adidas/i, 'adidas'], [/walmart/i, 'walmart'], [/starbucks/i, 'starbucks'], [/mcdonald/i, 'mcdonalds'],
-  [/kfc/i, 'kfc'], [/bet|casino|poker|slot/i, 'pokerstars'], [/vpn|proxy/i, 'nordvpn'],
-  [/telecom|mobile|sim|carrier/i, 'simpleicons']
+  [/\bkfc\b/i, 'kfc']
 ];
+// Official site per brand — used only when simple-icons has no mark for it (e.g. LinkedIn, Microsoft).
 const SERVICE_DOMAINS = {
   facebook: 'facebook.com', instagram: 'instagram.com', whatsapp: 'whatsapp.com', telegram: 'telegram.org',
   google: 'google.com', gmail: 'gmail.com', youtube: 'youtube.com', x: 'x.com', tiktok: 'tiktok.com',
@@ -1258,6 +1234,76 @@ function serviceIconUrl(code, name) {
   p.set('n', String(name || '').slice(0, 60));
   return '/api/numbers/icon?' + p.toString();
 }
+// Extra words a customer may type for a service, so "facebook" finds it even if the provider
+// labels it differently (e.g. just "fb").
+const SERVICE_SEARCH_EXTRA = {
+  facebook: ['facebook', 'fb', 'meta', 'messenger'], instagram: ['instagram', 'ig', 'insta', 'threads'],
+  whatsapp: ['whatsapp', 'wa', 'whatsapp business'], telegram: ['telegram', 'tg'],
+  google: ['google', 'gmail', 'youtube', 'google voice'], gmail: ['gmail', 'google'], youtube: ['youtube', 'google'],
+  x: ['twitter', 'x', 'tweet'], tiktok: ['tiktok', 'tik tok', 'douyin'], microsoftoutlook: ['outlook', 'hotmail', 'microsoft'],
+  microsoft: ['microsoft', 'outlook', 'azure'], apple: ['apple', 'icloud'], snapchat: ['snapchat', 'snap'],
+  discord: ['discord'], linkedin: ['linkedin'], amazon: ['amazon', 'aws'], paypal: ['paypal'], tencentqq: ['qq'],
+  wechat: ['wechat', 'weixin'], binance: ['binance', 'bnb']
+};
+function serviceKeywords(code, name) {
+  const set = new Set();
+  const slug = serviceBrandSlug(code, name);
+  if (slug) { set.add(slug); (SERVICE_SEARCH_EXTRA[slug] || []).forEach(k => set.add(k)); }
+  return [...set];
+}
+
+// ---- /api/numbers/icon : serves a logo image for any service, never a broken one ----
+const _iconCache = new Map();
+const _iconPending = new Map();
+let _iconOut = { n: 0, t: 0 };
+function iconOutboundOk() { const now = Date.now(); if (now - _iconOut.t > 60000) _iconOut = { n: 0, t: now }; return ++_iconOut.n <= 200; }
+function iconBadgeSvg(name) {
+  const words = [...String(name || '').matchAll(/[\p{L}\p{N}]+/gu)].map(m => m[0]);
+  const initials = ((words[0] || '•')[0] + (words[1] ? words[1][0] : '')).toUpperCase();
+  let h = 0; for (const ch of String(name || '').toLowerCase()) h = (h * 31 + ch.codePointAt(0)) % 360;
+  const size = initials.length > 1 ? 19 : 24;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${h},68%,56%)"/><stop offset="1" stop-color="hsl(${(h + 40) % 360},62%,40%)"/></linearGradient></defs><rect width="48" height="48" rx="11" fill="url(#g)"/><text x="24" y="24" text-anchor="middle" dominant-baseline="central" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="${size}" fill="#fff">${initials}</text></svg>`;
+}
+async function buildServiceIcon(slug, domain, name) {
+  if (slug && iconOutboundOk()) {
+    try {
+      const r = await axios.get('https://cdn.simpleicons.org/' + slug, { responseType: 'text', timeout: 4000, validateStatus: st => st === 200 });
+      const t = String(r.data || '');
+      if (/^\s*<svg/i.test(t) && !/<script|onload|javascript:/i.test(t)) {
+        const inner = t.replace(/^[\s\S]*?<svg[^>]*>/i, '').replace(/<\/svg>\s*$/i, '').replace(/<title>[\s\S]*?<\/title>/i, '');
+        return { real: true, type: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="11" fill="#fff"/><g transform="translate(9 9) scale(1.25)">${inner}</g></svg>` };
+      }
+    } catch (e) { /* no mark for this brand — try its website icon */ }
+  }
+  if (domain && iconOutboundOk()) {
+    try {
+      const r = await axios.get('https://www.google.com/s2/favicons', { params: { domain, sz: 128 }, responseType: 'arraybuffer', timeout: 4000, validateStatus: st => st === 200 });
+      const type = String(r.headers['content-type'] || '');
+      if (type.startsWith('image/') && r.data && r.data.length > 100) return { real: true, type, body: Buffer.from(r.data) };
+    } catch (e) { /* fall through to the badge */ }
+  }
+  return { real: false, type: 'image/svg+xml', body: iconBadgeSvg(name) };
+}
+app.get('/api/numbers/icon', async (req, res) => {
+  const s = String(req.query.s || ''), d = String(req.query.d || '');
+  const slug = /^[a-z0-9]{1,40}$/.test(s) ? s : '';
+  const domain = /^[a-z0-9-]+(\.[a-z0-9-]+){1,3}$/.test(d) ? d : '';
+  const name = String(req.query.n || '').replace(/[^\p{L}\p{N} ]/gu, '').trim().slice(0, 40);
+  const key = slug + '|' + domain + '|' + name.toLowerCase();
+  try {
+    let e = _iconCache.get(key);
+    if (!e) {
+      if (!_iconPending.has(key)) _iconPending.set(key, buildServiceIcon(slug, domain, name).finally(() => _iconPending.delete(key)));
+      e = await _iconPending.get(key);
+      if (e.real || !(slug || domain)) { if (_iconCache.size > 4000) _iconCache.clear(); _iconCache.set(key, e); }
+    }
+    res.set({ 'Content-Type': e.type, 'Cache-Control': e.real ? 'public, max-age=604800' : 'public, max-age=3600', 'X-Content-Type-Options': 'nosniff' });
+    res.send(e.body);
+  } catch (err) {
+    res.set({ 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=300' });
+    res.send(iconBadgeSvg(name));
+  }
+});
 function serviceEmoji(code, name) {
   if (SERVICE_EMOJI[String(code || '').toLowerCase()]) return SERVICE_EMOJI[String(code).toLowerCase()];
   for (const [re, emoji] of SERVICE_KEYWORD_EMOJI) if (re.test(String(name || ''))) return emoji;
@@ -1279,6 +1325,35 @@ function prettifyServiceName(raw) {
  const key = String(raw || '').trim().toLowerCase();
  if (KNOWN_SERVICE_NAMES[key]) return KNOWN_SERVICE_NAMES[key];
  return String(raw || '').replace(/\b\w/g, c => c.toUpperCase());
+}
+async function otpsuiteRequest(method, path, { params, data } = {}) {
+ console.log(`[otpsuite] ${method.toUpperCase()} ${path}`, JSON.stringify({ params, data }));
+ try {
+ const isPost = method.toLowerCase() === 'post';
+ const requestConfig = { method, url: path, params };
+ if (isPost && data) {
+ requestConfig.data = new URLSearchParams(data).toString();
+ requestConfig.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+ } else if (data) {
+ requestConfig.data = data;
+ }
+ const res = await otpsuiteAxios.request(requestConfig);
+ console.log(`[otpsuite] ${res.status}`, JSON.stringify(res.data));
+ if (!res.data?.success) {
+ const err = new Error(res.data?.error || 'otpsuite request failed');
+ err.otpsuiteStatus = res.status;
+ err.otpsuiteRaw = res.data;
+ throw err;
+ }
+ return res.data.data;
+ } catch (e) {
+ if (e.otpsuiteStatus) throw e; // already normalized above
+ console.log(`[otpsuite] ${e.response?.status || 'no response'}`, JSON.stringify(e.response?.data || e.message));
+ const err = new Error(e.response?.data?.error || e.message || 'otpsuite request failed');
+ err.otpsuiteStatus = e.response?.status || null;
+ err.otpsuiteRaw = e.response?.data || null;
+ throw err;
+ }
 }
 const badgeSchema = new mongoose.Schema({
  name: { type: String, required: true, trim: true },
@@ -1429,20 +1504,18 @@ const gameScoreSchema = new mongoose.Schema({
  createdAt: { type: Date, default: Date.now }
 });
 const Category = mongoose.model('Category', categorySchema);
-// Password-reset / engagement fields. These MUST be on the schema BEFORE the
-// model is compiled, otherwise Mongoose never saves or reads them and every
-// reset code shows as "invalid".
-userSchema.add({
- resetCodeHash: { type: String, default: '' },
- resetCodeExpires: { type: Date, default: null },
- resetCodeAttempts: { type: Number, default: 0 },
- resetCodeSentAt: { type: Date, default: null },
- passwordChangedAt: { type: Date, default: null },
- lastWinbackEmailAt: { type: Date, default: null }
-});
 const User = mongoose.model('User', userSchema);
 const Log = mongoose.model('Log', logSchema);
+// Every purchase-type transaction automatically gets its own unique order ID (unless the caller
+// already generated one to share with the purchase record).
+const { gen: _genOrderId, makeNewOrderId: _makeNewOrderId } = require('./lib/orderid');
+transactionSchema.pre('validate', function (next) {
+  if (this.type === 'purchase' && !this.orderId) this.orderId = _genOrderId();
+  next();
+});
 const Transaction = mongoose.model('Transaction', transactionSchema);
+let newOrderId = _makeNewOrderId([Transaction]);
+
 const referralEarningSchema = new mongoose.Schema({
  referrerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
  referredUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -1532,10 +1605,10 @@ const liveAnnouncementFilter = () => ({
   $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
 });
 
-let mysCampaigns = null; // set when lib/campaigns.js is mounted at the bottom of this file
+let klsCampaigns = null; // set when lib/campaigns.js is mounted at the bottom of this file
 // Set once lib/engagement.js is mounted at the bottom of this file. It owns the
 // device/session records, so tokens issued before it existed keep working.
-let mysEngagement = null;
+let klsEngagement = null;
 /**
  * Mark a user as active right now (throttled to one write every 2 minutes).
  * Called from every authenticated path — token auth, optional auth, API keys
@@ -1548,7 +1621,7 @@ function touchActivity(user) {
  if (Date.now() - last <= 2 * 60 * 1000) return;
  user.lastActiveAt = new Date();
  User.updateOne({ _id: user._id }, { $set: { lastActiveAt: new Date(), lastSeen: new Date() } })
- .catch(e => console.error('[MYS] touchActivity failed:', e.message));
+ .catch(e => console.error('[KLS] touchActivity failed:', e.message));
 }
 const auth = async (req, res, next) => {
   let decoded;
@@ -1567,7 +1640,7 @@ const auth = async (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'User not found' });
   if (req.user.restricted) return res.status(403).json({ error: 'Your account has been restricted. Contact support for help.', restricted: true });
   // This device may have been signed out from another device's Settings page.
-  if (mysEngagement && decoded.sid && !(await mysEngagement.touchSession(decoded.sid, req.user._id))) {
+  if (klsEngagement && decoded.sid && !(await klsEngagement.touchSession(decoded.sid, req.user._id))) {
     return res.status(401).json({ error: 'This device was signed out. Please log in again.', sessionEnded: true });
   }
  if (!req.user.gameId) {
@@ -1611,7 +1684,7 @@ const apiKeyAuth = async (req, res, next) => {
 };
 const adminAuth = (req, res, next) => {
  const p = req.headers['x-admin-passcode'];
- if (!p || !safeEqual(p, process.env.ADMIN_PASSCODE)) return res.status(403).json({ error: 'Access denied' });
+ if (!p || p !== process.env.ADMIN_PASSCODE) return res.status(403).json({ error: 'Access denied' });
  req.adminRole = 'super';
  next();
 };
@@ -1629,55 +1702,23 @@ const subAdminAuth = async (req, res, next) => {
 };
 const anyAdminAuth = async (req, res, next) => {
  const p = req.headers['x-admin-passcode'];
- if (p && safeEqual(p, process.env.ADMIN_PASSCODE)) { req.adminRole = 'super'; return next(); }
+ if (p && p === process.env.ADMIN_PASSCODE) { req.adminRole = 'super'; return next(); }
  return subAdminAuth(req, res, next);
 };
-const { brandLogoFor } = require('./lib/brand-logos').register({
- app, mongoose, adminAuth, cloudinary, cloudinaryConfigured
-});
 // Marketplace 2 (Sameeha Social Hub API) + marketplace on/off switches — see lib/market2.js
-require('./lib/market2').register(app, { mongoose, User, Transaction, auth, anyAdminAuth, sendAdminEmail, brandLogoFor });
-// Marketplace 5 (ExpressLogs API) - see lib/market5.js
+require('./lib/market2').register(app, { mongoose, User, Transaction, auth, anyAdminAuth, sendAdminEmail });
+// Marketplace 5 (ExpressLogs API) — see lib/market5.js
 try {
-  require('./lib/market5').register(app, { mongoose, User, Transaction, auth, anyAdminAuth, sendAdminEmail, brandLogoFor });
+  require('./lib/market5').register(app, { mongoose, User, Transaction, auth, anyAdminAuth, sendAdminEmail });
 } catch (m5Err) { console.error('[market5] failed to load:', m5Err.message); }
-// Marketplace 3 (Sujan Department reseller API) - see lib/market3.js
-require('./lib/market3').register(app, { mongoose, User, Transaction, auth, anyAdminAuth, sendAdminEmail, brandLogoFor });
-require('./lib/otp-suite')(app, { mongoose, User, Transaction, auth, anyAdminAuth });
-// Tutorial library (admin adds videos/pictures/descriptions, customers watch free) - see lib/tutorials.js
-require('./lib/tutorials').register(app, { mongoose, anyAdminAuth, uploadMw: depositTutorialUpload, fileUrl });
-
-// Owner-only integration diagnostics. This reports readiness without ever
-// returning provider credentials, so the admin can distinguish a disabled
-// switch from a missing API key before customers try to purchase.
-app.get('/api/admin/providers/status', anyAdminAuth, async (req, res) => {
-  try {
-    const getDoc = async (name, query = {}) => {
-      const M = mongoose.models[name];
-      return M ? await M.findOne(query).lean().catch(() => null) : null;
-    };
-    const [numberCfg, otpCfg, market2Cfg, market3Cfg, market5Cfg, boostCfg] = await Promise.all([
-      getNumberServerConfig().catch(() => null),
-      getDoc('OtpSuiteConfig', { key: 'main' }),
-      getDoc('Market2Config', { key: 'main' }),
-      getDoc('Market3Config', { key: 'main' }),
-      getDoc('Market5Config', { key: 'main' }),
-      getDoc('BoostSettings', { _id: 'singleton' })
-    ]);
-    const rows = [
-      { id: 'grizzly', name: 'Grizzly SMS — Buy Number 1', configured: !!String(process.env.GRIZZLY_API_KEY || '').trim(), enabled: numberCfg?.server2Enabled !== false, credentialSource: 'Render environment: GRIZZLY_API_KEY' },
-      { id: 'otpSuite', name: 'OTP Suite — Buy Number 2', configured: !!(otpCfg?.apiKeyCipher || process.env.OTP_SUITE_API_KEY), enabled: otpCfg?.enabled !== false, credentialSource: 'Admin provider settings or Render environment' },
-      { id: 'rakib', name: 'Sameeha Social Hub — Marketplace 2', configured: !!((market2Cfg?.apiKeyCipher && market2Cfg?.provider === 'sameeha') || process.env.SAMEEHA_API_KEY), enabled: market2Cfg?.market2Enabled !== false, credentialSource: 'Admin Marketplace 2 settings or Render environment' },
-      { id: 'sujan', name: 'Sujan Department — Marketplace 3', configured: !!(market3Cfg?.sujanKeyCipher || process.env.SUJAN_API_KEY), enabled: market3Cfg?.market3Enabled !== false, credentialSource: 'Admin Marketplace 3 settings or Render environment' },
-      { id: 'expressLogs', name: 'ExpressLogs — Marketplace 5', configured: !!((market5Cfg?.apiKeyCipher && market5Cfg?.provider === 'expresslogs') || process.env.EXPRESSLOGS_API_KEY), enabled: market5Cfg?.market5Enabled !== false, credentialSource: 'Admin Marketplace 5 settings or Render environment' },
-      { id: 'reallySimpleSocial', name: 'Really Simple Social — Boosting 1', configured: !!(boostCfg?.apiKey || process.env.BOOST_API_KEY), enabled: !!boostCfg?.enabled, credentialSource: 'Admin Boosting settings or Render environment' },
-    ].map(x => ({ ...x, ready: !!x.configured && !!x.enabled, state: !x.configured ? 'missing_credentials' : (!x.enabled ? 'disabled' : 'ready') }));
-    res.set('Cache-Control', 'no-store');
-    res.json({ providers: rows, readyCount: rows.filter(x => x.ready).length, checkedAt: new Date().toISOString() });
-  } catch (e) { res.status(500).json({ error: 'Could not check provider readiness.' }); }
-});
-// Welcome popup (WhatsApp channel promo) - settings editable in Admin -> Welcome Popup
-require('./lib/welcomepopup').register(app, { mongoose, adminAuth });
+// Marketplace 3 (Sujan Logs API) — see lib/market3.js
+require('./lib/market3').register(app, { mongoose, User, Transaction, auth, anyAdminAuth, sendAdminEmail });
+// Marketplace 4 (Novasolution Logs API, whitelisted categories) — see lib/market4.js
+require('./lib/market4').register(app, { mongoose, User, Transaction, auth, anyAdminAuth, sendAdminEmail });
+// "Before you buy a number" notice (editable in admin) — see lib/buy-notice.js
+require('./lib/buy-notice').register(app, { mongoose, anyAdminAuth });
+// "How to fund your wallet" guide shown before the Deposit page (editable in admin) — see lib/deposit-guide.js
+require('./lib/deposit-guide').register(app, { mongoose, anyAdminAuth });
 function sanitizeUser(u) {
  return {
  id: u._id, name: u.name, email: u.email, balance: u.balance || 0,
@@ -1928,7 +1969,8 @@ async function creditReferralCommission(buyer, purchaseAmount, itemLabel) {
  if (!referrer || referrer.restricted) return; // never pay out commission to a restricted account
  const commission = Math.round(purchaseAmount * REFERRAL_COMMISSION_RATE * 100) / 100;
  if (commission <= 0) return;
- await User.updateOne({ _id: referrer._id }, { $inc: { balance: commission } });
+ referrer.balance = (referrer.balance || 0) + commission;
+ await referrer.save();
  await ReferralEarning.create({
  referrerId: referrer._id, referredUserId: buyer._id,
  purchaseAmount, commission, itemLabel
@@ -1963,21 +2005,18 @@ const MAX_ACCOUNTS_PER_PERSON = Math.max(1, Number(process.env.MAX_ACCOUNTS_PER_
 function deviceFingerprint(req) {
   const ua = String(req.headers['user-agent'] || '');
   const lang = String(req.headers['accept-language'] || '');
-  const did = String(req.deviceId || '');
-  return crypto.createHash('sha256').update(did + '|' + ua + '|' + lang).digest('hex').slice(0, 32);
+  const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString().split(',')[0].trim();
+  return crypto.createHash('sha256').update(ip + '|' + ua + '|' + lang).digest('hex').slice(0, 32);
 }
-// Limit is per device (browser cookie). IP alone gets a much higher ceiling
-// because many real customers share one IP on mobile networks.
-const MAX_ACCOUNTS_PER_IP = Math.max(1, Number(process.env.MAX_ACCOUNTS_PER_IP || 50));
 async function accountLimitReached(req) {
-  const ip = (req.ip || req.socket?.remoteAddress || '').toString();
+  const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString().split(',')[0].trim();
   const fp = deviceFingerprint(req);
-  const [byDevice, byIp] = await Promise.all([
-    User.countDocuments({ signupFingerprint: fp }),
-    ip ? User.countDocuments({ signupIp: ip }) : 0
-  ]);
-  if (byDevice >= MAX_ACCOUNTS_PER_PERSON || byIp >= MAX_ACCOUNTS_PER_IP) {
-    return `You have reached the limit of accounts allowed per person on this website. Please log in to one of your existing accounts, or contact support if you believe this is a mistake.`;
+  const or = [];
+  if (ip) or.push({ signupIp: ip });
+  or.push({ signupFingerprint: fp });
+  const count = await User.countDocuments({ $or: or });
+  if (count >= MAX_ACCOUNTS_PER_PERSON) {
+    return `You have reached the limit of ${MAX_ACCOUNTS_PER_PERSON} accounts allowed per person on this website. Please log in to one of your existing accounts, or contact support if you believe this is a mistake.`;
   }
   return null;
 }
@@ -1985,34 +2024,28 @@ async function accountLimitReached(req) {
 app.post('/api/auth/register', async (req, res) => {
  try {
  const { name, email, password, refCode, phone, phoneCountry, country, language } = req.body;
- const cleanName = String(name || '').trim();
- const cleanEmail = String(email || '').trim().toLowerCase();
- const cleanPhone = String(phone || '').trim();
- const cleanPassword = String(password || '');
- if (!cleanName || !cleanEmail || !cleanPhone || !cleanPassword) return res.status(400).json({ error: 'Please complete every field.' });
- if (cleanName.length < 2 || cleanName.length > 80) return res.status(400).json({ error: 'Name must be between 2 and 80 characters.' });
- if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || cleanEmail.length > 254) return res.status(400).json({ error: 'Enter a valid email address.' });
- if (cleanPassword.length < 8 || cleanPassword.length > 128) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
- if (isBlockedEmailDomain(cleanEmail)) return res.status(400).json({ error: 'Please sign up with a real, active email address.' });
- if (await User.findOne({ email: cleanEmail })) return res.status(409).json({ error: 'An account with this email already exists. Sign in instead.' });
+ if (!name || !email || !password) return res.status(400).json({ error: 'All fields required' });
+ if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+ if (isBlockedEmailDomain(email)) return res.status(400).json({ error: 'Please sign up with a real, active email address.' });
+ if (await User.findOne({ email: email.toLowerCase() })) return res.status(400).json({ error: 'Email already registered' });
  const capError = await accountLimitReached(req);
  if (capError) return res.status(429).json({ error: capError, accountLimit: true });
  const gameId = await generateUniqueGameId();
  const referralCode = await generateUniqueReferralCode();
- const referrer = refCode ? await User.findOne({ referralCode: String(refCode).trim().toUpperCase() }) : null;
- if (String(refCode || '').trim() && !referrer) return res.status(400).json({ error: 'That referral code is not valid. Check it, or leave the box empty.' });
- const signupIp = (req.ip || req.socket?.remoteAddress || '').toString();
+ const referrer = refCode ? await User.findOne({ referralCode: String(refCode).toUpperCase() }) : null;
+ const signupIp = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString().split(',')[0].trim();
  // Worldwide phone handling: the client sends the chosen country plus the local
  // number; countries.normalizePhone turns that into a validated E.164 number.
  const countriesLib = require('./lib/countries');
  const isoCountry = countriesLib.byCode(phoneCountry || country || 'NG');
  if (isoCountry && isoCountry.blocked) return res.status(403).json({ error: 'We are unable to open accounts in your country.' });
- const contactPhone = countriesLib.normalizePhone((phoneCountry || country || 'NG'), cleanPhone)
- || (countriesLib.byPhone(cleanPhone) ? cleanPhone.replace(/[^\d+]/g, '') : '');
- if (!contactPhone || contactPhone.replace(/\D/g, '').length < 7) return res.status(400).json({ error: 'Enter a valid phone number including your country code or select your country.' });
- if (await User.findOne({ contactPhone })) return res.status(409).json({ error: 'This phone number is already linked to an account.' });
+ let contactPhone = '';
+ if (phone) {
+ contactPhone = countriesLib.normalizePhone((phoneCountry || country || 'NG'), phone)
+ || (countriesLib.byPhone(phone) ? String(phone).replace(/[^\d+]/g, '') : '');
+ }
  const user = new User({
- name: cleanName, email: cleanEmail, password: await bcrypt.hash(cleanPassword, 12), gameId,
+ name, email: email.toLowerCase(), password: await bcrypt.hash(password, 12), gameId,
  referralCode, referredBy: referrer ? referrer._id : null, signupIp, signupFingerprint: deviceFingerprint(req), contactPhone,
  country: isoCountry ? isoCountry.code : '',
  language: (language || 'en').slice(0, 8).toLowerCase(),
@@ -2020,18 +2053,16 @@ app.post('/api/auth/register', async (req, res) => {
  });
  await user.save();
  // Welcome email — never awaited so a slow mail provider can't stall signup.
- if (mysCampaigns) mysCampaigns.sendWelcomeEmail(user).catch(() => {});
- const token = mysEngagement ? await mysEngagement.issueToken(user, req) : jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+ if (klsCampaigns) klsCampaigns.sendWelcomeEmail(user).catch(() => {});
+ const token = klsEngagement ? await klsEngagement.issueToken(user, req) : jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
  res.json({ token, user: sanitizeUser(user) });
  } catch (e) { res.status(500).json({ error: 'Registration failed: ' + e.message }); }
 });
 app.post('/api/auth/login', async (req, res) => {
  try {
- const emailInput = String((req.body || {}).email || '').trim().toLowerCase();
- const password = String((req.body || {}).password || '');
- if (!emailInput || !password) return res.status(400).json({ error: 'Email and password are required.' });
- if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) return res.status(400).json({ error: 'Enter a valid email address.' });
- const user = await User.findOne({ email: emailInput });
+ const { email, password } = req.body;
+ if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+ const user = await User.findOne({ email: email.toLowerCase() });
  if (!user) return res.status(400).json({ error: 'Invalid email or password' });
  const t = user.tempPassword;
  const tempLive = !!(t && t.hash && t.expiresAt && new Date(t.expiresAt) > new Date());
@@ -2042,7 +2073,7 @@ app.post('/api/auth/login', async (req, res) => {
  return res.status(400).json({ error: 'Invalid email or password' });
  }
  if (user.restricted) return res.status(403).json({ error: `Your account has been restricted${user.restrictedReason ? ': ' + user.restrictedReason : ''}. Contact support for help.`, restricted: true });
- const ip = (req.ip || req.socket?.remoteAddress || '').toString();
+ const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString().split(',')[0].trim();
  const userAgent = req.headers['user-agent'] || '';
  user.lastLoginAt = new Date();
  user.lastLoginIp = ip;
@@ -2050,14 +2081,13 @@ app.post('/api/auth/login', async (req, res) => {
  user.loginHistory.push({ at: new Date(), ip, userAgent });
  if (user.loginHistory.length > 50) user.loginHistory = user.loginHistory.slice(-50);
  await user.save();
- const token = mysEngagement ? await mysEngagement.issueToken(user, req) : jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+ const token = klsEngagement ? await klsEngagement.issueToken(user, req) : jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
  res.json({ token, user: sanitizeUser(user) });
  } catch { res.status(500).json({ error: 'Login failed' }); }
 });
 async function upsertGoogleUser(payload, agreedTerms, refCode, req) {
  let user = await User.findOne({ $or: [{ googleId: payload.sub }, { email: payload.email.toLowerCase() }] });
  let isNewUser = false;
- if (payload.email_verified === false) { const err = new Error('Your Google email address is not verified.'); err.blockedDomain = true; throw err; }
  if (user) {
  if (!user.googleId) { user.googleId = payload.sub; user.authProvider = user.authProvider === 'local' && user.password ? 'local' : 'google'; }
  if (!user.profilePicture && payload.picture) user.profilePicture = payload.picture;
@@ -2070,7 +2100,7 @@ async function upsertGoogleUser(payload, agreedTerms, refCode, req) {
  if (capError) { const err = new Error(capError); err.accountLimit = true; throw err; }
  }
  const referrer = refCode ? await User.findOne({ referralCode: String(refCode).toUpperCase() }) : null;
- const signupIp = req ? (req.ip || req.socket?.remoteAddress || '').toString() : '';
+ const signupIp = req ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString().split(',')[0].trim() : '';
  user = new User({
  name: payload.name || payload.email.split('@')[0],
  email: payload.email.toLowerCase(),
@@ -2085,11 +2115,11 @@ async function upsertGoogleUser(payload, agreedTerms, refCode, req) {
  });
  }
  if (user.restricted) { const err = new Error(`Your account has been restricted${user.restrictedReason ? ': ' + user.restrictedReason : ''}. Contact support for help.`); err.restricted = true; throw err; }
- if (isNewUser && mysCampaigns) mysCampaigns.sendWelcomeEmail(user).catch(() => {});
+ if (isNewUser && klsCampaigns) klsCampaigns.sendWelcomeEmail(user).catch(() => {});
  return { user, isNewUser };
 }
 async function finalizeGoogleLogin(user, req) {
- const ip = (req.ip || req.socket?.remoteAddress || '').toString();
+ const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString().split(',')[0].trim();
  const userAgent = req.headers['user-agent'] || '';
  user.lastLoginAt = new Date();
  user.lastLoginIp = ip;
@@ -2097,7 +2127,7 @@ async function finalizeGoogleLogin(user, req) {
  user.loginHistory.push({ at: new Date(), ip, userAgent });
  if (user.loginHistory.length > 50) user.loginHistory = user.loginHistory.slice(-50);
  await user.save();
- return mysEngagement ? await mysEngagement.issueToken(user, req) : jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+ return klsEngagement ? await klsEngagement.issueToken(user, req) : jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 }
 app.post('/api/auth/google', async (req, res) => {
  try {
@@ -2363,7 +2393,18 @@ app.get('/api/user/deposit-summary', auth, async (req, res) => {
 });
 app.get('/api/user/purchases', auth, async (req, res) => {
  const u = await User.findById(req.user._id).select('purchaseDetails');
- res.json(u.purchaseDetails || []);
+ const list = (u && u.purchaseDetails) || [];
+ // Older purchases (made before order IDs existed) get their own unique ID the first time they are listed.
+ for (const rec of list) {
+   if (!rec.orderId) {
+     try {
+       const id = await newOrderId();
+       await User.updateOne({ _id: u._id }, { $set: { 'purchaseDetails.$[p].orderId': id } }, { arrayFilters: [{ 'p._id': rec._id, 'p.orderId': { $in: ['', null] } }] });
+       rec.orderId = id;
+     } catch (e) { /* non-fatal: shown with its record ID until next load */ }
+   }
+ }
+ res.json(list);
 });
 // ── ANNOUNCEMENT ROUTES ──────────────────────────────────────────────────────
 // User-facing: the list plus this user's own read/dismissed state.
@@ -2664,7 +2705,7 @@ app.get('/api/logs', optionalAuth, async (req, res) => {
  const logs = await Log.find(filter).select('-details -toolLink -deliverableFile -subAccounts.details -subAccounts.toolLink -subAccounts.deliverableFile').sort({ createdAt: -1 });
  const categories = await Category.find();
  const showReviewsFor = new Set(categories.filter(c => c.showReviews).map(c => c.name));
- const visible = await Promise.all(logs.map(async l => {
+ const visible = logs.map(l => {
  const obj = l.toObject();
  if (!showReviewsFor.has(l.category)) {
  obj.reviews = [];
@@ -2682,11 +2723,9 @@ app.get('/api/logs', optionalAuth, async (req, res) => {
  } else {
  obj.soldOut = obj.maxPurchases > 0 && obj.soldCount >= obj.maxPurchases;
  }
- const brandLogo = await brandLogoFor(obj.title, obj.category);
- if (brandLogo) obj.picture = brandLogo;
  return obj;
- }));
- res.json(visible);
+ });
+ res.json(await applyLogoRules(visible, 'title', 'm1'));
 });
 app.get('/api/logs/:id', optionalAuth, async (req, res) => {
  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -2713,8 +2752,6 @@ app.get('/api/logs/:id', optionalAuth, async (req, res) => {
  } else {
  obj.soldOut = obj.maxPurchases > 0 && obj.soldCount >= obj.maxPurchases;
  }
- const brandLogo = await brandLogoFor(obj.title, obj.category);
- if (brandLogo) obj.picture = brandLogo;
  res.json(obj);
 });
 app.post('/api/logs/:id/notify-restock', auth, async (req, res) => {
@@ -2729,10 +2766,6 @@ app.post('/api/logs/:id/notify-restock', auth, async (req, res) => {
  res.json({ ok: true });
  } catch (e) { res.status(500).json({ error: 'Failed to save — please try again' }); }
 });
-// A sub-account is only sellable if the admin actually put credentials/delivery content on it.
-function subHasCredentials(sa) {
-  return !!(sa && ((sa.details && String(sa.details).trim()) || (sa.toolLink && String(sa.toolLink).trim()) || (sa.deliverableFile && String(sa.deliverableFile).trim())));
-}
 app.post('/api/logs/buy/:id', auth, async (req, res) => {
  try {
  const { subAccountId } = req.body;
@@ -2745,7 +2778,7 @@ app.post('/api/logs/buy/:id', auth, async (req, res) => {
    // ATOMIC CLAIM — only touches the ONE matching sub-account (sold:false).
    // Two concurrent buyers can never both get the same account.
    const claimed = await Log.findOneAndUpdate(
-     { _id: log._id, subAccounts: { $elemMatch: { _id: subAccountId, sold: false } } },
+     { _id: log._id, 'subAccounts._id': subAccountId, 'subAccounts.sold': false },
      { $set: { 'subAccounts.$.sold': true, 'subAccounts.$.soldTo': user._id, 'subAccounts.$.soldAt': new Date() } },
      { new: true }
    );
@@ -2756,33 +2789,31 @@ app.post('/api/logs/buy/:id', auth, async (req, res) => {
      await Log.updateOne({ _id: log._id, 'subAccounts._id': subAccountId }, { $set: { 'subAccounts.$.sold': false, 'subAccounts.$.soldTo': null, 'subAccounts.$.soldAt': null } });
      return res.status(500).json({ error: 'Sub-account data error — please try again' });
    }
-   if (!subHasCredentials(sub)) {
-     await Log.updateOne({ _id: log._id, 'subAccounts._id': subAccountId }, { $set: { 'subAccounts.$.sold': false, 'subAccounts.$.soldTo': null, 'subAccounts.$.soldAt': null } });
-     return res.status(409).json({ error: 'This account has no login details added yet, so you were NOT charged. Please contact admin or choose another account.' });
-   }
    // BALANCE CHECK after claim — roll back if insufficient
    if ((user.balance || 0) < sub.price) {
      await Log.updateOne({ _id: log._id, 'subAccounts._id': subAccountId }, { $set: { 'subAccounts.$.sold': false, 'subAccounts.$.soldTo': null, 'subAccounts.$.soldAt': null } });
      return res.status(400).json({ error: 'Insufficient balance. Please deposit funds.' });
    }
    // ATOMIC DEDUCT — never read-modify-write; concurrent ops are safe
-   const updatedUser = await User.findOneAndUpdate(
-     { _id: user._id, balance: { $gte: sub.price } }, { $inc: { balance: -sub.price } }, { new: true }
+   const updatedUser = await User.findByIdAndUpdate(
+     user._id, { $inc: { balance: -sub.price } }, { new: true }
    );
    if (!updatedUser) {
      await Log.updateOne({ _id: log._id, 'subAccounts._id': subAccountId }, { $set: { 'subAccounts.$.sold': false, 'subAccounts.$.soldTo': null, 'subAccounts.$.soldAt': null } });
-     return res.status(400).json({ error: 'Insufficient balance. Please deposit funds.' });
+     return res.status(500).json({ error: 'Failed to deduct balance — please try again' });
    }
    // Push purchase record atomically — never overwrites other purchaseDetails
    const purchasedAt = new Date();
+   const orderId = await newOrderId();
    await User.updateOne({ _id: user._id }, { $push: { purchaseDetails: {
+     orderId,
      logId: log._id, logTitle: `${log.title} — ${sub.label}`, logType: log.type,
      logDetails: sub.details || '', toolLink: sub.toolLink || '',
      deliveryType: sub.deliveryType || 'link',
      deliverableFile: sub.deliverableFile || '', deliverableFileName: sub.deliverableFileName || '',
      pricePaid: sub.price, subAccountId: sub._id, purchasedAt
    }}});
-   await Transaction.create({ userId: user._id, type: 'purchase', amount: sub.price, description: `Purchased: ${log.title} — ${sub.label}`, status: 'success' });
+   await Transaction.create({ userId: user._id, type: 'purchase', amount: sub.price, description: `Purchased: ${log.title} — ${sub.label}`, status: 'success', orderId });
    await creditReferralCommission(updatedUser, sub.price, `${log.title} — ${sub.label}`);
    checkAndAwardBadges(user._id).catch(() => {});
    // Re-label ONLY the unsold sub-accounts so numbering stays clean
@@ -2793,7 +2824,7 @@ app.post('/api/logs/buy/:id', auth, async (req, res) => {
      await freshLog.save();
    }
    return res.json({
-     message: 'Purchase successful!', newBalance: updatedUser.balance,
+     message: 'Purchase successful!', newBalance: updatedUser.balance, orderId, purchaseId: orderId,
      logDetails: sub.details || '', toolLink: sub.toolLink || '',
      deliveryType: sub.deliveryType || 'link',
      deliverableFile: sub.deliverableFile || '', deliverableFileName: sub.deliverableFileName || '',
@@ -2812,38 +2843,27 @@ app.post('/api/logs/buy/:id', auth, async (req, res) => {
    return res.status(400).json({ error: 'This tool is out of stock.' });
  if ((user.balance || 0) < log.price)
    return res.status(400).json({ error: 'Insufficient balance. Please deposit funds.' });
- if (!(Number(log.price) >= 0)) return res.status(400).json({ error: 'Invalid item price' });
- // SECURITY: atomic stock claim (no overselling) + atomic wallet debit AND purchase record in ONE operation:
- // the balance can never go negative and a single "log" cannot be bought twice by parallel requests.
- const stockField = log.type === 'tool' ? 'toolQty' : 'maxPurchases';
- const stockClaim = await Log.findOneAndUpdate(
-   { _id: log._id, $expr: { $or: [ { $lte: [ { $ifNull: ['$' + stockField, 0] }, 0 ] }, { $lt: [ { $ifNull: ['$soldCount', 0] }, '$' + stockField ] } ] } },
-   { $inc: { soldCount: 1 } }, { new: true }
+ // Atomic deduct
+ const updatedUser = await User.findByIdAndUpdate(
+   user._id, { $inc: { balance: -log.price } }, { new: true }
  );
- if (!stockClaim) return res.status(400).json({ error: 'This item is sold out.' });
- const dedupe = log.type === 'log' ? { 'purchaseDetails.logId': { $ne: log._id } } : {};
- const updatedUser = await User.findOneAndUpdate(
-   { _id: user._id, balance: { $gte: log.price }, ...dedupe },
-   { $inc: { balance: -log.price }, $push: { purchaseDetails: {
+ const orderId = await newOrderId();
+ await User.updateOne({ _id: user._id }, { $push: { purchaseDetails: {
+   orderId,
    logId: log._id, logTitle: log.title, logType: log.type, logDetails: log.details || '',
    toolLink: log.toolLink || '', deliveryType: log.deliveryType || 'link',
    deliverableFile: log.deliverableFile || '', deliverableFileName: log.deliverableFileName || '',
    pricePaid: log.price, purchasedAt: new Date()
- } } },
-   { new: true }
- );
- if (!updatedUser) {
-   await Log.updateOne({ _id: log._id }, { $inc: { soldCount: -1 } });
-   return res.status(400).json({ error: 'Insufficient balance (or you already purchased this account). Please deposit funds.' });
- }
- await Transaction.create({ userId: user._id, type: 'purchase', amount: log.price, description: `Purchased: ${log.title}`, status: 'success' });
+ }}});
+ await Transaction.create({ userId: user._id, type: 'purchase', amount: log.price, description: `Purchased: ${log.title}`, status: 'success', orderId });
  await creditReferralCommission(updatedUser, log.price, log.title);
  checkAndAwardBadges(user._id).catch(() => {});
+ await Log.findByIdAndUpdate(log._id, { $inc: { soldCount: 1 } });
 
  // ── Send purchase confirmation email ──────────────────────
  try {
-   if (mysCampaigns && typeof mysCampaigns.sendPurchaseEmail === 'function') {
-     mysCampaigns.sendPurchaseEmail({
+   if (klsCampaigns && typeof klsCampaigns.sendPurchaseEmail === 'function') {
+     klsCampaigns.sendPurchaseEmail({
        user: updatedUser,
        item: { title: log.title, type: log.type, price: log.price },
        newBalance: updatedUser.balance
@@ -2852,7 +2872,7 @@ app.post('/api/logs/buy/:id', auth, async (req, res) => {
  } catch (_) {}
 
  res.json({
-   message: 'Purchase successful!', newBalance: updatedUser.balance,
+   message: 'Purchase successful!', newBalance: updatedUser.balance, orderId, purchaseId: orderId,
    logDetails: log.details || '', toolLink: log.toolLink || '',
    deliveryType: log.deliveryType || 'link',
    deliverableFile: log.deliverableFile || '', deliverableFileName: log.deliverableFileName || '',
@@ -2875,7 +2895,7 @@ app.post('/api/logs/buy-multi/:id', auth, async (req, res) => {
     const claimedSubs = []; // { _id, price, label, details, ... } for each successfully claimed sub
     for (const subId of subAccountIds) {
       const claimed = await Log.findOneAndUpdate(
-        { _id: log._id, subAccounts: { $elemMatch: { _id: subId, sold: false } } },
+        { _id: log._id, 'subAccounts._id': subId, 'subAccounts.sold': false },
         { $set: { 'subAccounts.$.sold': true, 'subAccounts.$.soldTo': user._id, 'subAccounts.$.soldAt': new Date() } },
         { new: true }
       );
@@ -2888,13 +2908,6 @@ app.post('/api/logs/buy-multi/:id', auth, async (req, res) => {
       claimedIds.push(subId);
       claimedSubs.push(claimed.subAccounts.id(subId));
     }
-    if (claimedSubs.some(sa => !subHasCredentials(sa))) {
-      for (const rid of claimedIds) {
-        await Log.updateOne({ _id: log._id, 'subAccounts._id': rid }, { $set: { 'subAccounts.$.sold': false, 'subAccounts.$.soldTo': null, 'subAccounts.$.soldAt': null } });
-      }
-      claimedIds.length = 0;
-      return res.status(409).json({ error: 'This account has no login details added yet, so you were NOT charged. Please contact admin or choose another account.' });
-    }
     const total = claimedSubs.reduce((sum, s) => sum + (s.price || 0), 0);
     if ((user.balance || 0) < total) {
       for (const rid of claimedIds) {
@@ -2902,29 +2915,24 @@ app.post('/api/logs/buy-multi/:id', auth, async (req, res) => {
       }
       return res.status(400).json({ error: 'Insufficient balance for this batch. Please deposit funds.' });
     }
-    const _docs = claimedSubs.map(sub => ({
- logId: log._id, logTitle: `${log.title} — ${sub.label}`, logType: log.type, logDetails: sub.details || '',
- toolLink: sub.toolLink || '', deliveryType: sub.deliveryType || 'link',
- deliverableFile: sub.deliverableFile || '', deliverableFileName: sub.deliverableFileName || '',
- pricePaid: sub.price, subAccountId: sub._id
- }));
- // SECURITY: atomic conditional debit + purchase records in one write (no double-spend, no negative balance)
- const _debited = await User.findOneAndUpdate(
- { _id: user._id, balance: { $gte: total } },
- { $inc: { balance: -total }, $push: { purchaseDetails: { $each: _docs } } }, { new: true }
- );
- if (!_debited) {
- for (const rid of claimedIds) await Log.updateOne({ _id: log._id, 'subAccounts._id': rid }, { $set: { 'subAccounts.$.sold': false, 'subAccounts.$.soldTo': null, 'subAccounts.$.soldAt': null } });
- return res.status(400).json({ error: 'Insufficient balance for this batch. Please deposit funds.' });
- }
- user.balance = _debited.balance; user.purchaseDetails = _debited.purchaseDetails;
- const purchasedItems = [];
- const newRecords = _debited.purchaseDetails.slice(-claimedSubs.length);
+    user.balance = (user.balance || 0) - total;
+    const purchasedItems = [];
+    for (const sub of claimedSubs) {
+      user.purchaseDetails.push({
+ orderId: await newOrderId(),
+        logId: log._id, logTitle: `${log.title} — ${sub.label}`, logType: log.type, logDetails: sub.details || '',
+        toolLink: sub.toolLink || '', deliveryType: sub.deliveryType || 'link',
+        deliverableFile: sub.deliverableFile || '', deliverableFileName: sub.deliverableFileName || '',
+        pricePaid: sub.price, subAccountId: sub._id
+      });
+    }
+    await user.save();
+    const newRecords = user.purchaseDetails.slice(-claimedSubs.length);
     newRecords.forEach((rec, i) => {
       purchasedItems.push({
         logDetails: rec.logDetails, toolLink: rec.toolLink, deliveryType: rec.deliveryType,
         deliverableFile: rec.deliverableFile, deliverableFileName: rec.deliverableFileName,
-        logTitle: rec.logTitle, purchaseId: rec._id, purchasedAt: rec.purchasedAt, pricePaid: rec.pricePaid
+        logTitle: rec.logTitle, purchaseId: rec._id, orderId: rec.orderId, purchasedAt: rec.purchasedAt, pricePaid: rec.pricePaid
       });
     });
     await Transaction.create({
@@ -3140,11 +3148,11 @@ const FLW_IS_LIVE = process.env.FLW_ENV === 'live';
 const FLW_API_BASE = FLW_IS_LIVE
  ? 'https://api.flutterwave.cloud/f4bexperience' // production
  : 'https://developersandbox-api.flutterwave.com'; // sandbox/test
-const mysCountries = require('./lib/countries');
-const mysGeo = require('./lib/geo');
-const mysFx = require('./lib/fx');
-const mysFlwMethods = require('./lib/flw-methods');
-let mysPlatform = null; // set once lib/platform.js is mounted at the bottom of this file
+const klsCountries = require('./lib/countries');
+const klsGeo = require('./lib/geo');
+const klsFx = require('./lib/fx');
+const klsFlwMethods = require('./lib/flw-methods');
+let klsPlatform = null; // set once lib/platform.js is mounted at the bottom of this file
 const FLW_TOKEN_URL = 'https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token';
 let _flwTokenCache = { token: null, expiresAt: 0 };
 async function getFlwAccessToken() {
@@ -3167,19 +3175,28 @@ async function flwHeaders() {
 async function handleFlutterwaveWebhook(req, res) {
  const receivedHash = req.headers['verif-hash'];
  const expectedHash = process.env.FLW_SECRET_HASH || process.env.FLW_WEBHOOK_HASH || '';
- console.log(' MYS webhook received (signature present:', !!receivedHash, ')');
- // SECURITY: a webhook is ONLY accepted when FLW_SECRET_HASH is configured AND matches (constant-time).
- if (!expectedHash || !safeEqual(receivedHash, expectedHash)) {
- console.error(' MYS webhook REJECTED:', !expectedHash ? 'FLW_SECRET_HASH is not configured on the server' : 'signature mismatch');
- if (mysPlatform) await mysPlatform.logWebhook({ channel: 'charge', status: 'signature_rejected', message: !expectedHash ? 'FLW_SECRET_HASH not configured' : 'verif-hash mismatch', payload: {} });
+ console.log(' KLS webhook received:');
+ console.log(' verif-hash header :', receivedHash || '(MISSING)');
+ console.log(' expected hash :', expectedHash ? expectedHash.slice(0, 6) + '***' : '(NOT SET IN ENV)');
+ console.log(' match? :', receivedHash && expectedHash && receivedHash === expectedHash ? 'YES ' : 'NO ');
+ console.log(' raw headers :', JSON.stringify(req.headers).slice(0, 300));
+ if (expectedHash && receivedHash !== expectedHash) {
+ console.error(' KLS webhook REJECTED: signature mismatch.');
+ console.error(' Got :', receivedHash);
+ console.error(' Expected:', expectedHash);
+ console.error(' Fix: set FLW_SECRET_HASH in your Render/env vars to match your Flutterwave Webhook Secret Hash');
+ if (klsPlatform) await klsPlatform.logWebhook({ channel: 'charge', status: 'signature_rejected', message: 'verif-hash mismatch', payload: req.body });
  return res.status(401).json({ error: 'Invalid webhook signature' });
+ }
+ if (!expectedHash) {
+ console.warn(' KLS webhook: FLW_SECRET_HASH not set — processing anyway (set it in env vars for security)');
  }
  const event = req.body;
  const tx = event.data || {};
  const eventType = event.event || event.type;
  const txStatus = tx.status;
  const txRefAny = tx.tx_ref || tx.reference || '';
- console.log('MYS webhook event:', eventType);
+ console.log('KLS webhook event:', eventType);
  console.log(' tx.id :', tx.id);
  console.log(' tx.tx_ref/ref :', txRefAny);
  console.log(' tx.flw_ref :', tx.flw_ref);
@@ -3191,17 +3208,17 @@ async function handleFlutterwaveWebhook(req, res) {
  console.log(' tx.narration :', tx.narration || tx.meta?.narration || '(none)');
  console.log(' tx.meta :', JSON.stringify(tx.meta || {}).slice(0, 300));
  // Record every delivery so the admin desk can prove what arrived and when.
- const whLog = mysPlatform ? await mysPlatform.logWebhook({
+ const whLog = klsPlatform ? await klsPlatform.logWebhook({
  channel: 'charge', event: eventType || 'unknown', reference: txRefAny,
  txId: tx.id, amount: tx.amount, currency: tx.currency,
  status: 'received', message: `status=${txStatus}`, payload: event,
  }) : null;
  const markWebhook = async (status, message) => {
  try {
- if (whLog && mysPlatform) {
- await mysPlatform.WebhookEvent.updateOne({ _id: whLog._id }, { $set: { status, message: String(message || '').slice(0, 900) } });
+ if (whLog && klsPlatform) {
+ await klsPlatform.WebhookEvent.updateOne({ _id: whLog._id }, { $set: { status, message: String(message || '').slice(0, 900) } });
  if (['failed', 'conversion_error'].includes(status)) {
- await mysPlatform.alertOps('webhook_' + status, `Flutterwave charge webhook ${status}`, message, { reference: txRefAny, txId: tx.id });
+ await klsPlatform.alertOps('webhook_' + status, `Flutterwave charge webhook ${status}`, message, { reference: txRefAny, txId: tx.id });
  }
  }
  } catch { /* logging never breaks a credit */ }
@@ -3235,8 +3252,8 @@ async function handleFlutterwaveWebhook(req, res) {
           description: 'Deposit reversal (auto): '+txRefAny+' — '+eventType,
           txRef: txRefAny+'_rev', status: 'success' });
         console.log(' [AUTO-REVERSAL] -₦'+reversalAmount+' from '+user.email+' → balance ₦'+user.balance+(user.balance<0?' (NEGATIVE)':''));
-        if (user.balance < 0 && mysPlatform) {
-          await mysPlatform.alertOps('negative_balance','User balance went negative after auto-reversal',
+        if (user.balance < 0 && klsPlatform) {
+          await klsPlatform.alertOps('negative_balance','User balance went negative after auto-reversal',
             'User: '+user.email+' — Balance: ₦'+user.balance+' after ₦'+reversalAmount+' reversal of '+txRefAny,
             { userId: String(user._id), txRef: txRefAny });
         }
@@ -3279,7 +3296,7 @@ async function handleFlutterwaveWebhook(req, res) {
  if (plDeposit) {
  console.log(` Matched PaymentLinkDeposit — routing to handlePaymentLinkWebhookCredit`);
  if (plDeposit.status === 'success') {
- if (mysPlatform) await mysPlatform.logIdempotencyConflict(txRefAny, 'Payment link deposit was already credited — duplicate delivery ignored', { txId: tx.id });
+ if (klsPlatform) await klsPlatform.logIdempotencyConflict(txRefAny, 'Payment link deposit was already credited — duplicate delivery ignored', { txId: tx.id });
  await markWebhook('duplicate', 'payment link deposit already credited');
  return;
  }
@@ -3291,9 +3308,6 @@ async function handleFlutterwaveWebhook(req, res) {
  const btDeposit = await BankTransferDeposit.findOne({ reference: txRefAny, status: 'pending' });
  if (btDeposit) {
  console.log(` Matched BankTransferDeposit ref=${txRefAny} — crediting via webhook`);
- if (await Transaction.exists({ txRef: chargeKey(tx) })) { await markWebhook('duplicate', 'charge already credited'); return; }
- const btConfirmed = await flwConfirmCharge(tx, { expectedRef: btDeposit.reference, minAmount: btDeposit.amount * 0.99, currency: 'NGN' });
- if (!btConfirmed) { await markWebhook('failed', 'bank transfer failed server-side verification'); return; }
  const freshBT = await BankTransferDeposit.findOneAndUpdate(
  { _id: btDeposit._id, status: 'pending' },
  { status: 'success', flwChargeId: String(tx.flw_ref || tx.id || '') },
@@ -3315,7 +3329,7 @@ async function handleFlutterwaveWebhook(req, res) {
  await markWebhook('processed', 'Bank transfer deposit credited');
  } else {
  console.log(` BT deposit already credited (race condition prevented)`);
- if (mysPlatform) await mysPlatform.logIdempotencyConflict(txRefAny, 'Bank transfer deposit already credited — duplicate delivery ignored', { txId: tx.id });
+ if (klsPlatform) await klsPlatform.logIdempotencyConflict(txRefAny, 'Bank transfer deposit already credited — duplicate delivery ignored', { txId: tx.id });
  await markWebhook('duplicate', 'bank transfer deposit already credited');
  }
  return;
@@ -3324,14 +3338,14 @@ async function handleFlutterwaveWebhook(req, res) {
  }
  const settings = await getVASettings();
  if (!settings.globalEnabled) {
- console.warn('MYS webhook: virtual accounts globally disabled — tx', tx.id, 'not credited');
+ console.warn('KLS webhook: virtual accounts globally disabled — tx', tx.id, 'not credited');
  return;
  }
  let user = null;
  const customerEmail = (tx.customer?.email || '').trim().toLowerCase();
  if (customerEmail) {
  user = await User.findOne({ email: customerEmail });
- if (user) console.log('MYS webhook: matched user by email:', customerEmail);
+ if (user) console.log('KLS webhook: matched user by email:', customerEmail);
  }
  if (!user) {
  const meta = tx.meta || {};
@@ -3345,7 +3359,7 @@ async function handleFlutterwaveWebhook(req, res) {
  null;
  if (vaAccNum) {
  user = await User.findOne({ 'virtualAccount.accountNumber': vaAccNum });
- if (user) console.log('MYS webhook: matched user by VA account number:', vaAccNum);
+ if (user) console.log('KLS webhook: matched user by VA account number:', vaAccNum);
  }
  }
  if (!user) {
@@ -3355,28 +3369,28 @@ async function handleFlutterwaveWebhook(req, res) {
  if (nameSlug.length >= 3) {
  user = await User.findOne({
  'virtualAccount.enabled': true,
- name: { $regex: new RegExp('^' + nameSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+ name: { $regex: new RegExp(nameSlug, 'i') }
  });
- if (user) console.log('MYS webhook: matched user by narration slug:', nameSlug, '', user.name);
+ if (user) console.log('KLS webhook: matched user by narration slug:', nameSlug, '', user.name);
  }
  }
  }
  if (!user) {
- await markWebhook('failed', 'No MYS user could be matched to this payment');
- console.warn('MYS webhook: NO user found for tx', tx.id,
+ await markWebhook('failed', 'No KLS user could be matched to this payment');
+ console.warn('KLS webhook: NO user found for tx', tx.id,
  '| email:', customerEmail, '| ref:', txRefAny,
  '| This payment arrived in Flutterwave but was NOT credited.',
  '| Full customer:', JSON.stringify(tx.customer));
  return;
  }
  if (!user.virtualAccount?.enabled) {
- console.warn(`MYS webhook: VA disabled for ${user.email} — ₦${tx.amount} NOT credited`);
+ console.warn(`KLS webhook: VA disabled for ${user.email} — ₦${tx.amount} NOT credited`);
  return;
  }
  await handleVaWebhookCredit(user, tx);
  await markWebhook('processed', 'Virtual account deposit credited');
  } catch (e) {
- console.error('MYS webhook error:', e.message, e.stack?.slice(0, 400));
+ console.error('KLS webhook error:', e.message, e.stack?.slice(0, 400));
  await markWebhook('failed', e.message);
  throw e;
  }
@@ -3396,25 +3410,6 @@ app.post('/api/deposit/paymentlink/callback', express.json(), handleFlutterwaveW
 // guarantees to be identical on every delivery / API read of the same charge;
 // flw_ref alone changed shape between retries and channels, which is how the
 // same money could be recorded twice under two different keys.
-// SECURITY: never trust a webhook body alone. Confirm the charge with Flutterwave's API.
-// Returns the verified charge, or null if it is not a matching successful payment.
-// THROWS if Flutterwave cannot be reached so the webhook answers 500 and Flutterwave retries (fail-closed).
-async function flwConfirmCharge(tx, { expectedRef, minAmount, currency }) {
- let vtx = null;
- if (tx && tx.id) {
-  const r = await flwAxios.get(`/transactions/${encodeURIComponent(tx.id)}/verify`, { timeout: 10000 });
-  vtx = r.data && r.data.data;
- } else if (expectedRef) {
-  const r = await flwAxios.get('/transactions/verify_by_reference', { params: { tx_ref: expectedRef }, timeout: 10000 });
-  vtx = r.data && r.data.data;
- }
- if (!vtx) return null;
- const ok = String(vtx.status || '').trim().toLowerCase() === 'successful'
-  && String(vtx.currency || '').trim().toUpperCase() === String(currency || 'NGN').toUpperCase()
-  && Number(vtx.amount) >= Number(minAmount || 0)
-  && (!expectedRef || String(vtx.tx_ref || vtx.reference || '') === String(expectedRef));
- return ok ? vtx : null;
-}
 function chargeKey(tx) {
  return String(tx.id || tx.flw_ref || tx.tx_ref || tx.reference || '');
 }
@@ -3473,22 +3468,18 @@ async function handleVaWebhookCredit(user, tx) {
  if (!claimedNew) { console.log(` DUPLICATE ${flwRef} for ${user.email} — already recorded, skipping`); return { status: 'duplicate' }; }
 
  // ── INDEPENDENT VERIFICATION ───────────────────────────────────────────────
- let verified = false;
+ let verified = true;
  try {
-  const vRes = await flwAxios.get(`/transactions/${encodeURIComponent(tx.id)}/verify`, { timeout: 8000 });
+  const vRes = await flwAxios.get(`/transactions/${tx.id}/verify`, { timeout: 8000 });
   const vtx = vRes.data?.data;
   if (vtx) {
    verified = String(vtx.status || '').trim().toLowerCase() === 'successful' && String(vtx.currency || '').trim().toUpperCase() === 'NGN' && Number(vtx.amount) >= receivedAmount * 0.99;
    console.log(` verify: status=${vtx.status} currency=${vtx.currency} amount=${vtx.amount} → ${verified}`);
   } else {
-   verified = false;
-   console.warn(' Verify returned no data — NOT crediting');
+   console.warn(' Verify returned no data — trusting the signed webhook');
   }
  } catch (ve) {
-  // fail CLOSED: release the claim and let Flutterwave retry the webhook later
-  if (claimId) await VirtualAccountDeposit.deleteOne({ _id: claimId, status: 'pending' }).catch(() => {});
-  console.warn(` Verify API unavailable (${ve.message}) — NOT crediting, webhook will be retried`);
-  throw new Error('verification unavailable');
+  console.warn(` Verify API unavailable (${ve.message}) — trusting the signed webhook`);
  }
  if (!verified) {
   // Release the claim so a later legitimate delivery can still be credited.
@@ -3526,7 +3517,7 @@ async function handleVaWebhookCredit(user, tx) {
   const clients = sseClients.get(String(user._id));
   if (clients && clients.size) { for (const r of clients) { try { r.write(vaDepMsg); } catch { clients.delete(r); } } }
  }
- console.log(` MYS VA credited: ₦${creditAmount} to ${user.email} (received ₦${receivedAmount}, fee ₦${fee}) | key:${flwRef}`);
+ console.log(` KLS VA credited: ₦${creditAmount} to ${user.email} (received ₦${receivedAmount}, fee ₦${fee}) | key:${flwRef}`);
  return { status: 'credited', creditAmount };
 }
 async function handlePaymentLinkWebhookCredit(deposit, tx) {
@@ -3542,9 +3533,7 @@ async function handlePaymentLinkWebhookCredit(deposit, tx) {
  console.warn(`Payment link webhook: amount mismatch for ${deposit.txRef} — expected ≥${expectedCurrency} ${deposit.amount}, got ${tx.amount}`);
  return;
  }
- const confirmedTx = await flwConfirmCharge(tx, { expectedRef: deposit.txRef, minAmount: deposit.amount * 0.98, currency: expectedCurrency });
- if (!confirmedTx) { console.warn(`Payment link webhook: ${deposit.txRef} FAILED server-side verification — not credited`); return; }
- await creditPaymentLinkDeposit(deposit, confirmedTx);
+ await creditPaymentLinkDeposit(deposit, tx);
  console.log(` Payment link deposit credited via webhook: ₦${deposit.creditAmount} for tx_ref ${deposit.txRef}`);
 }
 const FLW_PROXY_URL = process.env.FLW_PROXY_URL || '';
@@ -3571,8 +3560,7 @@ flwAxios.interceptors.request.use(config => {
 });
 const virtualAccountDepositSchema = new mongoose.Schema({
  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
- flwRef: { type: String, required: true, unique: true }, // Flutterwave tx reference (Paystack rows are prefixed PSK-)
- gateway: { type: String, enum: ['flutterwave', 'paystack'], default: 'flutterwave' },
+ flwRef: { type: String, required: true, unique: true }, // Flutterwave tx reference
  flwTxId: { type: String, default: '' },
  amount: { type: Number, required: true },
  creditAmount: { type: Number, required: true },
@@ -3602,7 +3590,7 @@ async function getVASettings() {
  return s;
  } catch (e) {
  // Never let a database hiccup look like "maintenance mode" to a customer.
- console.error('[MYS] getVASettings failed, defaulting to ENABLED:', e.message);
+ console.error('[KLS] getVASettings failed, defaulting to ENABLED:', e.message);
  return { globalEnabled: true };
  }
 }
@@ -3615,7 +3603,7 @@ app.put('/api/admin/virtual-accounts/settings', adminAuth, async (req, res) => {
  s.updatedAt = new Date();
  await s.save();
  await VirtualAccountSettings.deleteMany({ _id: { $ne: s._id } }).catch(() => {});
- console.log('[MYS] Admin set virtual accounts globalEnabled =', s.globalEnabled);
+ console.log('[KLS] Admin set virtual accounts globalEnabled =', s.globalEnabled);
  res.json({ globalEnabled: s.globalEnabled });
  } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -3650,9 +3638,9 @@ async function resolveVACountry(req, user) {
  const phone = String(user?.contactPhone || '').replace(/[^0-9+]/g, '');
  if (/^(\+?234|0)[789]\d{9}$/.test(phone)) return { code: 'NG', source: 'phone' };
  try {
- return await mysGeo.resolveCountry(req, user);
+ return await klsGeo.resolveCountry(req, user);
  } catch (e) {
- console.error('[MYS] geo lookup failed, defaulting to NG:', e.message);
+ console.error('[KLS] geo lookup failed, defaulting to NG:', e.message);
  return { code: 'NG', source: 'default' };
  }
 }
@@ -3662,7 +3650,7 @@ async function createVirtualAccountForUser(user) {
  // merchant account (Bank Transfer Ghana is still pending review), so no other
  // market may ever have one created — not by a user, not by an admin.
  const vaCountry = String(user.country || 'NG').toUpperCase();
- if (!mysFlwMethods.supportsVirtualAccount(vaCountry)) {
+ if (!klsFlwMethods.supportsVirtualAccount(vaCountry)) {
  const err = new Error('Virtual accounts are available to customers in Nigeria only. Use the payment link — it is priced in US dollars for your country.');
  err.status = 403;
  throw err;
@@ -3678,7 +3666,7 @@ async function createVirtualAccountForUser(user) {
  const slug = user.name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
  const txRef = `${BRAND.txPrefix}-VA-${slug}-${Date.now()}`;
  const nameParts = user.name.trim().split(/\s+/);
- const firstName = nameParts[0] || 'MYS';
+ const firstName = nameParts[0] || 'KLS';
  const lastName = nameParts.slice(1).join(' ') || 'User';
  const payload = {
  email: user.email, // KEY: this is how we match payments back to the user
@@ -3702,196 +3690,25 @@ async function createVirtualAccountForUser(user) {
  enabled: true,
  accountNumber: va.account_number,
  bankName: va.bank_name || 'Wema Bank',
- accountName: `${BRAND.txPrefix} ${user.name.trim()}`.slice(0, 30), // "MYS John Doe" — shown on deposit page and bank receipts
+ accountName: `${BRAND.txPrefix} ${user.name.trim()}`.slice(0, 30), // "KLS John Doe" — shown on deposit page and bank receipts
  flwRef: va.flw_ref || txRef,
  createdAt: new Date()
  };
  await user.save();
  return { message: ' Virtual account created', virtualAccount: user.virtualAccount };
 }
-// ═══ PAYSTACK DEDICATED VIRTUAL ACCOUNTS ════════════════════════════════════
-function isPaystackDvaTx(tx) {
- return !!tx && [tx.channel, tx.authorization && tx.authorization.channel].some(c => String(c || '').toLowerCase() === 'dedicated_nuban');
-}
-// Who owns the account the money was sent to? Account number first, then Paystack customer code.
-async function findUserForPaystackVa(...sources) {
- for (const t of sources) {
-  if (!t) continue;
-  const nums = [t.dedicated_account && t.dedicated_account.account_number, t.authorization && t.authorization.receiver_bank_account_number, t.metadata && t.metadata.receiver_account_number]
-   .filter(Boolean).map(String);
-  for (const n of nums) {
-   const u = await User.findOne({ 'paystackVirtualAccount.accountNumber': n });
-   if (u) return u;
-  }
- }
- for (const t of sources) {
-  const code = t && t.customer && t.customer.customer_code;
-  if (code) {
-   const u = await User.findOne({ 'paystackVirtualAccount.customerCode': code });
-   if (u) return u;
-  }
- }
- return null;
-}
-async function createPaystackVirtualAccountForUser(user) {
- const vaCountry = String(user.country || 'NG').toUpperCase();
- if (vaCountry !== 'NG') {
-  const err = new Error('Virtual accounts are available to customers in Nigeria only. Use the payment link — it is priced in US dollars for your country.');
-  err.status = 403;
-  throw err;
- }
- if (!process.env.PAYSTACK_SECRET_KEY) throw new Error('PAYSTACK_SECRET_KEY is not set');
- if (user.paystackVirtualAccount?.accountNumber) {
-  user.paystackVirtualAccount.enabled = true;
-  await user.save();
-  return { message: 'Virtual account re-enabled', virtualAccount: user.paystackVirtualAccount };
- }
- const email = String(user.email || '').trim().toLowerCase();
- const nameParts = String(user.name || '').trim().split(/\s+/);
- const first_name = nameParts[0] || 'MYS';
- const last_name = nameParts.slice(1).join(' ') || 'User';
- const phone = user.contactPhone || undefined;
- // 1. Paystack customer — reuse it if this e-mail already has one.
- let customer = null;
- try { customer = (await paystackAxios.get(`/customer/${encodeURIComponent(email)}`)).data?.data || null; }
- catch (e) { if (e.response?.status !== 404) throw e; }
- if (!customer) customer = (await paystackAxios.post('/customer', { email, first_name, last_name, phone })).data?.data || null;
- if (!customer?.customer_code) throw new Error('Paystack did not return a customer');
- // 2. Dedicated account — reuse it if this customer already has one.
- let da = customer.dedicated_account && customer.dedicated_account.account_number ? customer.dedicated_account : null;
- if (!da) {
-  const r = await paystackAxios.post('/dedicated_account', {
-   customer: customer.customer_code,
-   preferred_bank: process.env.PAYSTACK_DVA_BANK || 'wema-bank',
-   first_name, last_name, phone
-  }, { timeout: 25000 });
-  da = r.data?.data || null;
- }
- const accountNumber = (da && da.account_number) || '';
- user.paystackVirtualAccount = {
-  enabled: !!accountNumber,
-  accountNumber,
-  bankName: (da && da.bank && da.bank.name) || '',
-  accountName: (da && da.account_name) || '',
-  customerCode: customer.customer_code,
-  customerId: String(customer.id || ''),
-  dedicatedAccountId: String((da && da.id) || ''),
-  createdAt: new Date()
- };
- await user.save();
- if (!accountNumber) return { message: 'Your account is being set up — it will appear here in a moment.', pending: true, virtualAccount: user.paystackVirtualAccount };
- return { message: ' Virtual account created', virtualAccount: user.paystackVirtualAccount };
-}
-// Paystack tells us (webhook) when an account that was still being assigned is ready.
-async function applyPaystackDvaAssigned(data) {
- const code = data?.customer?.customer_code;
- const da = data?.dedicated_account || {};
- if (!code || !da.account_number) return false;
- let user = await User.findOne({ 'paystackVirtualAccount.customerCode': code });
- if (!user && data.customer.email) user = await User.findOne({ email: String(data.customer.email).trim().toLowerCase() });
- if (!user) return false;
- await User.updateOne({ _id: user._id }, { $set: {
-  'paystackVirtualAccount.enabled': true,
-  'paystackVirtualAccount.accountNumber': String(da.account_number),
-  'paystackVirtualAccount.bankName': (da.bank && da.bank.name) || '',
-  'paystackVirtualAccount.accountName': da.account_name || '',
-  'paystackVirtualAccount.customerCode': code,
-  'paystackVirtualAccount.dedicatedAccountId': String(da.id || ''),
-  'paystackVirtualAccount.createdAt': user.paystackVirtualAccount?.createdAt || new Date()
- } });
- return true;
-}
-// Credits one Paystack virtual-account transfer to the wallet. `tx` MUST come straight from Paystack's
-// API (verify or list) — callers never pass an unverified webhook body. Safe to call repeatedly:
-// the unique wallet-transaction reference means money can only ever move once.
-async function handlePaystackVaCredit(user, tx) {
- if (!tx || !tx.reference) return { status: 'skipped' };
- const key = 'PSK-' + String(tx.reference);
- if (String(tx.status || '').toLowerCase() !== 'success' || String(tx.currency || '').toUpperCase() !== 'NGN') return { status: 'rejected' };
- const receivedAmount = Number(tx.amount || 0) / 100; // kobo → naira
- if (receivedAmount <= 0) return { status: 'skipped' };
- const fee = calcDepositFee(receivedAmount);
- const creditAmount = receivedAmount - fee;
- if (creditAmount <= 0) return { status: 'skipped' };
- const acct = user.paystackVirtualAccount?.accountNumber || '';
- let claim;
- try {
-  claim = await VirtualAccountDeposit.findOneAndUpdate(
-   { flwRef: key },
-   { $setOnInsert: { userId: user._id, flwRef: key, flwTxId: String(tx.id || ''), gateway: 'paystack', amount: receivedAmount, creditAmount, accountNumber: acct, status: 'pending', rawPayload: tx, createdAt: new Date() } },
-   { upsert: true, new: true }
-  );
- } catch (e) {
-  if (e && e.code === 11000) claim = await VirtualAccountDeposit.findOne({ flwRef: key });
-  else throw e;
- }
- if (!claim) return { status: 'skipped' };
- if (claim.status === 'success') return { status: 'duplicate' };
- try {
-  await Transaction.create({
-   userId: user._id, type: 'deposit', amount: creditAmount, txRef: key,
-   description: `VA deposit — ₦${creditAmount.toLocaleString('en-NG')} credited (₦${receivedAmount.toLocaleString('en-NG')} received, ₦${fee} fee) via ${user.paystackVirtualAccount?.bankName || 'Paystack bank transfer'}`,
-   status: 'success'
-  });
- } catch (e) {
-  if (e && e.code === 11000) {
-   await VirtualAccountDeposit.updateOne({ _id: claim._id }, { $set: { status: 'success' } }).catch(() => {});
-   return { status: 'duplicate' };
-  }
-  throw e;
- }
- const updated = await User.findByIdAndUpdate(user._id, { $inc: { balance: creditAmount } }, { new: true }).select('balance');
- await VirtualAccountDeposit.updateOne({ _id: claim._id }, { $set: { status: 'success' } });
- if (updated) {
-  pushBalanceToUser(user._id, updated.balance, creditAmount);
-  const msg = `event: va_deposit\ndata: ${JSON.stringify({ creditAmount, receivedAmount, fee, balance: updated.balance, bank: user.paystackVirtualAccount?.bankName || 'bank transfer', flwRef: key, ts: Date.now() })}\n\n`;
-  const clients = sseClients.get(String(user._id));
-  if (clients && clients.size) { for (const r of clients) { try { r.write(msg); } catch { clients.delete(r); } } }
- }
- console.log(` MYS Paystack VA credited: ₦${creditAmount} to ${user.email} (received ₦${receivedAmount}, fee ₦${fee}) | key:${key}`);
- return { status: 'credited', creditAmount };
-}
-// Safety net for a missed webhook: look at the last 24h of successful Paystack charges.
-let _psVaReconcileRunning = false;
-async function reconcilePaystackVADeposits() {
- if (_psVaReconcileRunning || !process.env.PAYSTACK_SECRET_KEY) return;
- _psVaReconcileRunning = true;
- try {
-  if (!(await User.exists({ 'paystackVirtualAccount.accountNumber': { $exists: true, $ne: '' } }))) return;
-  const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  for (let page = 1; page <= 3; page++) {
-   const r = await paystackAxios.get('/transaction', { params: { status: 'success', perPage: 100, page, from }, timeout: 15000 });
-   const list = r.data?.data || [];
-   if (!list.length) break;
-   for (const tx of list) {
-    if (!isPaystackDvaTx(tx) || !tx.reference) continue;
-    try {
-     if (await VirtualAccountDeposit.findOne({ flwRef: 'PSK-' + tx.reference, status: 'success' }).select('_id')) continue;
-     const user = await findUserForPaystackVa(tx);
-     if (user) await handlePaystackVaCredit(user, tx);
-    } catch (e) { console.warn('[PS-VA-reconcile] credit error:', e.message); }
-   }
-   if (list.length < 100) break;
-  }
- } catch (e) {
-  console.warn('[PS-VA-reconcile] error:', e.response?.data?.message || e.message);
- } finally { _psVaReconcileRunning = false; }
-}
 app.get('/api/user/virtual-account', auth, async (req, res) => {
  try {
- const user = await User.findById(req.user._id).select('virtualAccount paystackVirtualAccount name balance country contactPhone');
+ const user = await User.findById(req.user._id).select('virtualAccount name balance country contactPhone');
  const settings = await getVASettings();
- const vaGw = req.query.gateway === 'paystack' ? 'paystack' : 'flutterwave';
- const vaStates = await getGatewayStates();
- const va = (vaGw === 'paystack' ? user.paystackVirtualAccount : user.virtualAccount) || {};
- const gwOn = vaGw === 'paystack' ? vaStates.paystack.available : vaStates.flutterwave.enabled;
+ const va = user.virtualAccount || {};
  // Nigeria-only rail. The country comes from the profile first and from the
  // caller's IP when the profile has none, so accounts created before the
  // country field existed are handled correctly too. Any non-Nigerian user —
  // including one who already has an account number from an earlier release —
  // gets nothing back and the deposit page hides the card entirely.
  const geoRes = await resolveVACountry(req, user);
- console.log(`[MYS] VA check for ${user.email || user._id}: country=${geoRes.code} (${geoRes.source}) globalEnabled=${settings.globalEnabled} hasAccount=${!!va.accountNumber}`);
+ console.log(`[KLS] VA check for ${user.email || user._id}: country=${geoRes.code} (${geoRes.source}) globalEnabled=${settings.globalEnabled} hasAccount=${!!va.accountNumber}`);
  if (geoRes.code !== 'NG') {
  return res.json({
  enabled: false,
@@ -3912,38 +3729,35 @@ app.get('/api/user/virtual-account', auth, async (req, res) => {
  userName: user.name || '',
  balance: user.balance || 0,
  createdAt: va.createdAt || null,
- globalEnabled: settings.globalEnabled && gwOn,
- gateway: vaGw,
- pending: !!(va.customerCode && !va.accountNumber)
+ globalEnabled: settings.globalEnabled
  });
  } catch (e) {
  // A failure here must never be mistaken for "maintenance". Report the error
  // but keep available/globalEnabled true so the page shows the Generate card.
- console.error('[MYS] /api/user/virtual-account failed:', e.message);
+ console.error('[KLS] /api/user/virtual-account failed:', e.message);
  res.status(200).json({ available: true, enabled: false, globalEnabled: true, error: e.message, balance: req.user?.balance || 0 });
  }
 });
 app.post('/api/user/virtual-account/create', auth, async (req, res) => {
  try {
+ const flwOffGate = await PaymentMethodSetting.findOne({ method: 'flutterwave' });
+ if (flwOffGate && flwOffGate.enabled === false) return res.status(503).json({ error: flwOffGate.disabledMessage || 'Flutterwave is turned off — please use another payment option.' });
  const settings = await getVASettings();
  if (!settings.globalEnabled) return res.status(503).json({ error: 'Virtual accounts are temporarily disabled — please try again later or use another deposit method.' });
- const vaGw = String(req.body?.gateway || 'flutterwave').toLowerCase() === 'paystack' ? 'paystack' : 'flutterwave';
- const vaStates = await getGatewayStates();
- if (vaGw === 'paystack' ? !vaStates.paystack.available : !vaStates.flutterwave.enabled) return res.status(503).json({ error: (vaStates[vaGw].disabledMessage) || 'Bank transfer is temporarily unavailable — please use the payment link instead.' });
  const user = await User.findById(req.user._id);
  if (!user) return res.status(404).json({ error: 'User not found' });
  if (!user.contactPhone) {
  return res.status(428).json({ error: 'Please add your phone number and country before creating a virtual account.', needsPhone: true });
  }
  const resolved = await resolveVACountry(req, user);
- console.log(`[MYS] VA create requested by ${user.email}: country=${resolved.code} (${resolved.source})`);
+ console.log(`[KLS] VA create requested by ${user.email}: country=${resolved.code} (${resolved.source})`);
  if (resolved.code !== 'NG') {
  return res.status(403).json({
  error: 'Virtual accounts are available to customers in Nigeria only. Use the payment link — it is priced in US dollars for your country.',
  methods: ['paymentlink'],
  });
  }
- const result = (String(req.body?.gateway || '').toLowerCase() === 'paystack') ? await createPaystackVirtualAccountForUser(user) : await createVirtualAccountForUser(user);
+ const result = await createVirtualAccountForUser(user);
  res.json(result);
  } catch (e) {
  const msg = e.response?.data?.message || e.message;
@@ -3955,7 +3769,7 @@ app.post('/api/admin/virtual-accounts/create/:userId', adminAuth, async (req, re
  try {
  const user = await User.findById(req.params.userId);
  if (!user) return res.status(404).json({ error: 'User not found' });
- const result = (String(req.body?.gateway || '').toLowerCase() === 'paystack') ? await createPaystackVirtualAccountForUser(user) : await createVirtualAccountForUser(user);
+ const result = await createVirtualAccountForUser(user);
  res.json(result);
  } catch (e) {
  const msg = e.response?.data?.message || e.message;
@@ -4002,8 +3816,6 @@ const paymentLinkDepositSchema = new mongoose.Schema({
  fee: { type: Number, default: 0 },
  status: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
  flwTransactionId: { type: String, default: '' },
- gateway: { type: String, enum: ['flutterwave', 'paystack'], default: 'flutterwave' }, // which provider took this payment (old rows = flutterwave)
- gatewayTxId: { type: String, default: '' }, // Paystack's own transaction id
  rawPayload: { type: mongoose.Schema.Types.Mixed },
  creditedAt: { type: Date },
  // Reversal tracking — prevents double-deduction if a failed deposit webhook fires twice
@@ -4024,68 +3836,36 @@ function calcDepositFee(creditAmount) {
 function calcChargeAmount(creditAmount) {
  return creditAmount + calcDepositFee(creditAmount);
 }
-// ═══ PAYSTACK HELPERS ═══════════════════════════════════════════════════════
-const paystackAxios = axios.create({ baseURL: 'https://api.paystack.co', timeout: 15000 });
-paystackAxios.interceptors.request.use(config => {
- config.headers = { ...config.headers, Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` };
- return config;
-});
-// Paystack can only settle currencies that are switched on for the merchant account.
-// NGN always works. USD must be enabled in the Paystack dashboard AND PAYSTACK_ALLOW_USD=true set here.
-function paystackSupportsCurrency(cur) {
- const c = String(cur || '').toUpperCase();
- return c === 'NGN' || (c === 'USD' && String(process.env.PAYSTACK_ALLOW_USD || '').toLowerCase() === 'true');
-}
-// Returns Paystack's transaction object, or null when the reference does not exist (yet).
-async function paystackVerify(reference) {
- try {
-  const r = await paystackAxios.get(`/transaction/verify/${encodeURIComponent(reference)}`, { timeout: 15000 });
-  return r.data?.data || null;
- } catch (e) {
-  const msg = String(e.response?.data?.message || '');
-  if (e.response?.status === 404 || /not found/i.test(msg)) return null;
-  throw e;
- }
-}
-// Paystack amounts are in the currency's subunit (kobo / cents). Never credit less than was asked for.
-function paystackTxOk(tx, deposit) {
- if (!tx) return false;
- return String(tx.status || '').toLowerCase() === 'success'
-  && String(tx.currency || '').toUpperCase() === String(deposit.currency || 'NGN').toUpperCase()
-  && Number(tx.amount) >= Math.round(Number(deposit.amount) * 100)
-  && String(tx.reference || '') === String(deposit.txRef);
-}
 app.post('/api/deposit/paymentlink/create', auth, async (req, res) => {
- let gateway = '';
  try {
- const gwStates = await getGatewayStates();
- if (!gwStates.flutterwave.configured && !gwStates.paystack.configured) {
-  return res.status(503).json({ error: 'Payments are not configured yet — contact support.' });
- }
- if (!gwStates.flutterwave.available && !gwStates.paystack.available) {
-  return res.status(503).json({ error: gwStates.flutterwave.disabledMessage || gwStates.paystack.disabledMessage || 'Deposits are temporarily unavailable — please try again later.' });
+ if (!process.env.FLW_V3_SECRET_KEY) {
+ return res.status(503).json({ error: 'Payments are not configured yet — contact support.' });
  }
  const methodSetting = await PaymentMethodSetting.findOne({ method: 'paymentlink' });
  if (methodSetting && methodSetting.enabled === false) {
  return res.status(503).json({ error: methodSetting.disabledMessage || 'Payment Link deposits are temporarily unavailable — please try again later.' });
  }
  const { amount, method } = req.body;
+ const flwGate = await PaymentMethodSetting.findOne({ method: 'flutterwave' });
+ if (flwGate && flwGate.enabled === false) {
+ return res.status(503).json({ error: flwGate.disabledMessage || 'Flutterwave is temporarily unavailable — please use another payment option.' });
+ }
  const user = await User.findById(req.user._id);
  if (!user) return res.status(404).json({ error: 'User not found' });
  // Nigerians pay in naira; everyone else pays in US dollars. The wallet ledger
  // stays in NGN either way, so a dollar charge is converted at the live rate.
  // The country is resolved from the profile first and the request second, so a
  // missing profile country can never accidentally price a foreign user in ₦.
- const plGeo = await mysGeo.resolveCountry(req, user);
- const payCurrency = mysCountries.payCurrencyFor(plGeo.code);
+ const plGeo = await klsGeo.resolveCountry(req, user);
+ const payCurrency = klsCountries.payCurrencyFor(plGeo.code);
  const parsedAmount = parseFloat(amount);
  let creditNgn, chargeAmount, chargeCurrency, fee;
  if (payCurrency === 'USD') {
  if (!parsedAmount || parsedAmount < 1) return res.status(400).json({ error: 'Minimum deposit is $1' });
  let ngn;
- try { ngn = Math.floor(await mysFx.ngnCreditForPayment(parsedAmount, 'USD')); }
+ try { ngn = Math.floor(await klsFx.ngnCreditForPayment(parsedAmount, 'USD')); }
  catch (convErr) {
- if (mysPlatform) await mysPlatform.logConversionError('USD→NGN quote failed while creating a payment link', convErr.message, { userId: String(user._id) });
+ if (klsPlatform) await klsPlatform.logConversionError('USD→NGN quote failed while creating a payment link', convErr.message, { userId: String(user._id) });
  return res.status(503).json({ error: 'Exchange rates are temporarily unavailable — please try again in a moment.' });
  }
  // Foreign deposits carry the same service charge as naira deposits, and it is
@@ -4104,71 +3884,39 @@ app.post('/api/deposit/paymentlink/create', auth, async (req, res) => {
  chargeAmount = parsedAmount + fee;
  chargeCurrency = 'NGN';
  }
- // ── Which gateway takes this payment? ──────────────────────────────────────
- // The customer's pick wins when it is available; otherwise Flutterwave, then Paystack.
- const requested = String(req.body.gateway || '').trim().toLowerCase();
- if (requested && !GATEWAY_LIST.includes(requested)) return res.status(400).json({ error: 'Unknown payment gateway' });
- const gwOk = {
-  flutterwave: gwStates.flutterwave.available,
-  paystack: gwStates.paystack.available && paystackSupportsCurrency(chargeCurrency)
- };
- gateway = requested || (gwOk.flutterwave ? 'flutterwave' : (gwOk.paystack ? 'paystack' : ''));
- if (!gateway || !gwOk[gateway]) {
-  const which = gateway || 'flutterwave';
-  return res.status(503).json({ error: gwStates[which].disabledMessage || `${GATEWAY_LABELS[which]} is currently unavailable for your country or currency — please choose another payment option.` });
- }
- let txRef = `${BRAND.txPrefix}-PL-${user._id}-${Date.now()}`;
+ // Only the rails Flutterwave has actually approved for this market are
+ // offered — a customer never sees a method that will fail at checkout.
+ const paymentOptions = klsFlwMethods.paymentOptionsFor(plGeo.code, chargeCurrency);
+ const txRef = `${BRAND.txPrefix}-PL-${user._id}-${Date.now()}`;
  const siteUrl = process.env.SITE_URL || '';
- let link, paymentOptions = null;
- if (gateway === 'paystack') {
-  // Paystack references may only contain letters, numbers and - . =
-  txRef = txRef.replace(/[^A-Za-z0-9.=-]/g, '-');
-  const psRes = await paystackAxios.post('/transaction/initialize', {
-   email: user.email, // auto-filled from the logged-in account — never typed by the user
-   amount: Math.round(chargeAmount * 100), // kobo / cents
-   currency: chargeCurrency,
-   reference: txRef,
-   callback_url: `${siteUrl}/api/deposit/paystack/callback`,
-   metadata: {
-    userId: String(user._id), purpose: 'wallet_deposit', creditNgn,
-    cancel_action: `${siteUrl}/deposit?deposit=cancelled`
-   }
-  }, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 });
-  link = psRes.data?.data?.authorization_url;
-  if (!psRes.data?.status || !link) throw new Error(psRes.data?.message || 'Paystack did not return a payment link');
- } else {
-  // Only the rails Flutterwave has actually approved for this market are
-  // offered — a customer never sees a method that will fail at checkout.
-  paymentOptions = mysFlwMethods.paymentOptionsFor(plGeo.code, chargeCurrency);
-  const payload = {
-   tx_ref: txRef,
-   amount: chargeAmount,
-   currency: chargeCurrency,
-   redirect_url: `${siteUrl}/api/deposit/paymentlink/callback`,
-   payment_options: paymentOptions,
-   customer: {
-    email: user.email, // auto-filled from the logged-in account — never typed by the user
-    name: user.name || `MYS Customer`
-   },
-   customizations: { title: 'MYS Wallet Deposit', description: `Deposit for ${user.name}` }
-  };
-  const flwRes = await flwAxios.post(`/payments`, payload, {
-   headers: { 'Content-Type': 'application/json' },
-   timeout: 15000
-  });
-  link = flwRes.data?.data?.link;
-  if (!link) throw new Error('Flutterwave did not return a payment link');
- }
- await PaymentLinkDeposit.create({ userId: user._id, txRef, amount: chargeAmount, currency: chargeCurrency, creditAmount: creditNgn, fee, status: 'pending', gateway });
- res.json({ link, txRef, gateway, currency: chargeCurrency, charged: chargeAmount, creditNgn, country: plGeo.code, paymentOptions });
+ const payload = {
+ tx_ref: txRef,
+ amount: chargeAmount,
+ currency: chargeCurrency,
+ redirect_url: `${siteUrl}/api/deposit/paymentlink/callback`,
+ payment_options: paymentOptions,
+ customer: {
+ email: user.email, // auto-filled from the logged-in account — never typed by the user
+ name: user.name || `KLS Customer`
+ },
+ customizations: { title: 'KLS Wallet Deposit', description: `Deposit for ${user.name}` }
+ };
+ const flwRes = await flwAxios.post(`/payments`, payload, {
+ headers: { 'Content-Type': 'application/json' },
+ timeout: 15000
+ });
+ const link = flwRes.data?.data?.link;
+ if (!link) throw new Error('Flutterwave did not return a payment link');
+ await PaymentLinkDeposit.create({ userId: user._id, txRef, amount: chargeAmount, currency: chargeCurrency, creditAmount: creditNgn, fee, status: 'pending' });
+ res.json({ link, txRef, currency: chargeCurrency, charged: chargeAmount, creditNgn, country: plGeo.code, paymentOptions });
  } catch (e) {
  console.error('Payment link create error:', JSON.stringify(e.response?.data || e.message, null, 2));
  try {
  await SystemError.create({
- source: gateway || 'flutterwave',
+ source: 'flutterwave',
  message: 'Failed to create payment link for deposit',
  detail: JSON.stringify(e.response?.data || e.message),
- context: { userId: req.user?._id, attemptedAmount: req.body?.amount, gateway }
+ context: { userId: req.user?._id, attemptedAmount: req.body?.amount }
  });
  } catch {}
  res.status(502).json({
@@ -4220,120 +3968,10 @@ app.get('/api/deposit/paymentlink/callback', async (req, res) => {
  res.redirect(failRedirect);
  }
 });
-// ── Paystack: browser comes back here after paying ───────────────────────────
-app.get('/api/deposit/paystack/callback', async (req, res) => {
- const siteUrl = process.env.SITE_URL || '';
- const failRedirect = `${siteUrl}/deposit?deposit=failed`;
- const pendingRedirect = (ref) => `${siteUrl}/deposit?deposit=pending&txRef=${encodeURIComponent(ref)}`;
- try {
-  const reference = String(req.query.reference || req.query.trxref || '');
-  if (!reference) return res.redirect(failRedirect);
-  const deposit = await PaymentLinkDeposit.findOne({ txRef: reference, gateway: 'paystack' });
-  if (!deposit) return res.redirect(failRedirect);
-  if (deposit.status === 'success') return res.redirect(`${siteUrl}/deposit?deposit=success`);
-  if (!process.env.PAYSTACK_SECRET_KEY) return res.redirect(failRedirect);
-  try {
-   const tx = await paystackVerify(reference);
-   if (paystackTxOk(tx, deposit)) {
-    await creditPaymentLinkDeposit(deposit, tx);
-    return res.redirect(`${siteUrl}/deposit?deposit=success`);
-   }
-   const st = String(tx?.status || '').toLowerCase();
-   if (st === 'failed' || st === 'reversed') {
-    await PaymentLinkDeposit.updateOne({ _id: deposit._id, status: 'pending' }, { $set: { status: 'failed', rawPayload: tx } });
-    return res.redirect(failRedirect);
-   }
-   if (st === 'abandoned') return res.redirect(`${siteUrl}/deposit?deposit=cancelled`);
-   return res.redirect(pendingRedirect(reference));
-  } catch (e) {
-   console.error('Paystack callback verify error:', e.response?.data || e.message);
-   return res.redirect(pendingRedirect(reference));
-  }
- } catch (e) {
-  console.error('Paystack callback error:', e.message);
-  res.redirect(failRedirect);
- }
-});
-// ── Paystack webhook (set https://YOUR-SITE/api/webhooks/paystack in the Paystack dashboard) ──
-// Always processed — even when the Paystack switch is OFF — because the customer has already paid.
-app.post('/api/webhooks/paystack', async (req, res) => {
- const secret = process.env.PAYSTACK_SECRET_KEY || '';
- const received = String(req.headers['x-paystack-signature'] || '');
- const event = req.body || {};
- const data = event.data || {};
- const reference = String(data.reference || '');
- const log = async (status, message) => {
-  try {
-   if (mysPlatform) await mysPlatform.logWebhook({
-    provider: 'paystack', channel: 'paymentlink', event: event.event || 'unknown', reference,
-    txId: data.id, amount: Number(data.amount || 0) / 100, currency: data.currency, status, message, payload: event
-   });
-  } catch { /* logging never breaks a credit */ }
- };
- if (!secret || !req.rawBody) {
-  await log('signature_rejected', !secret ? 'PAYSTACK_SECRET_KEY is not set' : 'raw body unavailable');
-  return res.status(401).json({ error: 'Webhook not configured' });
- }
- const expected = crypto.createHmac('sha512', secret).update(req.rawBody).digest('hex');
- let valid = false;
- try {
-  const a = Buffer.from(expected, 'utf8'), b = Buffer.from(received, 'utf8');
-  valid = a.length === b.length && crypto.timingSafeEqual(a, b);
- } catch { valid = false; }
- if (!valid) {
-  console.error('Paystack webhook REJECTED: bad x-paystack-signature');
-  await log('signature_rejected', 'x-paystack-signature mismatch');
-  return res.status(401).json({ error: 'Invalid webhook signature' });
- }
- try {
-  if (event.event === 'dedicatedaccount.assign.success') {
-   const ok = await applyPaystackDvaAssigned(data);
-   await log(ok ? 'processed' : 'ignored', ok ? 'virtual account assigned' : 'no matching customer for assigned account');
-   return res.json({ received: true });
-  }
-  if (event.event === 'dedicatedaccount.assign.failed') {
-   await log('failed', 'Paystack could not assign a dedicated account');
-   return res.json({ received: true });
-  }
-  if (event.event !== 'charge.success') {
-   await log('ignored', `event ${event.event || 'unknown'} is not handled`);
-   return res.json({ received: true });
-  }
-  const deposit = reference ? await PaymentLinkDeposit.findOne({ txRef: reference, gateway: 'paystack' }) : null;
-  if (!deposit && isPaystackDvaTx(data)) {
-   // A bank transfer into a customer's dedicated virtual account.
-   const vtx = await paystackVerify(reference);
-   if (!vtx || String(vtx.status || '').toLowerCase() !== 'success') {
-    await log('failed', `virtual account verification failed: status=${vtx?.status || 'not found'}`);
-    return res.json({ received: true });
-   }
-   const owner = await findUserForPaystackVa(vtx, data);
-   if (!owner) { await log('failed', 'virtual account transfer matches no user'); return res.json({ received: true }); }
-   const out = await handlePaystackVaCredit(owner, vtx);
-   await log(out.status === 'credited' ? 'processed' : 'ignored', `virtual account ${out.status}${out.creditAmount ? ' ₦' + out.creditAmount : ''}`);
-   return res.json({ received: true });
-  }
-  if (!deposit) { await log('ignored', 'no wallet deposit matches this reference'); return res.json({ received: true }); }
-  if (deposit.status === 'success') { await log('ignored', 'already credited'); return res.json({ received: true }); }
-  // Never trust the webhook body alone — confirm with Paystack's API before crediting.
-  const tx = await paystackVerify(reference);
-  if (!paystackTxOk(tx, deposit)) {
-   await log('failed', `verification failed: status=${tx?.status || 'not found'} amount=${tx?.amount} currency=${tx?.currency}`);
-   return res.json({ received: true });
-  }
-  await creditPaymentLinkDeposit(deposit, tx);
-  await log('processed', `credited ₦${deposit.creditAmount} for ${reference}`);
-  return res.json({ received: true });
- } catch (e) {
-  console.error('Paystack webhook error:', e.response?.data || e.message);
-  await log('failed', e.message);
-  return res.status(500).json({ error: 'Processing error' }); // non-2xx → Paystack retries
- }
-});
 async function creditPaymentLinkDeposit(deposit, tx) {
   const fresh = await PaymentLinkDeposit.findOneAndUpdate(
     { _id: deposit._id, status: 'pending' },
-    { status: 'success', ...(deposit.gateway === 'paystack' ? { gatewayTxId: String(tx.id || '') } : { flwTransactionId: String(tx.id || '') }), creditedAt: new Date(), rawPayload: tx },
+    { status: 'success', flwTransactionId: String(tx.id || ''), creditedAt: new Date(), rawPayload: tx },
     { new: true }
   );
   if (!fresh) return; // Already credited or failed — never double-credit
@@ -4348,7 +3986,7 @@ async function creditPaymentLinkDeposit(deposit, tx) {
   await Transaction.create({
     userId: updated._id, type: 'deposit', amount: creditAmount,
     txRef: deposit.txRef,
-    description: deposit.gateway === 'paystack' ? `Deposit via Paystack (${tx.channel || 'unknown method'})` : `Deposit via Flutterwave payment link (${tx.payment_type || 'unknown method'})`,
+    description: `Deposit via Flutterwave payment link (${tx.payment_type || 'unknown method'})`,
     status: 'success'
   });
   pushBalanceToUser(updated._id, updated.balance, creditAmount);
@@ -4398,7 +4036,7 @@ app.post('/api/admin/deposit/reverse', adminAuth, async (req, res) => {
       status: 'success'
     });
     pushBalanceToUser(user._id, user.balance);
-    console.log(`[MYS] Deposit reversed: ₦${creditAmount} from ${user.email} (txRef:${txRef}) — new balance ₦${user.balance}`);
+    console.log(`[KLS] Deposit reversed: ₦${creditAmount} from ${user.email} (txRef:${txRef}) — new balance ₦${user.balance}`);
     res.json({
       success: true,
       message: `✅ Reversed ₦${creditAmount.toLocaleString('en-NG')} from ${user.name}'s wallet`,
@@ -4411,28 +4049,117 @@ app.post('/api/admin/deposit/reverse', adminAuth, async (req, res) => {
     res.status(500).json({ error: 'Reversal failed: ' + e.message });
   }
 });
+
+// ───────────── PAYSTACK (second payment-link gateway) ─────────────
+const klsPaystack = require('./lib/paystack');
+const isPaystackRef = (ref) => String(ref || '').includes('-PS-');
+async function paystackTxMatchesDeposit(tx, deposit) {
+  if (!tx || String(tx.status || '').toLowerCase() !== 'success') return false;
+  if (String(tx.currency || 'NGN').toUpperCase() !== String(deposit.currency || 'NGN').toUpperCase()) return false;
+  return klsPaystack.fromSubunit(tx.amount) >= Number(deposit.amount) * 0.98;
+}
+async function creditPaystackDeposit(deposit, tx) {
+  await creditPaymentLinkDeposit(deposit, { id: tx.id, ...tx });
+}
+app.post('/api/deposit/paystack/create', auth, async (req, res) => {
+  try {
+    if (!klsPaystack.isConfigured()) return res.status(503).json({ error: 'Paystack is not configured yet — contact support.' });
+    const methodSetting = await PaymentMethodSetting.findOne({ method: 'paymentlink' });
+    if (methodSetting && methodSetting.enabled === false) {
+      return res.status(503).json({ error: methodSetting.disabledMessage || 'Deposits are temporarily unavailable — please try again later.' });
+    }
+    const gwSetting = await PaymentMethodSetting.findOne({ method: 'paystack' });
+    if (gwSetting && gwSetting.enabled === false) {
+      return res.status(503).json({ error: gwSetting.disabledMessage || 'Paystack is temporarily unavailable — please use another payment option.' });
+    }
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const plGeo = await klsGeo.resolveCountry(req, user);
+    const payCurrency = klsCountries.payCurrencyFor(plGeo.code);
+    const parsedAmount = parseFloat(req.body.amount);
+    let creditNgn, chargeAmount, chargeCurrency, fee;
+    if (payCurrency === 'USD') {
+      if (!parsedAmount || parsedAmount < 1) return res.status(400).json({ error: 'Minimum deposit is $1' });
+      let ngn;
+      try { ngn = Math.floor(await klsFx.ngnCreditForPayment(parsedAmount, 'USD')); }
+      catch (convErr) { return res.status(503).json({ error: 'Exchange rates are temporarily unavailable — please try again in a moment.' }); }
+      fee = calcDepositFee(ngn);
+      const feeUsd = Math.ceil((fee / (ngn / parsedAmount)) * 100) / 100;
+      creditNgn = ngn;
+      chargeAmount = Math.round((parsedAmount + feeUsd) * 100) / 100;
+      chargeCurrency = 'USD';
+    } else {
+      if (!parsedAmount || parsedAmount < 100) return res.status(400).json({ error: 'Minimum deposit is ₦100' });
+      fee = calcDepositFee(parsedAmount);
+      creditNgn = parsedAmount;
+      chargeAmount = parsedAmount + fee;
+      chargeCurrency = 'NGN';
+    }
+    const txRef = `${BRAND.txPrefix}-PS-${user._id}-${Date.now()}`;
+    const siteUrl = process.env.SITE_URL || '';
+    const init = await klsPaystack.initializeTransaction({
+      email: user.email, amount: chargeAmount, currency: chargeCurrency, reference: txRef,
+      callback_url: `${siteUrl}/api/deposit/paystack/callback`,
+      metadata: { userId: String(user._id), purpose: 'wallet_deposit' }, customerName: user.name
+    });
+    await PaymentLinkDeposit.create({ userId: user._id, txRef, amount: chargeAmount, currency: chargeCurrency, creditAmount: creditNgn, fee, status: 'pending' });
+    res.json({ link: init.authorization_url, txRef, currency: chargeCurrency, charged: chargeAmount, creditNgn, country: plGeo.code });
+  } catch (e) {
+    console.error('Paystack create error:', e.message);
+    try { await SystemError.create({ source: 'paystack', message: 'Failed to create Paystack checkout', detail: String(e.message), context: { userId: req.user?._id, attemptedAmount: req.body?.amount } }); } catch {}
+    res.status(502).json({ error: 'Our payment provider is temporarily unavailable. Nothing was charged. Please try again shortly.' });
+  }
+});
+app.get('/api/deposit/paystack/callback', async (req, res) => {
+  const siteUrl = process.env.SITE_URL || '';
+  const ref = req.query.reference || req.query.trxref;
+  try {
+    if (!ref) return res.redirect(`${siteUrl}/deposit?deposit=failed`);
+    const deposit = await PaymentLinkDeposit.findOne({ txRef: ref });
+    if (!deposit) return res.redirect(`${siteUrl}/deposit?deposit=failed`);
+    if (deposit.status === 'success') return res.redirect(`${siteUrl}/deposit?deposit=success`);
+    const tx = await klsPaystack.verifyTransaction(ref);
+    if (await paystackTxMatchesDeposit(tx, deposit)) { await creditPaystackDeposit(deposit, tx); return res.redirect(`${siteUrl}/deposit?deposit=success`); }
+    if (tx && ['failed', 'abandoned', 'reversed'].includes(String(tx.status).toLowerCase())) return res.redirect(`${siteUrl}/deposit?deposit=cancelled`);
+    return res.redirect(`${siteUrl}/deposit?deposit=pending&txRef=${encodeURIComponent(ref)}`);
+  } catch (e) {
+    console.error('Paystack callback error:', e.message);
+    return res.redirect(`${siteUrl}/deposit?deposit=pending&txRef=${encodeURIComponent(ref || '')}`);
+  }
+});
+app.post('/api/webhooks/paystack', async (req, res) => {
+  try {
+    const sig = req.headers['x-paystack-signature'];
+    if (!klsPaystack.verifyWebhookSignature(req.rawBody, sig)) return res.sendStatus(401);
+    if (process.env.PAYSTACK_WEBHOOK_IPS_ONLY === 'true' && !klsPaystack.isPaystackIp(req.ip)) return res.sendStatus(403);
+    const ev = req.body || {};
+    if (ev.event === 'charge.success' && ev.data?.reference) {
+      const deposit = await PaymentLinkDeposit.findOne({ txRef: ev.data.reference });
+      if (deposit && deposit.status === 'pending') {
+        const tx = await klsPaystack.verifyTransaction(ev.data.reference); // never trust the payload alone
+        if (await paystackTxMatchesDeposit(tx, deposit)) await creditPaystackDeposit(deposit, tx);
+      }
+    }
+    res.sendStatus(200);
+  } catch (e) {
+    console.error('Paystack webhook error:', e.message);
+    res.sendStatus(500); // Paystack retries
+  }
+});
 app.get('/api/deposit/paymentlink/status/:txRef', auth, async (req, res) => {
  try {
  const deposit = await PaymentLinkDeposit.findOne({ txRef: req.params.txRef, userId: req.user._id });
  if (!deposit) return res.status(404).json({ error: 'Deposit not found' });
  if (deposit.status !== 'pending') return res.json({ status: deposit.status, creditAmount: deposit.creditAmount });
- if (deposit.gateway === 'paystack') {
- if (process.env.PAYSTACK_SECRET_KEY) {
+ if (isPaystackRef(deposit.txRef)) {
  try {
- const tx = await paystackVerify(deposit.txRef);
- if (paystackTxOk(tx, deposit)) {
- await creditPaymentLinkDeposit(deposit, tx);
- return res.json({ status: 'success', creditAmount: deposit.creditAmount });
- }
- const st = String(tx?.status || '').toLowerCase();
- if (st === 'failed' || st === 'reversed') {
- await PaymentLinkDeposit.updateOne({ _id: deposit._id, status: 'pending' }, { $set: { status: 'failed', rawPayload: tx } });
+ const ptx = await klsPaystack.verifyTransaction(deposit.txRef);
+ if (await paystackTxMatchesDeposit(ptx, deposit)) { await creditPaystackDeposit(deposit, ptx); return res.json({ status: 'success', creditAmount: deposit.creditAmount }); }
+ if (ptx && ['failed', 'reversed'].includes(String(ptx.status).toLowerCase())) {
+ await PaymentLinkDeposit.updateOne({ _id: deposit._id, status: 'pending' }, { $set: { status: 'failed', rawPayload: ptx } });
  return res.json({ status: 'failed' });
  }
- } catch (pollErr) {
- console.error('Paystack status poll error:', pollErr.response?.data || pollErr.message);
- }
- }
+ } catch (pollErr) { console.error('Paystack status poll error:', pollErr.message); }
  return res.json({ status: 'pending' });
  }
  if (process.env.FLW_V3_SECRET_KEY) {
@@ -4489,8 +4216,8 @@ flwV4Axios.interceptors.request.use(async config => {
 });
 async function getOrCreateFlwCustomer(user) {
  if (user.flwCustomerId) return user.flwCustomerId;
- const nameParts = (user.name || 'MYS Customer').trim().split(/\s+/);
- const first = nameParts[0] || 'MYS';
+ const nameParts = (user.name || 'KLS Customer').trim().split(/\s+/);
+ const first = nameParts[0] || 'KLS';
  const last = nameParts.slice(1).join(' ') || 'Customer';
  const r = await flwV4Axios.post('/customers', { name: { first, last }, email: user.email });
  const customerId = r.data?.data?.id;
@@ -4501,7 +4228,8 @@ async function getOrCreateFlwCustomer(user) {
 }
 app.post('/api/deposit/banktransfer/create', auth, async (req, res) => {
  try {
- if (!(await getGatewayStates()).flutterwave.enabled) return res.status(503).json({ error: 'Bank transfer is temporarily unavailable — please use the payment link instead.' });
+ const flwOffGate = await PaymentMethodSetting.findOne({ method: 'flutterwave' });
+ if (flwOffGate && flwOffGate.enabled === false) return res.status(503).json({ error: flwOffGate.disabledMessage || 'Flutterwave is turned off — please use another payment option.' });
  if (!process.env.FLW_CLIENT_ID || !process.env.FLW_CLIENT_SECRET) {
  return res.status(503).json({ error: 'Bank transfer deposits are not configured yet — contact support.' });
  }
@@ -4510,8 +4238,8 @@ app.post('/api/deposit/banktransfer/create', auth, async (req, res) => {
  // ── NIGERIA-ONLY HARD GUARD ───────────────────────────────────────────────
  // A dynamic virtual account is an NGN bank account: only Nigeria is approved
  // on this Flutterwave account, so everyone else is sent to the payment link.
- const btGeo = await mysGeo.resolveCountry(req, user);
- if (!mysFlwMethods.supportsVirtualAccount(btGeo.code)) {
+ const btGeo = await klsGeo.resolveCountry(req, user);
+ if (!klsFlwMethods.supportsVirtualAccount(btGeo.code)) {
  return res.status(403).json({
  error: 'Bank transfer deposits are available to customers in Nigeria only. Use the payment link — it is priced in US dollars for your country.',
  country: btGeo.code,
@@ -4603,7 +4331,7 @@ app.get('/api/deposit/banktransfer/status/:reference', auth, async (req, res) =>
  });
  // Guard: if that charge was already credited as a permanent-VA deposit,
  // crediting it here as a bank transfer would pay the same money twice.
- if (match && (await VirtualAccountDeposit.findOne({ flwRef: chargeKey(match) }).select('_id') || await Transaction.exists({ txRef: chargeKey(match) }))) {
+ if (match && await VirtualAccountDeposit.findOne({ flwRef: chargeKey(match) }).select('_id')) {
  console.log('BT poll: charge already credited as a VA deposit — ignoring');
  return res.json({ status: 'pending' });
  }
@@ -4623,7 +4351,6 @@ app.get('/api/deposit/banktransfer/status/:reference', auth, async (req, res) =>
  await Transaction.create({
  userId: fresh.userId,
  type: 'deposit',
- txRef: chargeKey(match),
  amount: fresh.creditAmount,
  description: `VA bank transfer deposit — ₦${fresh.creditAmount.toLocaleString('en-NG')} credited (₦${fresh.amount.toLocaleString('en-NG')} received, ₦${fresh.fee} fee) via ${fresh.bankName || 'bank transfer'}`,
  status: 'success'
@@ -4649,7 +4376,7 @@ app.get('/api/deposit/banktransfer/status/:reference', auth, async (req, res) =>
 });
 app.get('/api/user/virtual-account/latest-deposit', auth, async (req, res) => {
  try {
- const user = await User.findById(req.user._id).select('balance virtualAccount paystackVirtualAccount email');
+ const user = await User.findById(req.user._id).select('balance virtualAccount email');
  if (!user) return res.status(404).json({ error: 'User not found' });
  const latest = await VirtualAccountDeposit.findOne({ userId: user._id })
  .sort({ createdAt: -1 })
@@ -4693,30 +4420,13 @@ app.get('/api/user/virtual-account/latest-deposit', auth, async (req, res) => {
  }
  }
  }
- if (!reconCredit && user.paystackVirtualAccount?.enabled && user.paystackVirtualAccount?.customerId && process.env.PAYSTACK_SECRET_KEY) {
- const psKey = 'ps:' + String(user._id);
- if (Date.now() - (_vaReconCache.get(psKey) || 0) > 30000) { // throttle: at most every 30s
- _vaReconCache.set(psKey, Date.now());
- try {
- const psRes = await paystackAxios.get('/transaction', {
- params: { customer: user.paystackVirtualAccount.customerId, status: 'success', perPage: 20, from: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString() },
- timeout: 10000
- });
- for (const ptx of (psRes.data?.data || [])) {
- if (!isPaystackDvaTx(ptx)) continue;
- const out = await handlePaystackVaCredit(user, ptx).catch(err => { console.warn('[PS-VA-poll-reconcile] credit error:', err.message); return null; });
- if (out?.status === 'credited') { reconCredit = { flwRef: 'PSK-' + ptx.reference, amount: Number(ptx.amount) / 100 }; break; }
- }
- } catch (psErr) { console.warn('[PS-VA-poll-reconcile] error:', psErr.response?.data?.message || psErr.message); }
- }
- }
  const latestFinal = reconCredit
  ? await VirtualAccountDeposit.findOne({ userId: user._id }).sort({ createdAt: -1 }).select('status amount creditAmount createdAt flwRef')
  : latest;
  const freshUser = reconCredit ? await User.findById(user._id).select('balance') : user;
  res.json({
  balance: freshUser.balance || 0,
- vaEnabled: !!(vaEnabled || (user.paystackVirtualAccount?.enabled && user.paystackVirtualAccount?.accountNumber)),
+ vaEnabled: vaEnabled || false,
  reconCredit, // non-null if we just credited something in this poll
  latestDeposit: latestFinal ? {
  status: latestFinal.status,
@@ -4761,13 +4471,13 @@ async function sendWhatsAppNotification(user, amount, bank, accountName, receipt
  });
  return { sent: false, error: msg };
  }
- const approveLink = `${siteUrl}/${adminPath}`; // SECURITY: never put the admin passcode in a link
- const rejectLink = approveLink;
+ const approveLink = `${siteUrl}/api/admin/receipts/${receiptId}/quick-action?action=approved&passcode=${encodeURIComponent(passcode)}`;
+ const rejectLink = `${siteUrl}/api/admin/receipts/${receiptId}/quick-action?action=rejected&passcode=${encodeURIComponent(passcode)}`;
  const aiSummary = aiResult
  ? ` AI: ${aiResult.verdict.toUpperCase()} (${aiResult.confidence}%)\n Reason: ${aiResult.reason}${aiResult.flags?.length ? '\n Flags: ' + aiResult.flags.join(', ') : ''}\n\n`
  : '';
  const msg =
- `*MYS DEPOSIT — MANUAL REVIEW*\n\n` +
+ `*KLS DEPOSIT — MANUAL REVIEW*\n\n` +
  `User: ${user.name}\n` +
  `Email: ${user.email}\n` +
  `Amount: ₦${amount.toLocaleString('en-NG')}\n` +
@@ -4803,10 +4513,52 @@ async function sendWhatsAppNotification(user, amount, bank, accountName, receipt
  return { sent: false, error: detail };
  }
 }
-app.get('/api/admin/receipts/:id/quick-action', (req, res) => {
- // SECURITY: disabled. A state-changing GET carrying the master admin passcode in the URL leaks the
- // passcode (logs, WhatsApp, link-preview bots) and can be fired by crawlers. Use the admin panel.
- res.status(410).send('<h2>This one-click link has been retired for security. Please approve or reject receipts from the admin panel.</h2>');
+app.get('/api/admin/receipts/:id/quick-action', async (req, res) => {
+ try {
+ const { action, passcode } = req.query;
+ if (!passcode || passcode !== process.env.ADMIN_PASSCODE)
+ return res.status(403).send(`<h2> Wrong passcode. Access denied.</h2>`);
+ if (!['approved', 'rejected'].includes(action))
+ return res.status(400).send(`<h2>Invalid action.</h2>`);
+ const receipt = await Receipt.findById(req.params.id);
+ if (!receipt) return res.status(404).send(`<h2>Receipt not found.</h2>`);
+ if (receipt.status !== 'pending')
+ return res.send(`<h2> Already ${receipt.status}. No action needed.</h2>`);
+ receipt.status = action;
+ receipt.adminNote = `Quick-${action} via WhatsApp link`;
+ await receipt.save();
+ if (action === 'approved') {
+ const user = await User.findById(receipt.userId);
+ if (user) {
+ user.balance = (user.balance || 0) + receipt.claimedAmount;
+ await user.save();
+ await Transaction.create({
+ userId: user._id,
+ type: 'deposit',
+ amount: receipt.claimedAmount,
+ description: `Deposit approved via WhatsApp quick-action (${receipt.claimedBank})`,
+ status: 'success'
+ });
+ }
+ return res.send(`
+ <html><body style="font-family:sans-serif;text-align:center;padding:40px;background:#0a0a0a;color:#ffd700;">
+ <h1> APPROVED</h1>
+ <p style="color:#fff;">₦${receipt.claimedAmount.toLocaleString('en-NG')} credited to <b>${receipt.userName}</b> (${receipt.userEmail})</p>
+ <p style="color:#aaa;">You can close this tab.</p>
+ </body></html>
+ `);
+ } else {
+ return res.send(`
+ <html><body style="font-family:sans-serif;text-align:center;padding:40px;background:#0a0a0a;color:#ff4444;">
+ <h1> REJECTED</h1>
+ <p style="color:#fff;">Deposit from <b>${receipt.userName}</b> has been rejected.</p>
+ <p style="color:#aaa;">You can close this tab.</p>
+ </body></html>
+ `);
+ }
+ } catch (e) {
+ res.status(500).send(`<h2>Error: ${e.message}</h2>`);
+ }
 });
 app.post('/api/visit', async (req, res) => {
  try {
@@ -5125,7 +4877,7 @@ app.post('/api/v1/buy/:id', apiKeyAuth, async (req, res) => {
  targetId = available[0]._id;
  }
  const claimed = await Log.findOneAndUpdate(
- { _id: log._id, subAccounts: { $elemMatch: { _id: targetId, sold: false } } },
+ { _id: log._id, 'subAccounts._id': targetId, 'subAccounts.sold': false },
  { $set: { 'subAccounts.$.sold': true, 'subAccounts.$.soldTo': user._id, 'subAccounts.$.soldAt': new Date() } },
  { new: true }
  );
@@ -5135,24 +4887,21 @@ app.post('/api/v1/buy/:id', apiKeyAuth, async (req, res) => {
  await Log.updateOne({ _id: log._id, 'subAccounts._id': targetId }, { $set: { 'subAccounts.$.sold': false, 'subAccounts.$.soldTo': null, 'subAccounts.$.soldAt': null } });
  return res.status(400).json({ error: `Insufficient balance — this account costs ₦${sub.price}` });
  }
- const _subDoc = {
+ user.balance = (user.balance || 0) - sub.price;
+ user.purchaseDetails.push({
+ orderId: await newOrderId(),
  logId: log._id, logTitle: `${log.title} — ${sub.label}`, logType: log.type, logDetails: sub.details || '',
  toolLink: sub.toolLink || '', deliveryType: sub.deliveryType || 'link',
  deliverableFile: sub.deliverableFile || '', deliverableFileName: sub.deliverableFileName || '',
  pricePaid: sub.price, subAccountId: sub._id
- };
- const _deb = await User.findOneAndUpdate({ _id: user._id, balance: { $gte: sub.price } }, { $inc: { balance: -sub.price }, $push: { purchaseDetails: _subDoc } }, { new: true });
- if (!_deb) {
- await Log.updateOne({ _id: log._id, 'subAccounts._id': targetId }, { $set: { 'subAccounts.$.sold': false, 'subAccounts.$.soldTo': null, 'subAccounts.$.soldAt': null } });
- return res.status(400).json({ error: `Insufficient balance — this account costs ₦${sub.price}` });
- }
- user.balance = _deb.balance; user.purchaseDetails = _deb.purchaseDetails;
- const purchaseRecord = _deb.purchaseDetails[_deb.purchaseDetails.length - 1];
- await Transaction.create({ userId: user._id, type: 'purchase', amount: sub.price, description: `Purchased via API: ${log.title} — ${sub.label}`, status: 'success' });
+ });
+ await user.save();
+ const purchaseRecord = user.purchaseDetails[user.purchaseDetails.length - 1];
+ await Transaction.create({ userId: user._id, type: 'purchase', amount: sub.price, description: `Purchased via API: ${log.title} — ${sub.label}`, status: 'success', orderId: purchaseRecord.orderId });
  await creditReferralCommission(user, sub.price, `${log.title} — ${sub.label}`);
  checkAndAwardBadges(user._id).catch(() => {});
  return res.json({
- message: 'Purchase successful', newBalance: user.balance, purchaseId: purchaseRecord._id, purchasedAt: purchaseRecord.purchasedAt,
+ message: 'Purchase successful', newBalance: user.balance, purchaseId: purchaseRecord._id, orderId: purchaseRecord.orderId, purchasedAt: purchaseRecord.purchasedAt,
  itemPrice: sub.price, totalCharged: sub.price,
  logDetails: sub.details || '', toolLink: sub.toolLink || '', deliveryType: sub.deliveryType || 'link',
  deliverableFile: sub.deliverableFile || '', deliverableFileName: sub.deliverableFileName || ''
@@ -5163,28 +4912,24 @@ app.post('/api/v1/buy/:id', apiKeyAuth, async (req, res) => {
  } else if (log.toolQty > 0 && log.soldCount >= log.toolQty) {
  return res.status(400).json({ error: 'Out of stock' });
  }
- if (!(Number(log.price) >= 0)) return res.status(400).json({ error: 'Invalid item price' });
- const _sf = log.type === 'tool' ? 'toolQty' : 'maxPurchases';
- const _claim = await Log.findOneAndUpdate(
- { _id: log._id, $expr: { $or: [ { $lte: [ { $ifNull: ['$' + _sf, 0] }, 0 ] }, { $lt: [ { $ifNull: ['$soldCount', 0] }, '$' + _sf ] } ] } },
- { $inc: { soldCount: 1 } }, { new: true });
- if (!_claim) return res.status(400).json({ error: 'Sold out' });
- const _deb = await User.findOneAndUpdate({ _id: user._id, balance: { $gte: log.price } }, { $inc: { balance: -log.price }, $push: { purchaseDetails: {
+ if ((user.balance || 0) < log.price) return res.status(400).json({ error: `Insufficient balance — this item costs ₦${log.price}` });
+ user.balance = (user.balance || 0) - log.price;
+ user.purchaseDetails.push({
+ orderId: await newOrderId(),
  logId: log._id, logTitle: log.title, logType: log.type, logDetails: log.details || '',
  toolLink: log.toolLink || '', deliveryType: log.deliveryType || 'link',
  deliverableFile: log.deliverableFile || '', deliverableFileName: log.deliverableFileName || '',
- pricePaid: log.price } } }, { new: true });
- if (!_deb) {
- await Log.updateOne({ _id: log._id }, { $inc: { soldCount: -1 } });
- return res.status(400).json({ error: `Insufficient balance — this item costs ₦${log.price}` });
- }
- user.balance = _deb.balance; user.purchaseDetails = _deb.purchaseDetails;
- const purchaseRecord = _deb.purchaseDetails[_deb.purchaseDetails.length - 1];
- await Transaction.create({ userId: user._id, type: 'purchase', amount: log.price, description: `Purchased via API: ${log.title}`, status: 'success' });
+ pricePaid: log.price
+ });
+ await user.save();
+ const purchaseRecord = user.purchaseDetails[user.purchaseDetails.length - 1];
+ await Transaction.create({ userId: user._id, type: 'purchase', amount: log.price, description: `Purchased via API: ${log.title}`, status: 'success', orderId: purchaseRecord.orderId });
  await creditReferralCommission(user, log.price, log.title);
  checkAndAwardBadges(user._id).catch(() => {});
+ log.soldCount += 1;
+ await log.save();
  res.json({
- message: 'Purchase successful', newBalance: user.balance, purchaseId: purchaseRecord._id, purchasedAt: purchaseRecord.purchasedAt,
+ message: 'Purchase successful', newBalance: user.balance, purchaseId: purchaseRecord._id, orderId: purchaseRecord.orderId, purchasedAt: purchaseRecord.purchasedAt,
  itemPrice: log.price, totalCharged: log.price,
  logDetails: log.details || '', toolLink: log.toolLink || '', deliveryType: log.deliveryType || 'link',
  deliverableFile: log.deliverableFile || '', deliverableFileName: log.deliverableFileName || ''
@@ -5205,7 +4950,7 @@ app.post('/api/v1/buy-multi/:id', apiKeyAuth, async (req, res) => {
  const claimedSubs = [];
  for (const subId of subAccountIds) {
  const claimed = await Log.findOneAndUpdate(
- { _id: log._id, subAccounts: { $elemMatch: { _id: subId, sold: false } } },
+ { _id: log._id, 'subAccounts._id': subId, 'subAccounts.sold': false },
  { $set: { 'subAccounts.$.sold': true, 'subAccounts.$.soldTo': user._id, 'subAccounts.$.soldAt': new Date() } },
  { new: true }
  );
@@ -5221,30 +4966,25 @@ app.post('/api/v1/buy-multi/:id', apiKeyAuth, async (req, res) => {
  for (const rid of claimedIds) await Log.updateOne({ _id: log._id, 'subAccounts._id': rid }, { $set: { 'subAccounts.$.sold': false, 'subAccounts.$.soldTo': null, 'subAccounts.$.soldAt': null } });
  return res.status(400).json({ error: `Insufficient balance — this batch costs ₦${total}` });
  }
- const _docs = claimedSubs.map(sub => ({
+ user.balance = (user.balance || 0) - total;
+ for (const sub of claimedSubs) {
+ user.purchaseDetails.push({
+ orderId: await newOrderId(),
  logId: log._id, logTitle: `${log.title} — ${sub.label}`, logType: log.type, logDetails: sub.details || '',
  toolLink: sub.toolLink || '', deliveryType: sub.deliveryType || 'link',
  deliverableFile: sub.deliverableFile || '', deliverableFileName: sub.deliverableFileName || '',
  pricePaid: sub.price, subAccountId: sub._id
- }));
- // SECURITY: atomic conditional debit + purchase records in one write (no double-spend, no negative balance)
- const _debited = await User.findOneAndUpdate(
- { _id: user._id, balance: { $gte: total } },
- { $inc: { balance: -total }, $push: { purchaseDetails: { $each: _docs } } }, { new: true }
- );
- if (!_debited) {
- for (const rid of claimedIds) await Log.updateOne({ _id: log._id, 'subAccounts._id': rid }, { $set: { 'subAccounts.$.sold': false, 'subAccounts.$.soldTo': null, 'subAccounts.$.soldAt': null } });
- return res.status(400).json({ error: 'Insufficient balance for this batch. Please deposit funds.' });
+ });
  }
- user.balance = _debited.balance; user.purchaseDetails = _debited.purchaseDetails;
- const newRecords = _debited.purchaseDetails.slice(-claimedSubs.length);
+ await user.save();
+ const newRecords = user.purchaseDetails.slice(-claimedSubs.length);
  await Transaction.create({ userId: user._id, type: 'purchase', amount: total, description: `Purchased ${claimedSubs.length} accounts via API: ${log.title}`, status: 'success' });
  for (const sub of claimedSubs) await creditReferralCommission(user, sub.price, `${log.title} — ${sub.label}`);
  checkAndAwardBadges(user._id).catch(() => {});
  res.json({
  message: `${claimedSubs.length} accounts purchased`, newBalance: user.balance, totalCharged: total,
  items: newRecords.map(r => ({
- purchaseId: r._id, purchasedAt: r.purchasedAt, pricePaid: r.pricePaid, logTitle: r.logTitle,
+ purchaseId: r._id, orderId: r.orderId, purchasedAt: r.purchasedAt, pricePaid: r.pricePaid, logTitle: r.logTitle,
  logDetails: r.logDetails, toolLink: r.toolLink, deliveryType: r.deliveryType,
  deliverableFile: r.deliverableFile, deliverableFileName: r.deliverableFileName
  }))
@@ -5294,31 +5034,45 @@ app.post('/api/v1/buy-number', apiKeyAuth, async (req, res) => {
 });
 app.get('/api/v1/get-sms', apiKeyAuth, async (req, res) => {
  try {
-   const { order_id } = req.query;
-   if (!order_id) return res.status(400).json({ error: 'order_id is required' });
-   let listing = await NumberListing.findOne({ _id: order_id, soldTo: req.apiUser._id });
-   if (!listing) return res.status(404).json({ error: 'Order not found' });
-   if (listing.status === 'sold' && !listing.code) { try { const code = await fetchCodeFromProvider(listing); if (code) { listing.code = code; listing.codeAddedAt = new Date(); await listing.save(); } } catch (_) {} }
-   listing = await expireStaleNumberOrder(listing);
-   res.json({ order_id: listing._id, status: listing.code ? 'received' : listing.status === 'sold' ? 'waiting' : listing.status, sms: listing.code || null });
+ const { order_id } = req.query;
+ if (!order_id) return res.status(400).json({ error: 'order_id is required' });
+ let listing = await NumberListing.findOne({ _id: order_id, soldTo: req.apiUser._id });
+ if (!listing) return res.status(404).json({ error: 'Order not found' });
+ if (listing.status === 'sold' && !listing.code) {
+ try {
+ const result = await otpsuiteRequest('get', '/get-sms', { params: { order_id: listing.otpsuiteOrderId } });
+ if (result.status === 'received' && result.sms) {
+ listing.code = result.sms;
+ listing.codeAddedAt = new Date();
+ await listing.save();
+ }
+ } catch (e) { /* transient — client just polls again */ }
+ }
+ listing = await expireStaleNumberOrder(listing);
+ res.json({
+ order_id: listing._id,
+ status: listing.code ? 'received' : listing.status === 'sold' ? 'waiting' : listing.status,
+ sms: listing.code || null
+ });
  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/api/v1/cancel-number', apiKeyAuth, async (req, res) => {
  try {
-   const { order_id } = req.body; if (!order_id) return res.status(400).json({ error: 'order_id is required' });
-   const listing = await NumberListing.findOne({ _id: order_id, soldTo: req.apiUser._id });
-   if (!listing) return res.status(404).json({ error: 'Order not found' });
-   if (listing.status !== 'sold' || listing.code) return res.status(400).json({ error: 'This order can no longer be cancelled' });
-   // Atomic claim: only ONE concurrent request can move sold -> cancelled, so only one refund can happen.
-   const cancelled = await NumberListing.findOneAndUpdate(
-     { _id: listing._id, soldTo: req.apiUser._id, status: 'sold', code: '' },
-     { $set: { status: 'cancelled', cancelledAt: new Date() } }, { new: true });
-   if (!cancelled) return res.status(409).json({ error: 'This order has already changed state; check it with get-sms.' });
-   await User.updateOne({ _id: cancelled.soldTo }, { $inc: { balance: cancelled.sellPrice } });
-   await Transaction.create({ userId: cancelled.soldTo, type: 'admin_credit', amount: cancelled.sellPrice, description: `Refund: ${cancelled.provider} number (${cancelled.country}) — cancelled via API`, status: 'success' });
-   const released = await releaseNumberOnProvider(cancelled);
-   await NumberListing.updateOne({ _id: cancelled._id }, { $set: { providerCancelled: !!released?.ok, providerCancelDetail: String(released?.detail && typeof released.detail === 'string' ? released.detail : (released?.ok ? 'cancel requested' : '')).slice(0, 200) } });
-   res.json({ order_id: cancelled._id, status: 'cancelled', refunded: cancelled.sellPrice, provider_cancelled: !!released?.ok });
+ const { order_id } = req.body;
+ if (!order_id) return res.status(400).json({ error: 'order_id is required' });
+ const listing = await NumberListing.findOne({ _id: order_id, soldTo: req.apiUser._id });
+ if (!listing) return res.status(404).json({ error: 'Order not found' });
+ if (listing.status !== 'sold' || listing.code) return res.status(400).json({ error: 'This order can no longer be cancelled' });
+ if (listing.otpsuiteOrderId) {
+ try { await otpsuiteRequest('post', '/cancel-number', { data: { order_id: listing.otpsuiteOrderId } }); } catch (e) {}
+ }
+ listing.status = 'cancelled';
+ await listing.save();
+ const user = await User.findById(listing.soldTo);
+ user.balance = (user.balance || 0) + listing.sellPrice;
+ await user.save();
+ await Transaction.create({ userId: user._id, type: 'admin_credit', amount: listing.sellPrice, description: `Refund: ${listing.provider} number (${listing.country}) — cancelled via API`, status: 'success' });
+ res.json({ order_id: listing._id, status: 'cancelled', refunded: listing.sellPrice });
  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.get('/api/v1/categories', apiKeyAuth, async (req, res) => {
@@ -5530,7 +5284,7 @@ app.post('/api/admin/support/live/:userId', anyAdminAuth, chatUpload.single('att
   if (text.length > 2000) return res.status(400).json({ error: 'Reply is too long' });
   const latest = await SupportMessage.findOne({ userId: req.params.userId }).sort({ createdAt: -1 }).select('conversationStatus');
   if (latest?.conversationStatus === 'closed') return res.status(409).json({ error: 'Reopen this conversation before replying.' });
-  res.json(await SupportMessage.create({ userId: req.params.userId, sender: 'admin', senderName: req.subAdmin?.name || 'Mizzy Sales Support', text, attachmentUrl, attachmentType: attachmentUrl ? 'image' : '', attachmentName: req.file?.originalname || '', readByAdmin: true }));
+  res.json(await SupportMessage.create({ userId: req.params.userId, sender: 'admin', senderName: req.subAdmin?.name || 'KLS Support', text, attachmentUrl, attachmentType: attachmentUrl ? 'image' : '', attachmentName: req.file?.originalname || '', readByAdmin: true }));
  } catch { res.status(500).json({ error: 'Could not send reply' }); }
 });
 app.post('/api/admin/support/live/:userId/status', anyAdminAuth, async (req, res) => {
@@ -5635,7 +5389,7 @@ app.post('/api/support/ai-chat', auth, async (req, res) => {
  } catch (e) { res.status(500).json({ error: 'Failed to get a reply — please try again.' }); }
 });
 app.post('/api/admin/verify', (req, res) => {
- safeEqual(req.body && req.body.passcode, process.env.ADMIN_PASSCODE) ? res.json({ success: true }) : res.status(403).json({ error: 'Wrong passcode' });
+ req.body.passcode === process.env.ADMIN_PASSCODE ? res.json({ success: true }) : res.status(403).json({ error: 'Wrong passcode' });
 });
 app.get('/api/admin/restock-requests', anyAdminAuth, async (req, res) => {
  try {
@@ -5813,8 +5567,6 @@ app.post('/api/admin/logs', adminAuth, uploadLogFields, async (req, res) => {
  };
  });
  if (parsedSubAccounts.some(sa => !sa.price)) return res.status(400).json({ error: 'Every sub-account needs a price' });
- { const blankIdx = parsedSubAccounts.findIndex(sa => !subHasCredentials(sa));
-   if (blankIdx !== -1) return res.status(400).json({ error: `"${parsedSubAccounts[blankIdx].label}" has no login details. Paste its credentials in the Details box before saving.` }); }
  }
  const log = await Log.create({
  type: type || 'log', listingType: isFolder ? 'folder' : 'simple',
@@ -5875,15 +5627,12 @@ app.put('/api/admin/logs/:id', adminAuth, uploadLogFields, async (req, res) => {
  }
  return {
  _id: sa._id, label: sa.label || 'Account', details: sa.details || '', toolLink: sa.toolLink || '',
- deliverableFile: (existing.subAccounts.id(sa._id) || {}).deliverableFile || '', deliverableFileName: (existing.subAccounts.id(sa._id) || {}).deliverableFileName || '',
  deliveryType: sa.deliveryType === 'file' ? 'file' : 'link',
  price: parseFloat(sa.price) || 0, picture: sa.picture || '',
  sold: !!sa.sold, soldTo: sa.soldTo, soldAt: sa.soldAt, reviews: sa.reviews || [],
  adminReview: saAdminReview, tutorial: saTutorial
  };
  });
- const blank = update.subAccounts.find(sa => !sa.sold && !subHasCredentials(sa));
- if (blank) return res.status(400).json({ error: `"${blank.label}" has no login details. Paste its credentials in the Details box before saving.` });
  } catch { return res.status(400).json({ error: 'Invalid sub-accounts data' }); }
  }
  if (deliveryType) update.deliveryType = deliveryType === 'file' ? 'file' : 'link';
@@ -5953,7 +5702,7 @@ app.post('/api/heartbeat', auth, async (req, res) => {
  await User.updateOne({ _id: req.user._id }, { $set: { lastActiveAt: new Date(), lastSeen: new Date() } });
  res.json({ ok: true, at: new Date() });
  } catch (e) {
- console.error('[MYS] heartbeat failed:', e.message);
+ console.error('[KLS] heartbeat failed:', e.message);
  res.status(500).json({ error: e.message });
  }
 });
@@ -5968,10 +5717,10 @@ app.get('/api/admin/active-users', adminAuth, async (req, res) => {
  .sort({ lastActiveAt: -1, lastSeen: -1 })
  .lean();
  const rows = users.map(u => ({ ...u, lastActiveAt: u.lastActiveAt || u.lastSeen }));
- console.log(`[MYS] Admin active-users: ${rows.length} online in last ${ACTIVITY_WINDOW_HOURS}h`);
+ console.log(`[KLS] Admin active-users: ${rows.length} online in last ${ACTIVITY_WINDOW_HOURS}h`);
  res.json(rows);
  } catch (e) {
- console.error('[MYS] active-users failed:', e.message);
+ console.error('[KLS] active-users failed:', e.message);
  res.status(500).json({ error: 'Failed to load active users' });
  }
 });
@@ -5998,7 +5747,7 @@ app.post('/api/admin/credit', adminAuth, async (req, res) => {
  if (!user) return res.status(404).json({ error: 'User not found' });
  await Transaction.create({ userId: user._id, type: 'admin_credit', amount: parsed, description: reason || 'Admin manual credit', status: 'success' });
  pushBalanceToUser(user._id, user.balance, parsed);
- console.log(`[MYS] Admin credited ₦${parsed} to ${user.email} — new balance ₦${user.balance}`);
+ console.log(`[KLS] Admin credited ₦${parsed} to ${user.email} — new balance ₦${user.balance}`);
  res.json({ success: true, message: ` Credited ₦${parsed.toLocaleString('en-NG')} to ${user.name}`, newBalance: user.balance, userName: user.name, userEmail: user.email });
  } catch (e) { res.status(500).json({ error: 'Credit failed: ' + e.message }); }
 });
@@ -6016,7 +5765,7 @@ app.post('/api/admin/deduct', adminAuth, async (req, res) => {
  await Transaction.create({ userId: user._id, type: 'admin_debit', amount: parsed, description: reason || 'Admin manual deduction', status: 'success' });
  pushBalanceToUser(user._id, user.balance);
  const balLabel = user.balance < 0 ? `-₦${Math.abs(user.balance).toLocaleString('en-NG')}` : `₦${user.balance.toLocaleString('en-NG')}`;
- console.log(`[MYS] Admin deducted ₦${parsed} from ${user.email} — new balance ${balLabel}`);
+ console.log(`[KLS] Admin deducted ₦${parsed} from ${user.email} — new balance ${balLabel}`);
  res.json({ success: true, message: `✅ Deducted ₦${parsed.toLocaleString('en-NG')} from ${user.name} — new balance: ${balLabel}`, newBalance: user.balance, userName: user.name, userEmail: user.email });
  } catch (e) { res.status(500).json({ error: 'Deduction failed: ' + e.message }); }
 });
@@ -6070,8 +5819,8 @@ app.post('/api/admin/weekly-top-buyer/pay', adminAuth, async (req, res) => {
  const rewardAmount = parseFloat(amount) || 50;
  const { start, end } = getWeekBounds(new Date(weekKey + 'T00:00:00.000Z'));
  const purchaseCount = await Transaction.countDocuments({ userId, type: 'purchase', status: 'success', createdAt: { $gte: start, $lt: end } });
- await User.updateOne({ _id: user._id }, { $inc: { balance: rewardAmount } });
- user.balance = (user.balance || 0) + rewardAmount; // (display value only)
+ user.balance = (user.balance || 0) + rewardAmount;
+ await user.save();
  await Transaction.create({ userId: user._id, type: 'admin_credit', amount: rewardAmount, description: ` Weekly top buyer reward (week of ${weekKey})`, status: 'success' });
  await WeeklyReward.create({ weekKey, winnerId: user._id, winnerName: user.name, purchaseCount, amount: rewardAmount });
  res.json({ success: true, message: ` Awarded ₦${rewardAmount} to ${user.name} for week of ${weekKey}!`, newBalance: user.balance });
@@ -6079,6 +5828,30 @@ app.post('/api/admin/weekly-top-buyer/pay', adminAuth, async (req, res) => {
  if (e.code === 11000) return res.status(409).json({ error: 'This week was already paid out (race condition caught).' });
  res.status(500).json({ error: 'Failed to pay weekly reward: ' + e.message });
  }
+});
+// Admin sets a TEMPORARY password for a customer. It works alongside the customer's own
+// password until it expires. The customer's own password is not changed.
+app.put('/api/admin/users/:id/temp-password', adminAuth, async (req, res) => {
+ try {
+ const pw = String(req.body.password || '');
+ const hours = Number(req.body.hours);
+ if (pw.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+ if (pw.length > 100) return res.status(400).json({ error: 'Password is too long.' });
+ if (![24, 168].includes(hours)) return res.status(400).json({ error: 'Choose 24 hours or 7 days.' });
+ const hash = await bcrypt.hash(pw, 12);
+ const expiresAt = new Date(Date.now() + hours * 3600 * 1000);
+ const user = await User.findByIdAndUpdate(req.params.id, { $set: { tempPassword: { hash, expiresAt } } }, { new: true }).select('name email');
+ if (!user) return res.status(404).json({ error: 'User not found' });
+ console.log('[KLS] Admin set a temporary password for ' + user.email + ' until ' + expiresAt.toISOString());
+ res.json({ success: true, message: 'Temporary password set for ' + user.name + ' until ' + expiresAt.toLocaleString('en-NG') + '. Their own password still works too.' });
+ } catch (e) { res.status(400).json({ error: 'Could not set temporary password: ' + e.message }); }
+});
+app.put('/api/admin/users/:id/temp-password/clear', adminAuth, async (req, res) => {
+ try {
+ const user = await User.findByIdAndUpdate(req.params.id, { $unset: { tempPassword: 1 } }, { new: true }).select('name');
+ if (!user) return res.status(404).json({ error: 'User not found' });
+ res.json({ success: true, message: 'Temporary password removed for ' + user.name + '.' });
+ } catch (e) { res.status(400).json({ error: 'Could not remove it: ' + e.message }); }
 });
 app.put('/api/admin/users/:id/restrict', adminAuth, async (req, res) => {
  try {
@@ -6156,6 +5929,76 @@ app.post('/api/admin/security/purge-suspicious-emails', adminAuth, async (req, r
  res.json({ message: `Permanently deleted ${deletedCount} account(s) using fake/disposable email domains`, deletedCount });
  } catch (e) { res.status(500).json({ error: 'Purge failed: ' + e.message }); }
 });
+// ══════════════════════ ADMIN USERS — paged list, one user, linked accounts ══════════════════════
+// Paged so the admin page never loads every user at once.
+app.get('/api/admin/users/page', adminAuth, async (req, res) => {
+ try {
+ const size = Math.min(50, Math.max(5, Number(req.query.size) || 30));
+ const page = Math.max(1, Number(req.query.page) || 1);
+ const search = String(req.query.search || '').trim().slice(0, 100);
+ let filter = {};
+ if (search) {
+ const rx = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+ filter = { $or: [{ name: rx }, { email: rx }, { contactPhone: rx }, { gameId: rx }, { 'virtualAccount.accountNumber': rx }] };
+ }
+ const [total, users] = await Promise.all([
+ User.countDocuments(filter),
+ User.find(filter).select('name email contactPhone gameId balance restricted restrictedReason createdAt lastActiveAt')
+ .sort({ createdAt: -1 }).skip((page - 1) * size).limit(size).lean()
+ ]);
+ res.set('Cache-Control', 'no-store');
+ res.json({ users, total, page, size, pages: Math.max(1, Math.ceil(total / size)) });
+ } catch (e) { res.status(500).json({ error: 'Could not load users.' }); }
+});
+app.get('/api/admin/users/:id/full', adminAuth, async (req, res) => {
+ try {
+ const u = await User.findById(req.params.id).select('-password -apiSecret -tempPassword.hash').lean();
+ if (!u) return res.status(404).json({ error: 'User not found' });
+ res.set('Cache-Control', 'no-store');
+ res.json(u);
+ } catch (e) { res.status(400).json({ error: 'Bad user id' }); }
+});
+// Everything one customer has done, in one list (boosting, numbers, temp email, rentals, airtime, wallet).
+app.get('/api/admin/users/:id/history', adminAuth, async (req, res) => {
+ try {
+ const uid = req.params.id;
+ if (!mongoose.Types.ObjectId.isValid(uid)) return res.status(400).json({ error: 'Bad user id' });
+ const oid = new mongoose.Types.ObjectId(uid);
+ const rows = [];
+ const grab = async (name, query, map) => {
+ try {
+ const M = mongoose.models[name];
+ if (!M) return;
+ const docs = await M.find(query).sort({ createdAt: -1 }).limit(100).lean();
+ docs.forEach(d => rows.push(map(d)));
+ } catch (e) { console.error('[admin history] ' + name + ':', e.message); }
+ };
+ await grab('BoostOrder', { userId: oid }, o => ({ when: o.createdAt, kind: 'Boosting', item: o.serviceName || '', detail: o.link || '', amount: o.price, status: o.status || '' }));
+ await grab('NovaBoost1Order', { userId: oid }, o => ({ when: o.createdAt, kind: 'Boosting 1', item: o.itemName || '', detail: o.link || '', amount: o.sellTotal, status: o.status || '' }));
+ await grab('SmsCoolOrder', { userId: oid }, o => ({ when: o.createdAt, kind: 'Number (SMS)', item: o.serviceName || '', detail: o.phoneNumber || '', amount: o.price, status: o.status || '' }));
+ await grab('SmsCoolEmail', { userId: oid }, o => ({ when: o.createdAt, kind: 'Temp email', item: o.serviceName || '', detail: o.email || '', amount: o.price, status: o.status || '' }));
+ await grab('SmsCoolRental', { userId: oid }, o => ({ when: o.createdAt, kind: 'Rental', item: o.serviceName || '', detail: o.phone || '', amount: o.price, status: o.status || '' }));
+ await grab('VtuOrder', { userId: oid }, o => ({ when: o.createdAt, kind: 'Airtime & data', item: o.label || '', detail: o.target || '', amount: o.charged, status: o.status || '' }));
+ await grab('NumberListing', { soldTo: oid }, o => ({ when: o.soldAt || o.createdAt, kind: 'Buy number', item: [o.server === 'server2' ? 'Buy Number 2' : 'Buy Number 1', o.provider, o.country].filter(Boolean).join(' · '), detail: [o.phoneNumber, o.code ? 'code ' + o.code : ''].filter(Boolean).join(' · '), amount: o.sellPrice, status: o.code ? 'delivered' : o.status || '' }));
+ await grab('Transaction', { userId: oid }, t => ({ when: t.createdAt, kind: 'Wallet', item: t.type || '', detail: t.description || '', amount: t.amount, status: t.status || '' }));
+ rows.sort((a, b) => new Date(b.when || 0) - new Date(a.when || 0));
+ res.set('Cache-Control', 'no-store');
+ res.json({ rows: rows.slice(0, 300) });
+ } catch (e) { res.status(500).json({ error: 'Could not load history.' }); }
+});
+app.get('/api/admin/users/:id/linked', adminAuth, async (req, res) => {
+ try {
+ const u = await User.findById(req.params.id).select('signupIp signupFingerprint').lean();
+ if (!u) return res.status(404).json({ error: 'User not found' });
+ const or = [];
+ if (u.signupIp) or.push({ signupIp: u.signupIp });
+ if (u.signupFingerprint) or.push({ signupFingerprint: u.signupFingerprint });
+ if (!or.length) return res.json([]);
+ const rows = await User.find({ $or: or, _id: { $ne: u._id } }).select('name email restricted').limit(50).lean();
+ res.set('Cache-Control', 'no-store');
+ res.json(rows);
+ } catch (e) { res.status(400).json({ error: 'Bad user id' }); }
+});
 app.get('/api/admin/users/:id/logins', adminAuth, async (req, res) => {
  const user = await User.findById(req.params.id).select('name email lastLoginAt lastLoginIp lastLoginUserAgent loginHistory');
  if (!user) return res.status(404).json({ error: 'User not found' });
@@ -6172,15 +6015,18 @@ app.get('/api/admin/receipts/all', anyAdminAuth, async (req, res) => {
 app.post('/api/admin/receipts/:id/action', anyAdminAuth, async (req, res) => {
  try {
  const { action, note } = req.body;
- if (!['approved', 'rejected'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
- // atomic claim: only ONE request can move a receipt out of "pending" (stops double-credit on double-click / replay)
- const receipt = await Receipt.findOneAndUpdate({ _id: req.params.id, status: 'pending' }, { $set: { status: action, adminNote: note || '', seenByUser: false } }, { new: true });
- if (!receipt) return res.status(400).json({ error: 'Receipt not found or already processed' });
+ const receipt = await Receipt.findById(req.params.id);
+ if (!receipt) return res.status(404).json({ error: 'Receipt not found' });
+ if (receipt.status !== 'pending') return res.status(400).json({ error: 'Receipt already processed' });
+ receipt.status = action;
+ receipt.adminNote = note || '';
+ receipt.seenByUser = false;
+ await receipt.save();
  if (action === 'approved') {
- const amt = Number(receipt.claimedAmount);
- if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Invalid receipt amount' });
- const user = await User.findByIdAndUpdate(receipt.userId, { $inc: { balance: amt } }, { new: true });
+ const user = await User.findById(receipt.userId);
  if (user) {
+ user.balance = (user.balance || 0) + receipt.claimedAmount;
+ await user.save();
  await Transaction.create({ userId: user._id, type: 'deposit', amount: receipt.claimedAmount, description: `Manual deposit approved by admin via ${receipt.claimedBank}`, status: 'success' });
  }
  }
@@ -6298,25 +6144,20 @@ async function fetchCodeFromProvider(listing) {
 }
 async function expireStaleNumberOrder(listing) {
  if (listing.status === 'sold' && listing.expiresAt && listing.expiresAt.getTime() < Date.now() && !listing.code) {
-   await releaseNumberOnProvider(listing);
-   const expired = await NumberListing.findOneAndUpdate(
-     { _id: listing._id, status: 'sold', code: '' },
-     { $set: { status: 'expired', expiredAt: new Date(), providerCancelled: !!listing.providerCancelled, providerCancelDetail: listing.providerCancelDetail || '' } },
-     { new: true }
-   );
-   if (expired) {
-     const user = await User.findById(expired.soldTo);
-     if (user) {
-       await User.updateOne({ _id: user._id }, { $inc: { balance: expired.sellPrice } });
-       await Transaction.create({ userId: user._id, type: 'admin_credit', amount: expired.sellPrice, description: `Refund: ${expired.provider} number (${expired.country}) — no code received in time`, status: 'success' });
-     }
-     return expired;
-   }
-   return await NumberListing.findById(listing._id) || listing;
+ await releaseNumberOnProvider(listing);
+
+ listing.status = 'expired';
+ listing.expiredAt = new Date();
+ await listing.save();
+ const user = await User.findById(listing.soldTo);
+ if (user) {
+ user.balance = (user.balance || 0) + listing.sellPrice;
+ await user.save();
+ await Transaction.create({ userId: user._id, type: 'admin_credit', amount: listing.sellPrice, description: `Refund: ${listing.provider} number (${listing.country}) — no code received in time`, status: 'success' });
+ }
  }
  return listing;
 }
-
 app.get('/api/numbers/options', async (req, res) => {
  return res.json([]); // OTP Suit retired — Grizzly SMS is the only provider
  try {
@@ -6324,6 +6165,16 @@ app.get('/api/numbers/options', async (req, res) => {
  res.json(rows.map(r => ({ id: r._id, provider: r.provider, country: r.country, price: r.price, available: true })));
  } catch (e) { res.status(500).json({ error: 'Failed to load numbers' }); }
 });
+let _liveCountriesCache = null, _liveCountriesCachedAt = 0;
+async function getLiveCountriesCached() {
+ if (_liveCountriesCache && Date.now() - _liveCountriesCachedAt < 30 * 60 * 1000) return _liveCountriesCache;
+ const r = await otpsuiteRequest('get', '/countries');
+ const list = Array.isArray(r) ? r : (Array.isArray(r?.countries) ? r.countries : []);
+ if (!list.length) return []; // never cache an empty list for 30 min
+ _liveCountriesCache = list;
+ _liveCountriesCachedAt = Date.now();
+ return _liveCountriesCache;
+}
 app.get('/api/numbers/live-countries', async (req, res) => {
  return res.status(410).json({ error: 'This number server has been retired.' });
  try {
@@ -6346,6 +6197,55 @@ app.get('/api/numbers/live-services', optionalAuth, async (req, res) => {
  res.json(list.map(({ costNgn, ...pub }) => pub));
  } catch (e) { console.error('live-services failed:', e.otpsuiteStatus, e.message); res.status(502).json({ error: 'Could not load services for that country right now — please try again shortly.' }); }
 });
+async function rentNumberForUser(user, pricing, chargeAmount) {
+ if ((user.balance || 0) < chargeAmount) throw new Error('Insufficient balance. Please deposit funds.');
+ if (!pricing.otpsuiteCountryCode || !pricing.otpsuiteServiceId) {
+ console.error(`Number pricing "${pricing.provider} — ${pricing.country}" is missing its otpsuite country/service mapping.`);
+ SystemError.create({
+ source: 'otpsuite',
+ message: `Pricing entry missing otpsuite mapping: ${pricing.provider} — ${pricing.country}`,
+ detail: 'Re-save this entry in Admin Numbers Price Sheet, picking its otpsuite country and service, then Save Price.',
+ context: { pricingId: pricing._id, userId: user._id }
+ }).catch(() => {});
+ throw new Error('This number option is temporarily unavailable — please try again shortly or contact support.');
+ }
+ return rentNumberLive(user, pricing.provider, pricing.country, pricing.otpsuiteCountryCode, pricing.otpsuiteServiceId, chargeAmount);
+}
+async function rentNumberLive(user, providerLabel, countryLabel, countryCode, serviceId, chargeAmount, expectedCostNgn) {
+ if ((user.balance || 0) < chargeAmount) throw new Error('Insufficient balance. Please deposit funds.');
+ let bought;
+ try {
+ bought = await otpsuiteRequest('post', '/buy-number', { data: { country: countryCode, service: serviceId } });
+ } catch (e) {
+ if (e.otpsuiteStatus === 409) {
+ throw new Error('No numbers currently available for that selection — please try again shortly.');
+ }
+ console.error('otpsuite /buy-number failed:', e.otpsuiteStatus, e.message);
+ SystemError.create({
+ source: 'otpsuite',
+ message: `otpsuite /buy-number failed (HTTP ${e.otpsuiteStatus || '?'}): ${e.message}`,
+ detail: `Sent: {"country":"${countryCode}","service":"${serviceId}"} — Raw response: ${JSON.stringify(e.otpsuiteRaw)}`,
+ context: { userId: user._id, otpsuiteStatus: e.otpsuiteStatus }
+ }).catch(() => {});
+ throw new Error(`Number setup issue (code ${e.otpsuiteStatus || '?'}): ${e.message}. Please contact support if this persists.`);
+ }
+ // Loss guard: if the API charged us more than the customer pays, release the number instead of selling at a loss.
+ const actualCost = Number(bought.price || 0);
+ if (actualCost > 0 && actualCost >= chargeAmount) {
+ try { await otpsuiteRequest('post', '/cancel-number', { data: { order_id: bought.order_id } }); } catch (_) {}
+ throw new Error('The price for this number just changed — please refresh and try again.');
+ }
+ const claimed = await NumberListing.create({
+ provider: providerLabel, country: countryLabel, phoneNumber: bought.number, sellPrice: chargeAmount, cost: actualCost || expectedCostNgn || 0, server: 'server1',
+ status: 'sold', soldTo: user._id, soldAt: new Date(), expiresAt: new Date(Date.now() + NUMBER_RENTAL_WINDOW_MS),
+ otpsuiteOrderId: bought.order_id
+ });
+ user.balance = (user.balance || 0) - chargeAmount;
+ await user.save();
+ await Transaction.create({ userId: user._id, type: 'purchase', amount: chargeAmount, description: `Rented ${claimed.provider} number (${claimed.country})`, status: 'success' });
+ await creditReferralCommission(user, chargeAmount, `${claimed.provider} number (${claimed.country})`);
+ return claimed;
+}
 app.post('/api/numbers/buy', auth, async (req, res) => {
   return res.status(410).json({ error: 'This number server has been retired. Please use the main number purchase page.' });
   // eslint-disable-next-line no-unreachable
@@ -6438,19 +6338,14 @@ app.get('/api/numbers/my-orders', auth, async (req, res) => {
  try {
  const mine = await NumberListing.find({ soldTo: req.user._id }).sort({ soldAt: -1 }).limit(50);
  for (const l of mine) await expireStaleNumberOrder(l);
- const combined = mine.map(l => ({
- id: l._id, product: l.server === 'server2' ? 'Buy Number 1' : 'Buy Number 3',
- provider: l.server === 'server2' ? 'Buy Number 1' : 'Buy Number 3', country: l.country, phoneNumber: l.phoneNumber,
- status: l.code ? 'delivered' : ['sold', 'needs_review'].includes(l.status) ? 'pending' : l.status,
+ res.json(mine.map(l => ({
+ id: l._id, provider: l.provider, country: l.country, phoneNumber: l.phoneNumber,
+ status: l.code ? 'delivered' : l.status === 'sold' ? 'pending' : l.status,
  code: l.code, expiresAt: l.expiresAt, createdAt: l.soldAt || l.createdAt, sellPrice: l.sellPrice,
- checkPending: !!l.providerError,
- codeAddedAt: l.codeAddedAt || null, cancelledAt: l.cancelledAt || null, expiredAt: l.expiredAt || null, operator: l.operator && l.operator !== 'any' ? prettifyServiceName(l.operator) : '',
+ server: l.server || 'server1', providerError: l.providerError || '', providerErrorAt: l.providerErrorAt || null,
+ codeAddedAt: l.codeAddedAt || null, cancelledAt: l.cancelledAt || null, expiredAt: l.expiredAt || null, operator: l.operator || '', providerCancelled: !!l.providerCancelled,
  refunded: l.status === 'expired' || l.status === 'cancelled' ? l.sellPrice : null
- }));
- const OtpSuiteOrder = mongoose.models.OtpSuiteOrder;
- if (OtpSuiteOrder) { const otp = await OtpSuiteOrder.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(100).lean(); combined.push(...otp.map(o => ({ id:o._id, product:'Buy Number 2', provider:'Buy Number 2', country:o.countryName || o.countryCode, phoneNumber:o.phoneNumber || '', status:o.status === 'received' || o.sms ? 'delivered' : o.status, code:o.sms || '', createdAt:o.createdAt, sellPrice:o.price || 0, checkPending:!!o.lastError, refunded:o.refunded ? (o.price || 0) : null }))); }
- combined.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
- res.json(combined);
+ })));
  } catch (e) { res.status(500).json({ error: 'Failed to load orders' }); }
 });
 
@@ -6498,27 +6393,17 @@ app.get('/api/numbers/my-orders/search', auth, async (req, res) => {
  .limit(limit);
  for (const l of rows) await expireStaleNumberOrder(l);
 
- const pageOrders = rows.map(l => ({
- id: l._id, product: l.server === 'server2' ? 'Buy Number 1' : 'Buy Number 3',
- provider: l.server === 'server2' ? 'Buy Number 1' : 'Buy Number 3', country: l.country, phoneNumber: l.phoneNumber,
- status: l.code ? 'delivered' : ['sold', 'needs_review'].includes(l.status) ? 'pending' : l.status,
+ res.json({
+ server, page: safePage, pages, limit, total,
+ orders: rows.map(l => ({
+ id: l._id, provider: l.provider, country: l.country, phoneNumber: l.phoneNumber,
+ status: l.code ? 'delivered' : l.status === 'sold' ? 'pending' : l.status,
  code: l.code, expiresAt: l.expiresAt, createdAt: l.soldAt || l.createdAt, sellPrice: l.sellPrice,
- checkPending: !!l.providerError,
- codeAddedAt: l.codeAddedAt || null, cancelledAt: l.cancelledAt || null, expiredAt: l.expiredAt || null, operator: l.operator && l.operator !== 'any' ? prettifyServiceName(l.operator) : '',
+ server: l.server || 'server1',
+ codeAddedAt: l.codeAddedAt || null, cancelledAt: l.cancelledAt || null, expiredAt: l.expiredAt || null, operator: l.operator || '', providerCancelled: !!l.providerCancelled,
  refunded: l.status === 'expired' || l.status === 'cancelled' ? l.sellPrice : null
- }));
- let allPageOrders = pageOrders;
- if (server === 'server1' && mongoose.models.OtpSuiteOrder) {
-   const otpQ = { userId: req.user._id };
-   if (q) { const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'); otpQ.$or = [{ phoneNumber: rx }, { serviceName: rx }, { countryName: rx }, { sms: rx }]; }
-   if (status === 'delivered') otpQ.sms = { $nin: ['', null] };
-   else if (status === 'pending') otpQ.status = { $in: ['pending','waiting','review'] };
-   else if (status) otpQ.status = status;
-   const otpRows = await mongoose.models.OtpSuiteOrder.find(otpQ).sort({createdAt:-1}).limit(100).lean();
-   allPageOrders = allPageOrders.concat(otpRows.map(o => ({id:o._id,product:'Buy Number 2',provider:'Buy Number 2',country:o.countryName||o.countryCode,phoneNumber:o.phoneNumber||'',status:o.sms?'delivered':o.status,code:o.sms||'',createdAt:o.createdAt,sellPrice:o.price||0,checkPending:!!o.lastError,refunded:o.refunded?(o.price||0):null})));
-   allPageOrders.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
- }
- res.json({ page:safePage, pages, limit, total:total + (allPageOrders.length-pageOrders.length), orders:allPageOrders });
+ }))
+ });
  } catch (e) { res.status(500).json({ error: 'Failed to search orders' }); }
 });
 
@@ -6611,7 +6496,7 @@ app.get('/api/admin/numbers/analytics', anyAdminAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Failed to build analytics: ' + e.message }); }
 });
 
-// ── Live health checks for the number servers ─────
+// ── Live health checks for Server 1 (otpsuite) and Server 2 (GrizzlySMS) ─────
 // Results are cached briefly so a busy page doesn't hammer the providers.
 let _healthCache = null, _healthCheckedAt = 0, _healthInFlight = null;
 const HEALTH_TTL_MS = 60 * 1000;
@@ -6663,6 +6548,107 @@ app.get('/api/admin/numbers/health', anyAdminAuth, async (req, res) => {
 });
 
 // Admin: every purchased number with its delivery state and any provider error.
+// ══════════════════════ SUGGESTIONS ("Recommended for you") ══════════════════════
+// Ranked from real orders in the last 30 days. Admin can pin items or hide them.
+const SuggestionSetting = mongoose.models.SuggestionSetting || mongoose.model('SuggestionSetting', new mongoose.Schema({
+  _id: { type: String, default: 'main' },
+  pinned: [{ key: String, label: String, sub: String, href: String, slot: Number, mk: String, pid: String, price: Number, picture: String }],
+  hidden: [String],
+  platformMix: { facebook: { type: Number, default: 2 }, tiktok: { type: Number, default: 2 }, instagram: { type: Number, default: 2 } }
+}, { versionKey: false }));
+const DEFAULT_PLATFORM_MIX = { facebook: 2, tiktok: 2, instagram: 2 };
+async function buildSuggestionCandidates() {
+  const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+  const out = [];
+  try {
+    const rows = await NumberListing.aggregate([
+      { $match: { soldTo: { $ne: null }, soldAt: { $gte: since } } },
+      { $group: { _id: '$server', n: { $sum: 1 }, p: { $min: '$sellPrice' } } }
+    ]);
+    rows.forEach(r => {
+      const srv = r._id === 'server2' ? 'server2' : 'server1';
+      out.push({ key: 'number:' + srv, label: srv === 'server2' ? 'Buy Number 2' : 'Buy Number 1',
+        sub: srv === 'server2' ? 'Any service, any country' : 'USA WhatsApp & more', href: '/buy-number?server=' + srv, count: r.n, price: r.p });
+    });
+  } catch (e) { console.error('[suggest] numbers failed:', e.message); }
+  try {
+    const BO = mongoose.models.BoostOrder;
+    if (BO) {
+      const rows = await BO.aggregate([
+        { $match: { createdAt: { $gte: since } } },
+        { $group: { _id: '$serviceName', n: { $sum: 1 }, p: { $min: '$price' } } },
+        { $sort: { n: -1 } }, { $limit: 5 }
+      ]);
+      rows.forEach(r => { if (r._id) out.push({ key: 'boost:' + r._id, label: String(r._id).slice(0, 60), sub: 'Social boosting', href: '/boost', count: r.n, price: r.p }); });
+    }
+  } catch (e) { console.error('[suggest] boost failed:', e.message); }
+  try {
+    const E = mongoose.models.SmsCoolEmail;
+    if (E) { const [a] = await E.aggregate([{ $match: { createdAt: { $gte: since } } }, { $group: { _id: null, n: { $sum: 1 }, p: { $min: '$price' } } }]); out.push({ key: 'email', label: 'Temp email', sub: 'Disposable inbox', href: '/temp-email', count: a ? a.n : 0, price: a ? a.p : undefined }); }
+  } catch (e) {}
+  try {
+    const R = mongoose.models.SmsCoolRental;
+    if (R) { const [a] = await R.aggregate([{ $match: { createdAt: { $gte: since } } }, { $group: { _id: null, n: { $sum: 1 }, p: { $min: '$price' } } }]); out.push({ key: 'rental', label: 'Rentals', sub: 'Rent a number for a while', href: '/rental', count: a ? a.n : 0, price: a ? a.p : undefined }); }
+  } catch (e) {}
+  return out.sort((a, b) => b.count - a.count);
+}
+async function getSuggestions() {
+  const setting = (await SuggestionSetting.findById('main').lean()) || { pinned: [], hidden: [] };
+  const hidden = new Set(setting.hidden || []);
+  const pinned = (setting.pinned || []).filter(p => !hidden.has(p.key));
+  const mix = { ...DEFAULT_PLATFORM_MIX, ...(setting.platformMix || {}) };
+  return { pinned, platformMix: mix, hidden: setting.hidden || [], candidates: null };
+}
+app.get('/api/suggestions', async (req, res) => {
+  try {
+    const d = await getSuggestions();
+    res.set('Cache-Control', 'public, max-age=60');
+    // The site builds the Facebook / TikTok / Instagram cards from the live marketplace listings.
+    res.json({ pinned: d.pinned.slice(0, 6).map(({ key, label, sub, href, slot, mk, pid, price, picture }) => ({ key, label, sub, href, slot, mk, pid, price, picture })), platformMix: d.platformMix });
+  } catch (e) { res.json({ pinned: [], platformMix: DEFAULT_PLATFORM_MIX }); }
+});
+app.get('/api/admin/suggestions', adminAuth, async (req, res) => {
+  try {
+    const d = await getSuggestions();
+    res.set('Cache-Control', 'no-store');
+    res.json({ candidates: await buildSuggestionCandidates(), pinned: d.pinned, hidden: d.hidden, platformMix: d.platformMix });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put('/api/admin/suggestions', adminAuth, async (req, res) => {
+  try {
+    // Each pinned item can sit in a chosen card slot (0-5 = card 1-6). One item per slot; the last one sent wins.
+    const okPic = (u) => { u = String(u || ''); return u.length <= 500 && /^(https?:\/\/|\/)/i.test(u) ? u : ''; };
+    const bySlot = new Map(); const noSlot = [];
+    (Array.isArray(req.body.pinned) ? req.body.pinned : []).forEach(p => {
+      const item = { key: String(p.key || '').slice(0, 120), label: String(p.label || '').slice(0, 80), sub: String(p.sub || '').slice(0, 80), href: String(p.href || '').slice(0, 300) };
+      if (!item.key || !item.label || !item.href.startsWith('/')) return;
+      if (['m1', 'm2', 'm3', 'm4', 'm5'].includes(p.mk)) { item.mk = p.mk; item.pid = String(p.pid || '').slice(0, 80); }
+      const pr = Number(p.price); if (Number.isFinite(pr) && pr > 0) item.price = pr;
+      const pic = okPic(p.picture); if (pic) item.picture = pic;
+      const sl = Number(p.slot);
+      if (Number.isInteger(sl) && sl >= 0 && sl <= 5) { item.slot = sl; bySlot.set(sl, item); } else noSlot.push(item);
+    });
+    const pinned = [...bySlot.entries()].sort((a, b) => a[0] - b[0]).map(e => e[1]);
+    for (const it of noSlot) { if (pinned.length >= 6) break; let f = 0; while (bySlot.has(f)) f++; it.slot = f; bySlot.set(f, it); pinned.push(it); }
+    pinned.sort((a, b) => a.slot - b.slot);
+    const hidden = (Array.isArray(req.body.hidden) ? req.body.hidden : []).map(String).slice(0, 50);
+    const set = { pinned, hidden };
+    if (req.body.platformMix !== undefined) {
+      const m = req.body.platformMix || {};
+      const mix = {};
+      for (const k of ['facebook', 'tiktok', 'instagram']) {
+        const n = Number(m[k]);
+        if (!Number.isInteger(n) || n < 0 || n > 6) return res.status(400).json({ error: 'Each platform count must be a whole number from 0 to 6.' });
+        mix[k] = n;
+      }
+      if (mix.facebook + mix.tiktok + mix.instagram !== 6) return res.status(400).json({ error: 'Facebook + TikTok + Instagram must add up to exactly 6.' });
+      set.platformMix = mix;
+    }
+    await SuggestionSetting.updateOne({ _id: 'main' }, { $set: set }, { upsert: true });
+    res.json({ success: true, message: 'Suggestions saved' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/admin/numbers/orders', anyAdminAuth, async (req, res) => {
  try {
  const q = {};
@@ -6698,164 +6684,48 @@ app.get('/api/admin/numbers/orders', anyAdminAuth, async (req, res) => {
 app.get('/api/numbers/servers', async (req, res) => {
  try {
  const cfg = await getNumberServerConfig();
- const configuredDefaultOperator = String(cfg.server2DefaultOperator || 'any').toLowerCase();
  res.json([
- { id: 'server1', name: 'Server 1', description: 'Live server catalog with services and live prices.', enabled: !!cfg.server1Enabled },
- { id: 'server2', name: 'Server 2 — All services & countries', description: 'Hundreds of services and countries, live stock and live prices.', enabled: !!cfg.server2Enabled, providerMode: cfg.server2ProviderMode || 'pools', defaultOperator: configuredDefaultOperator === 'any' ? 'any' : sealGrizzlyOperatorRef(configuredDefaultOperator) }
+ // Server 1 = SMS-COOL (country, service, then buy). Always listed so the customer can open it.
+ { id: 'server1', name: 'Server 1 — USA/Canada & more', description: 'Pick a country and service, then buy a number. Code arrives on the page.', enabled: true, providerMode: 'live', defaultOperator: 'any' },
+ { id: 'server2', name: 'Server 2 — All services & countries', description: 'Hundreds of services and countries, live stock and live prices.', enabled: !!cfg.server2Enabled, providerMode: cfg.server2ProviderMode || 'pools', defaultOperator: cfg.server2DefaultOperator || 'any' }
  ]);
  } catch (e) { res.status(500).json({ error: 'Failed to load servers' }); }
 });
 
-// ── Server 2 data store ─────────────────────────────────────────────────────
-// Same idea as Server 1's stored catalogue: everything the picker needs is kept in memory AND in
-// the database, so customers are answered instantly from the stored copy. Refreshing from the
-// provider happens in the background (stale-while-revalidate) and never makes a customer wait.
-// Buying still re-checks live stock and price with the provider before any money is taken.
-const GrizzlyCache = mongoose.models.GrizzlyCache || mongoose.model('GrizzlyCache', new mongoose.Schema({
- key: { type: String, unique: true, index: true },
- payload: { type: mongoose.Schema.Types.Mixed },
- syncedAt: { type: Date, default: Date.now }
-}, { minimize: false }));
-function gzSave(key, payload) { return GrizzlyCache.updateOne({ key }, { $set: { payload, syncedAt: new Date() } }, { upsert: true }).catch(() => {}); }
-async function gzLoad(key) { try { return await GrizzlyCache.findOne({ key }).lean(); } catch (e) { return null; } }
-
-let _grizzlyServicesCache = null, _grizzlyServicesAt = 0, _grizzlyServicesJob = null;
-let _grizzlyCountriesCache = null, _grizzlyCountriesAt = 0, _grizzlyCountriesJob = null;
-const GRIZZLY_LIST_TTL = 60 * 60 * 1000;
-function refreshGrizzlyServices() {
- if (_grizzlyServicesJob) return _grizzlyServicesJob;
- _grizzlyServicesJob = (async () => {
-  const r = await grizzlyRequest('getServicesList');
-  const list = (r.services || []).map(s => ({
-   code: s.code,
-   name: prettifyServiceName(s.name),
-   emoji: serviceEmoji(s.code, s.name),
-   icon: serviceIconUrl(s.code, s.name),
-   popular: POPULAR_SERVICE_CODES.includes(String(s.code).toLowerCase())
-  }));
-  if (list.length) { _grizzlyServicesCache = list; _grizzlyServicesAt = Date.now(); gzSave('services', list); }
-  return _grizzlyServicesCache || list;
- })().finally(() => { _grizzlyServicesJob = null; });
- return _grizzlyServicesJob;
-}
-// Instant answer from memory, else from the database copy, else (first ever time) the provider.
+let _grizzlyServicesCache = null, _grizzlyServicesAt = 0;
 async function getGrizzlyServices() {
- if (!_grizzlyServicesCache) {
-  const d = await gzLoad('services');
-  if (d && Array.isArray(d.payload) && d.payload.length) { _grizzlyServicesCache = d.payload; _grizzlyServicesAt = new Date(d.syncedAt).getTime(); }
- }
- if (_grizzlyServicesCache) {
-  if (Date.now() - _grizzlyServicesAt >= GRIZZLY_LIST_TTL) refreshGrizzlyServices().catch(() => {});
-  return _grizzlyServicesCache;
- }
- return refreshGrizzlyServices();
+ if (_grizzlyServicesCache && Date.now() - _grizzlyServicesAt < 60 * 60 * 1000) return _grizzlyServicesCache;
+ const r = await grizzlyRequest('getServicesList');
+ _grizzlyServicesCache = (r.services || []).map(s => ({
+ code: s.code,
+ name: prettifyServiceName(s.name),
+ emoji: serviceEmoji(s.code, s.name),
+ icon: serviceIconUrl(s.code, prettifyServiceName(s.name)),
+ kw: serviceKeywords(s.code, prettifyServiceName(s.name)),
+ popular: POPULAR_SERVICE_CODES.includes(String(s.code).toLowerCase())
+ }));
+ _grizzlyServicesAt = Date.now();
+ return _grizzlyServicesCache;
 }
-function refreshGrizzlyCountries() {
- if (_grizzlyCountriesJob) return _grizzlyCountriesJob;
- _grizzlyCountriesJob = (async () => {
-  const r = await grizzlyRequest('getCountries');
-  const list = Object.values(r || {})
-   .filter(c => c && c.visible !== 0)
-   .map(c => {
-    const name = c.eng || c.rus || String(c.id);
-    return { id: String(c.id), name, flag: countryFlag(name) };
-   });
-  if (list.length) { _grizzlyCountriesCache = list; _grizzlyCountriesAt = Date.now(); gzSave('countries', list); }
-  return _grizzlyCountriesCache || list;
- })().finally(() => { _grizzlyCountriesJob = null; });
- return _grizzlyCountriesJob;
-}
+let _grizzlyCountriesCache = null, _grizzlyCountriesAt = 0;
 async function getGrizzlyCountries() {
- if (!_grizzlyCountriesCache) {
-  const d = await gzLoad('countries');
-  if (d && Array.isArray(d.payload) && d.payload.length) { _grizzlyCountriesCache = d.payload; _grizzlyCountriesAt = new Date(d.syncedAt).getTime(); }
- }
- if (_grizzlyCountriesCache) {
-  if (Date.now() - _grizzlyCountriesAt >= GRIZZLY_LIST_TTL) refreshGrizzlyCountries().catch(() => {});
-  return _grizzlyCountriesCache;
- }
- return refreshGrizzlyCountries();
+ if (_grizzlyCountriesCache && Date.now() - _grizzlyCountriesAt < 60 * 60 * 1000) return _grizzlyCountriesCache;
+ const r = await grizzlyRequest('getCountries');
+ const list = Object.values(r || {})
+ .filter(c => c && c.visible !== 0)
+ .map(c => {
+ const name = c.eng || c.rus || String(c.id);
+ return { id: String(c.id), name, flag: countryFlag(name) };
+ });
+ _grizzlyCountriesCache = list;
+ _grizzlyCountriesAt = Date.now();
+ return _grizzlyCountriesCache;
 }
-// Generic stale-while-revalidate cache with request de-duplication.
-function makeSwrCache({ fresh, hardMax, max = 400, fetcher, persistKey }) {
- const store = new Map(), jobs = new Map();
- function refresh(k, args) {
-  if (jobs.has(k)) return jobs.get(k);
-  const job = fetcher(...args).then(data => {
-   store.set(k, { at: Date.now(), data });
-   if (store.size > max) store.delete(store.keys().next().value);
-   if (persistKey) gzSave(persistKey(k), data);
-   return data;
-  }).finally(() => jobs.delete(k));
-  jobs.set(k, job);
-  return job;
- }
- return async function get(k, ...args) {
-  let hit = store.get(k);
-  if (!hit && persistKey) {
-   const d = await gzLoad(persistKey(k));
-   if (d && d.payload && Date.now() - new Date(d.syncedAt).getTime() < hardMax) { hit = { at: new Date(d.syncedAt).getTime(), data: d.payload }; store.set(k, hit); }
-  }
-  if (hit && Date.now() - hit.at < hardMax) {
-   if (Date.now() - hit.at >= fresh) refresh(k, args).catch(() => {});
-   return hit.data;
-  }
-  try { return await refresh(k, args); } catch (e) { if (hit) return hit.data; throw e; }
- };
-}
-// Stock + price per country for ONE service (drives the country list).
-const _grizzlyPricesSwr = makeSwrCache({
- fresh: 20 * 1000, hardMax: 6 * 60 * 60 * 1000,
- fetcher: service => grizzlyRequest('getPrices', { service }),
- persistKey: k => 'prices:' + k
-});
-const getGrizzlyPricesCached = service => _grizzlyPricesSwr(service, service);
-// Pools (price tiers) for one service + country (drives the provider list).
-const getGrizzlyPoolsCached = makeSwrCache({
- fresh: 15 * 1000, hardMax: 30 * 60 * 1000,
- fetcher: (service, country) => grizzlyRequest('getPricesV2', { service, country })
-});
-// Warm everything the picker needs right after boot, then keep it fresh in the background.
-function warmGrizzly() {
- getGrizzlyServices().catch(() => {});
- getGrizzlyCountries().catch(() => {});
- POPULAR_SERVICE_CODES.forEach((c, i) => setTimeout(() => getGrizzlyPricesCached(c).catch(() => {}), 1200 * (i + 1)));
-}
-setTimeout(warmGrizzly, 4000);
-setInterval(() => { refreshGrizzlyServices().catch(() => {}); refreshGrizzlyCountries().catch(() => {}); }, 45 * 60 * 1000);
-// Keep the popular services' stock fresh so the first tap is always instant.
-setInterval(() => { POPULAR_SERVICE_CODES.forEach((c, i) => setTimeout(() => getGrizzlyPricesCached(c).catch(() => {}), 1500 * i)); }, 5 * 60 * 1000);
 
 async function requireServer2(res) {
  const cfg = await getNumberServerConfig();
- if (!cfg.server2Enabled) { res.status(400).json({ error: 'Server 2 is temporarily switched off — please try Server 1.' }); return null; }
+ if (!cfg.server2Enabled) { res.status(400).json({ error: 'Numbers are temporarily switched off — please try again later.' }); return null; }
  return cfg;
-}
-function sealGrizzlyServiceRef(code) {
- return sealRef('grizzly:service', { code: String(code) }, process.env.JWT_SECRET);
-}
-function openGrizzlyServiceRef(value) {
- try {
-  const ref = openRef('grizzly:service', String(value || ''), process.env.JWT_SECRET);
-  const code = String(ref.code || '').trim();
-  return code && code.length <= 100 ? code : '';
- } catch (_) { return ''; }
-}
-function sealGrizzlyPoolRef(service, country, maxPrice) {
- const secret = String(process.env.JWT_SECRET || '');
- if (secret.length < 32) throw new Error('Secure number references are unavailable.');
- const payload = `${String(service)}\0${String(country)}\0${String(Number(maxPrice))}`;
- return crypto.createHmac('sha256', secret).update(`grizzly:pool\0${payload}`).digest('base64url');
-}
-function sealGrizzlyOperatorRef(operator) {
- const secret = String(process.env.JWT_SECRET || '');
- if (secret.length < 32) throw new Error('Secure number references are unavailable.');
- return crypto.createHmac('sha256', secret).update(`grizzly:operator\0${String(operator).toLowerCase()}`).digest('base64url');
-}
-async function resolveGrizzlyServiceRef(value) {
- const code = openGrizzlyServiceRef(value);
- if (!code || !(await getGrizzlyServices()).some(service => service.code === code)) return '';
- return code;
 }
 
 // Full service catalogue (every service Grizzly sells), each with an icon. The client
@@ -6866,14 +6736,14 @@ app.get('/api/numbers/server2/services', async (req, res) => {
  if (!(await requireServer2(res))) return;
  const q = String(req.query.search || '').trim().toLowerCase();
  let list = await getGrizzlyServices();
- if (q) list = list.filter(s => s.name.toLowerCase().includes(q) || s.code.toLowerCase() === q);
+ if (q) { const nq = q.replace(/[^a-z0-9]+/g, ''); list = list.filter(s => s.name.toLowerCase().includes(q) || s.name.toLowerCase().replace(/[^a-z0-9]+/g, '').includes(nq) || s.code.toLowerCase() === q || (s.kw || []).some(k => k.includes(nq))); }
  // Popular first, then alphabetical.
  list = list.slice().sort((a, b) =>
  (b.popular ? 1 : 0) - (a.popular ? 1 : 0) ||
  (a.popular && b.popular ? POPULAR_SERVICE_CODES.indexOf(a.code) - POPULAR_SERVICE_CODES.indexOf(b.code) : 0) ||
  a.name.localeCompare(b.name));
- res.json(list.map(service => ({ ...service, code: sealGrizzlyServiceRef(service.code) })));
- } catch (e) { console.error('[numbers] service catalogue unavailable:', e.name); res.status(502).json({ error: 'Number services are temporarily unavailable. Please try again shortly.' }); }
+ res.json(list);
+ } catch (e) { res.status(502).json({ error: e.message }); }
 });
 
 // Countries that actually have stock for the chosen service, with our ₦ price and flag.
@@ -6881,9 +6751,10 @@ app.get('/api/numbers/server2/countries', async (req, res) => {
  try {
  const cfg = await requireServer2(res);
  if (!cfg) return;
- const service = await resolveGrizzlyServiceRef(String(req.query.service || ''));
+ const service = String(req.query.service || '').trim();
  if (!service) return res.status(400).json({ error: 'service is required' });
- const [prices, countries] = await Promise.all([getGrizzlyPricesCached(service), getGrizzlyCountries()]);
+ const prices = await grizzlyRequest('getPrices', { service });
+ const countries = await getGrizzlyCountries();
  const byId = new Map(countries.map(c => [c.id, c]));
  const out = [];
  for (const [countryId, services] of Object.entries(prices || {})) {
@@ -6892,13 +6763,13 @@ app.get('/api/numbers/server2/countries', async (req, res) => {
  const meta = byId.get(String(countryId));
  const name = meta?.name || `Country ${countryId}`;
  const { price, costNgn } = grizzlyPriceNgn(info.cost, cfg);
- out.push({ id: String(countryId), name, flag: meta?.flag || countryFlag(name), count: info.count, price });
+ out.push({ id: String(countryId), name, flag: meta?.flag || countryFlag(name), count: info.count, price, costNgn });
  }
  // Default is alphabetical (A→Z) so a country is easy to find; ?sort=price gives cheapest first.
  if (String(req.query.sort || 'name') === 'price') out.sort((a, b) => a.price - b.price || b.count - a.count);
  else out.sort((a, b) => a.name.localeCompare(b.name));
  res.json(out);
- } catch (e) { console.error('[numbers] country catalogue unavailable:', e.name); res.status(502).json({ error: 'Country availability is temporarily unavailable. Please try again shortly.' }); }
+ } catch (e) { res.status(502).json({ error: e.message }); }
 });
 
 // "Providers" on Grizzly are price tiers — each tier is a different pool of numbers.
@@ -6906,25 +6777,25 @@ app.get('/api/numbers/server2/providers', async (req, res) => {
  try {
  const cfg = await requireServer2(res);
  if (!cfg) return;
- const service = await resolveGrizzlyServiceRef(String(req.query.service || ''));
+ const service = String(req.query.service || '').trim();
  const country = String(req.query.country || '').trim();
  if (!service || !country) return res.status(400).json({ error: 'service and country are required' });
- const [data, countries] = await Promise.all([getGrizzlyPoolsCached(service + '|' + country, service, country), getGrizzlyCountries()]);
+ const data = await grizzlyRequest('getPricesV2', { service, country });
  const tiers = data?.[country]?.[service] || {};
+ const countries = await getGrizzlyCountries();
  const meta = countries.find(c => c.id === String(country));
  const availableTiers = Object.entries(tiers).filter(([, count]) => Number(count) > 0)
    .sort(([a], [b]) => Number(a) - Number(b));
  const shownTiers = cfg.server2HideLowPools ? availableTiers.slice(3) : availableTiers;
  const out = shownTiers.map(([costUsd, count], i) => {
- const maxPrice = Number(costUsd);
- const { price } = grizzlyPriceNgn(maxPrice, cfg);
+ const { price, costNgn } = grizzlyPriceNgn(Number(costUsd), cfg);
  return {
- poolKey: sealGrizzlyPoolRef(service, country, maxPrice), count: Number(count), price,
+ maxPrice: Number(costUsd), count: Number(count), price, costNgn,
  label: `Pool ${i + 1 + (cfg.server2HideLowPools ? 3 : 0)}`, flag: meta?.flag || '🌍', countryName: meta?.name || country
  };
- }).sort((a, b) => a.price - b.price);
+ }).sort((a, b) => a.price - b.price || a.maxPrice - b.maxPrice);
  res.json(out);
- } catch (e) { console.error('[numbers] pool availability unavailable:', e.name); res.status(502).json({ error: 'Number availability is temporarily unavailable. Please try again shortly.' }); }
+ } catch (e) { res.status(502).json({ error: e.message }); }
 });
 
 
@@ -6954,10 +6825,10 @@ app.get('/api/numbers/server2/operators', async (req, res) => {
  if (!country) return res.status(400).json({ error: 'country is required' });
  const list = await getGrizzlyOperators(country);
  res.json(list.map(code => ({
- code: code === 'any' ? 'any' : sealGrizzlyOperatorRef(code),
+ code,
  name: code === 'any' ? 'Any operator (recommended)' : prettifyServiceName(code)
  })));
- } catch (e) { console.error('[numbers] operator list unavailable:', e.name); res.status(502).json({ error: 'Operator options are temporarily unavailable. Please try again shortly.' }); }
+ } catch (e) { res.status(502).json({ error: e.message }); }
 });
 
 // Buy: charge the customer in ₦, then request the number from Grizzly.
@@ -6965,21 +6836,14 @@ app.post('/api/numbers/server2/buy', auth, async (req, res) => {
  try {
  const cfg = await requireServer2(res);
  if (!cfg) return;
- const service = await resolveGrizzlyServiceRef(String(req.body.service || ''));
+ const service = String(req.body.service || '').trim();
  const country = String(req.body.country || '').trim();
- const poolKey = String(req.body.poolKey || '');
- if (!service || !country || !poolKey) return res.status(400).json({ error: 'Please re-pick service, country and provider, then try again.' });
+ const maxPrice = Number(req.body.maxPrice || 0);
+ if (!service || !country || !maxPrice) return res.status(400).json({ error: 'Please re-pick service, country and provider, then try again.' });
  // Operator choice — only honoured when the admin turned operator picking on.
  const mode = cfg.server2ProviderMode || 'pools';
- const operatorRef = String(req.body.operator || '').trim();
- let operator = '';
- if (mode === 'pools' || !operatorRef) operator = String(cfg.server2DefaultOperator || 'any').toLowerCase();
- else if (operatorRef === 'any') operator = 'any';
- else {
- const available = await getGrizzlyOperators(country);
- operator = available.find(code => code !== 'any' && sealGrizzlyOperatorRef(code) === operatorRef) || '';
- if (!operator) return res.status(400).json({ error: 'That operator is not available for this country — pick another one.' });
- }
+ let operator = String(req.body.operator || '').trim().toLowerCase();
+ if (mode === 'pools' || !operator) operator = String(cfg.server2DefaultOperator || 'any').toLowerCase();
  if (operator && operator !== 'any') {
  const allowed = await getGrizzlyOperators(country);
  if (!allowed.map(o => o.toLowerCase()).includes(operator)) {
@@ -6990,21 +6854,16 @@ app.post('/api/numbers/server2/buy', auth, async (req, res) => {
  // Re-check live stock + price so a customer can never pay a stale amount.
  const data = await grizzlyRequest('getPricesV2', { service, country });
  const tiers = data?.[country]?.[service] || {};
- const tierKey = Object.keys(tiers).find(k =>
-  Number(tiers[k]) > 0 && sealGrizzlyPoolRef(service, country, Number(k)) === poolKey
- );
+ const tierKey = Object.keys(tiers).find(k => Math.abs(Number(k) - maxPrice) < 0.0001);
  if (!tierKey || !Number(tiers[tierKey])) return res.status(400).json({ error: 'That provider just sold out — please pick another one.' });
- const maxPrice = Number(tierKey);
  if (cfg.server2HideLowPools) {
  const lowPools = Object.entries(tiers).filter(([, c]) => Number(c) > 0).map(([k]) => Number(k)).sort((a, b) => a - b).slice(0, 3);
  if (lowPools.some(k => Math.abs(k - maxPrice) < 0.0001)) return res.status(400).json({ error: 'That provider is not available right now — please pick another one.' });
  }
  const { price: chargeAmount, costNgn } = grizzlyPriceNgn(maxPrice, cfg);
 
- // SECURITY: atomic debit BEFORE calling the provider so parallel requests cannot get several numbers for one balance
- const user = await User.findOneAndUpdate({ _id: req.user._id, balance: { $gte: chargeAmount } }, { $inc: { balance: -chargeAmount } }, { new: true });
- if (!user) return res.status(400).json({ error: 'Insufficient balance. Please deposit funds.' });
- const _refundS2 = () => User.updateOne({ _id: user._id }, { $inc: { balance: chargeAmount } }).catch(() => {});
+ const user = await User.findById(req.user._id);
+ if ((user.balance || 0) < chargeAmount) return res.status(400).json({ error: 'Insufficient balance. Please deposit funds.' });
 
  let bought;
  try {
@@ -7013,11 +6872,9 @@ app.post('/api/numbers/server2/buy', auth, async (req, res) => {
  bought = await grizzlyRequest('getNumberV2', buyParams);
  } catch (e) {
  SystemError.create({ source: 'grizzly', message: `getNumberV2 failed: ${e.message}`, detail: `service=${service} country=${country} maxPrice=${maxPrice}`, context: { userId: user._id } }).catch(() => {});
- await _refundS2();
- console.error('[numbers] number purchase request failed:', e.name, e.grizzlyCode || '');
- return res.status(502).json({ error: 'The number provider could not complete the request. Check your wallet balance before retrying, and contact support if needed.' });
+ return res.status(400).json({ error: e.message });
  }
- if (!bought || !bought.phoneNumber) { await _refundS2(); return res.status(400).json({ error: 'Provider did not return a number — nothing was charged, please try again.' }); }
+ if (!bought || !bought.phoneNumber) return res.status(400).json({ error: 'Provider did not return a number — nothing was charged, please try again.' });
 
  const services = await getGrizzlyServices();
  const countries = await getGrizzlyCountries();
@@ -7031,11 +6888,13 @@ app.post('/api/numbers/server2/buy', auth, async (req, res) => {
  expiresAt: new Date(Date.now() + NUMBER_RENTAL_WINDOW_MS),
  server: 'server2', grizzlyActivationId: String(bought.activationId), operator: operator || 'any'
  });
+ user.balance = (user.balance || 0) - chargeAmount;
+ await user.save();
  await Transaction.create({ userId: user._id, type: 'purchase', amount: chargeAmount, description: `Rented ${serviceName} number (${countryName}) — Server 2`, status: 'success' });
  await creditReferralCommission(user, chargeAmount, `${serviceName} number (${countryName})`);
 
  res.json({ orderId: claimed._id, phoneNumber: claimed.phoneNumber, expiresAt: claimed.expiresAt, provider: claimed.provider, country: claimed.country, amountPaid: chargeAmount });
- } catch (e) { console.error('[numbers] purchase processing failed:', e.name); res.status(500).json({ error: 'Could not complete the number purchase. Please check your order history or contact support.' }); }
+ } catch (e) { res.status(500).json({ error: 'Failed to buy number: ' + e.message }); }
 });
 
 // ── Admin: server switches, ₦ rate, profit ladder, provider balance, profit report ──
@@ -7060,7 +6919,7 @@ app.put('/api/admin/numbers/server-config', anyAdminAuth, async (req, res) => {
  try {
  const cfg = await getNumberServerConfig();
  const b = req.body || {};
- if (typeof b.server1Enabled === 'boolean') cfg.server1Enabled = b.server1Enabled;
+ cfg.server1Enabled = false; // OTP Suit retired
  if (typeof b.server2Enabled === 'boolean') cfg.server2Enabled = b.server2Enabled;
  if (typeof b.server2HideLowPools === 'boolean') cfg.server2HideLowPools = b.server2HideLowPools;
  if (Array.isArray(b.server1MarkupTiers)) {
@@ -7179,7 +7038,7 @@ app.post('/api/admin/numbers/alerts/test-email', anyAdminAuth, async (req, res) 
  const cfg = await getNumberServerConfig();
  const to = String(req.body?.email || cfg.balanceAlertEmail || '').trim();
  if (!to) return res.status(400).json({ error: 'Add an alert email address first.' });
- const r = await sendAdminEmail(to, '[MYS Alert] Test alert email',
+ const r = await sendAdminEmail(to, '[KLS Alert] Test alert email',
  'This is a test. Low Gizzle SMS balance and failed balance checks will be emailed to this address.');
  if (!r.sent) return res.status(400).json({ error: r.reason || 'Email could not be sent' });
  res.json({ message: 'Test email sent to ' + to + ' via ' + r.via });
@@ -7241,65 +7100,6 @@ app.get('/api/admin/numbers/profit', anyAdminAuth, async (req, res) => {
  } catch (e) { res.status(500).json({ error: 'Failed to load profit report' }); }
 });
 
-let _liveCountriesCache = null, _liveCountriesCachedAt = 0;
-async function getLiveCountriesCached() {
- if (_liveCountriesCache && Date.now() - _liveCountriesCachedAt < 30 * 60 * 1000) return _liveCountriesCache;
- const r = await otpsuiteRequest('get', '/countries');
- const list = Array.isArray(r) ? r : (Array.isArray(r?.countries) ? r.countries : []);
- if (!list.length) return []; // never cache an empty list for 30 min
- _liveCountriesCache = list;
- _liveCountriesCachedAt = Date.now();
- return _liveCountriesCache;
-}
-async function rentNumberForUser(user, pricing, chargeAmount) {
- if ((user.balance || 0) < chargeAmount) throw new Error('Insufficient balance. Please deposit funds.');
- if (!pricing.otpsuiteCountryCode || !pricing.otpsuiteServiceId) {
- console.error(`Number pricing "${pricing.provider} — ${pricing.country}" is missing its otpsuite country/service mapping.`);
- SystemError.create({
- source: 'otpsuite',
- message: `Pricing entry missing otpsuite mapping: ${pricing.provider} — ${pricing.country}`,
- detail: 'Re-save this entry in Admin Numbers Price Sheet, picking its otpsuite country and service, then Save Price.',
- context: { pricingId: pricing._id, userId: user._id }
- }).catch(() => {});
- throw new Error('This number option is temporarily unavailable — please try again shortly or contact support.');
- }
- return rentNumberLive(user, pricing.provider, pricing.country, pricing.otpsuiteCountryCode, pricing.otpsuiteServiceId, chargeAmount);
-}
-async function rentNumberLive(user, providerLabel, countryLabel, countryCode, serviceId, chargeAmount, expectedCostNgn) {
- if ((user.balance || 0) < chargeAmount) throw new Error('Insufficient balance. Please deposit funds.');
- let bought;
- try {
- bought = await otpsuiteRequest('post', '/buy-number', { data: { country: countryCode, service: serviceId } });
- } catch (e) {
- if (e.otpsuiteStatus === 409) {
- throw new Error('No numbers currently available for that selection — please try again shortly.');
- }
- console.error('otpsuite /buy-number failed:', e.otpsuiteStatus, e.message);
- SystemError.create({
- source: 'otpsuite',
- message: `otpsuite /buy-number failed (HTTP ${e.otpsuiteStatus || '?'}): ${e.message}`,
- detail: `Sent: {"country":"${countryCode}","service":"${serviceId}"} — Raw response: ${JSON.stringify(e.otpsuiteRaw)}`,
- context: { userId: user._id, otpsuiteStatus: e.otpsuiteStatus }
- }).catch(() => {});
- throw new Error(`Number setup issue (code ${e.otpsuiteStatus || '?'}): ${e.message}. Please contact support if this persists.`);
- }
- // Loss guard: if the API charged us more than the customer pays, release the number instead of selling at a loss.
- const actualCost = Number(bought.price || 0);
- if (actualCost > 0 && actualCost >= chargeAmount) {
- try { await otpsuiteRequest('post', '/cancel-number', { data: { order_id: bought.order_id } }); } catch (_) {}
- throw new Error('The price for this number just changed — please refresh and try again.');
- }
- const claimed = await NumberListing.create({
- provider: providerLabel, country: countryLabel, phoneNumber: bought.number, sellPrice: chargeAmount, cost: actualCost || expectedCostNgn || 0, server: 'server1',
- status: 'sold', soldTo: user._id, soldAt: new Date(), expiresAt: new Date(Date.now() + NUMBER_RENTAL_WINDOW_MS),
- otpsuiteOrderId: bought.order_id
- });
- user.balance = (user.balance || 0) - chargeAmount;
- await user.save();
- await Transaction.create({ userId: user._id, type: 'purchase', amount: chargeAmount, description: `Rented ${claimed.provider} number (${claimed.country})`, status: 'success' });
- await creditReferralCommission(user, chargeAmount, `${claimed.provider} number (${claimed.country})`);
- return claimed;
-}
 app.get('/api/admin/user-number-prices', anyAdminAuth, async (req, res) => {
  try {
  const filter = req.query.userId ? { userId: req.query.userId } : {};
@@ -7336,10 +7136,35 @@ app.get('/api/admin/number-pricing', anyAdminAuth, async (req, res) => {
 });
 app.post('/api/admin/number-pricing', anyAdminAuth, async (req, res) => {
  try {
-   const { provider, country, price, apiPrice, enabled } = req.body;
-   if (!provider || !country || price === undefined || !Number.isFinite(Number(price)) || Number(price) <= 0) return res.status(400).json({ error: 'provider, country and a valid price are required' });
-   const doc = await NumberPricing.findOneAndUpdate({ provider: String(provider).trim(), country: String(country).trim() }, { price: Number(price), apiPrice: apiPrice ? Number(apiPrice) : 0, enabled: enabled !== undefined ? !!enabled : true, updatedAt: new Date(), mode: 'manual' }, { upsert: true, new: true });
-   res.json(doc);
+ const { provider, country, price, apiPrice, enabled, mode, otpsuiteCountryCode, otpsuiteServiceId } = req.body;
+ if (!provider || !country || price === undefined) return res.status(400).json({ error: 'provider, country and price are required' });
+ if (mode === 'live' && (!otpsuiteCountryCode || !otpsuiteServiceId)) {
+ return res.status(400).json({ error: 'Live mode needs both an otpsuite country code and service id' });
+ }
+ if (mode === 'live') {
+ let liveServices;
+ try {
+ liveServices = await otpsuiteRequest('get', '/services', { params: { country: otpsuiteCountryCode } });
+ } catch (e) {
+ return res.status(502).json({ error: `Could not verify this with otpsuite: ${e.message}` });
+ }
+ const match = (liveServices.services || []).find(s => s.service_id === otpsuiteServiceId);
+ if (!match) {
+ return res.status(400).json({ error: `That service isn't currently valid for ${otpsuiteCountryCode} on otpsuite — please re-select the country and service from the dropdowns (their catalog may have just changed).` });
+ }
+ }
+ const doc = await NumberPricing.findOneAndUpdate(
+ { provider: provider.trim(), country: country.trim() },
+ {
+ price: Number(price), apiPrice: apiPrice ? Number(apiPrice) : 0,
+ enabled: enabled !== undefined ? !!enabled : true, updatedAt: new Date(),
+ mode: mode === 'live' ? 'live' : 'manual',
+ otpsuiteCountryCode: mode === 'live' ? otpsuiteCountryCode : '',
+ otpsuiteServiceId: mode === 'live' ? otpsuiteServiceId : ''
+ },
+ { upsert: true, new: true }
+ );
+ res.json(doc);
  } catch (e) { res.status(500).json({ error: 'Failed to save price: ' + e.message }); }
 });
 app.put('/api/admin/number-pricing/:id/toggle', anyAdminAuth, async (req, res) => {
@@ -7366,12 +7191,14 @@ app.put('/api/admin/number-pricing/:id/price', anyAdminAuth, async (req, res) =>
 });
 app.put('/api/admin/number-pricing/:id', anyAdminAuth, async (req, res) => {
  try {
- const { provider, country, price, apiPrice, enabled } = req.body;
+ const { provider, country, price, apiPrice, otpsuiteCountryCode, otpsuiteServiceId, enabled } = req.body;
  const update = { updatedAt: new Date() };
  if (provider !== undefined) update.provider = String(provider).trim();
  if (country !== undefined) update.country = String(country).trim();
  if (price !== undefined) update.price = Number(price);
  if (apiPrice !== undefined) update.apiPrice = Number(apiPrice);
+ if (otpsuiteCountryCode !== undefined) update.otpsuiteCountryCode = otpsuiteCountryCode;
+ if (otpsuiteServiceId !== undefined) update.otpsuiteServiceId = otpsuiteServiceId;
  if (enabled !== undefined) update.enabled = !!enabled;
  const doc = await NumberPricing.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
  if (!doc) return res.status(404).json({ error: 'Not found' });
@@ -7500,32 +7327,31 @@ app.get('/api/deposit/payment-methods', optionalAuth, async (req, res) => {
  docs.forEach(d => { byMethod[d.method] = { enabled: d.enabled, disabledMessage: d.disabledMessage || '' }; });
  byMethod.virtualaccount = { enabled: vaSettings.globalEnabled, disabledMessage: vaSettings.globalEnabled ? '' : 'Virtual accounts are temporarily unavailable. Please use Payment Link instead.' };
  // Country gate: outside Nigeria only the payment link exists, priced in USD.
- const geo = await mysGeo.resolveCountry(req, req.user || null);
- const isNg = mysFlwMethods.supportsVirtualAccount(geo.code);
+ const geo = await klsGeo.resolveCountry(req, req.user || null);
+ const isNg = klsFlwMethods.supportsVirtualAccount(geo.code);
  if (!isNg) {
  byMethod.virtualaccount = { enabled: false, disabledMessage: 'Virtual accounts are available in Nigeria only. Use the payment link — it is priced in US dollars.' };
  byMethod.banktransfer = { enabled: false, disabledMessage: 'Bank transfer deposits are available in Nigeria only.' };
  }
- byMethod.country = geo.code;
- byMethod.payCurrency = mysCountries.payCurrencyFor(geo.code);
- byMethod.methods = isNg ? ['virtualaccount', 'paymentlink'] : ['paymentlink'];
- byMethod.checkoutMethods = mysFlwMethods.describeFor(geo.code);
- // Gateways the customer can choose between for the payment link.
- const gw = await getGatewayStates();
- const payCur = mysCountries.payCurrencyFor(geo.code);
- byMethod.gateways = {
-  flutterwave: { enabled: gw.flutterwave.enabled, available: gw.flutterwave.available, disabledMessage: gw.flutterwave.disabledMessage },
-  paystack: { enabled: gw.paystack.enabled, available: gw.paystack.available && paystackSupportsCurrency(payCur), disabledMessage: gw.paystack.disabledMessage }
+ const gwOf = (k, configured) => {
+ const d = byMethod[k] || { enabled: true, disabledMessage: '' };
+ const on = d.enabled !== false && configured;
+ return { enabled: on, disabledMessage: d.enabled === false ? (d.disabledMessage || 'This payment option is temporarily unavailable.') : (configured ? '' : 'This payment option is not available right now.') };
  };
- byMethod.defaultGateway = byMethod.gateways.flutterwave.available ? 'flutterwave' : (byMethod.gateways.paystack.available ? 'paystack' : '');
- // Virtual accounts can be issued by Flutterwave or Paystack — a gateway that is switched off stops issuing them.
- byMethod.vaGateways = { flutterwave: gw.flutterwave.enabled, paystack: gw.paystack.available };
- if (!byMethod.vaGateways.flutterwave && !byMethod.vaGateways.paystack) {
-  byMethod.virtualaccount = { enabled: false, disabledMessage: gw.flutterwave.disabledMessage || gw.paystack.disabledMessage || 'Bank transfer is temporarily unavailable. Please use Payment Link instead.' };
+ byMethod.gateways = {
+ paystack: gwOf('paystack', klsPaystack.isConfigured()),
+ flutterwave: gwOf('flutterwave', !!process.env.FLW_V3_SECRET_KEY)
+ };
+ const flwDoc = docs.find(d => d.method === 'flutterwave');
+ if (flwDoc && flwDoc.enabled === false) {
+ const m = flwDoc.disabledMessage || 'Flutterwave is turned off — please use Paystack.';
+ byMethod.virtualaccount = { enabled: false, disabledMessage: m };
+ byMethod.banktransfer = { enabled: false, disabledMessage: m };
  }
- if (!gw.flutterwave.enabled) {
-  byMethod.banktransfer = { enabled: false, disabledMessage: gw.flutterwave.disabledMessage || 'Bank transfer is temporarily unavailable. Please use Payment Link instead.' };
- }
+ byMethod.country = geo.code;
+ byMethod.payCurrency = klsCountries.payCurrencyFor(geo.code);
+ byMethod.methods = isNg ? ['virtualaccount', 'paymentlink'] : ['paymentlink'];
+ byMethod.checkoutMethods = klsFlwMethods.describeFor(geo.code);
  res.json(byMethod);
  } catch (e) { res.status(500).json({ error: 'Failed to load payment method settings' }); }
 });
@@ -7536,11 +7362,77 @@ app.get('/api/deposit/payment-methods', optionalAuth, async (req, res) => {
 app.get('/api/public/geo', async (req, res) => {
  res.set('Cache-Control', 'no-store');
  try {
-  const geo = await mysGeo.resolveCountry(req, req.user || null);
+  const geo = await klsGeo.resolveCountry(req, req.user || null);
   res.json({ country: geo.code, source: geo.source, currency: geo.code === 'NG' ? 'NGN' : 'USD' });
  } catch (e) {
   res.json({ country: 'NG', source: 'default', currency: 'NGN' });
  }
+});
+function welcomePopupOut(d) {
+ return { enabled: !!d.enabled, title: d.title || '', message: d.message || '', buttonText: d.buttonText || 'Join now', link: d.link || '', frequency: d.frequency || 'session', version: d.version || 1 };
+}
+app.get('/api/admin/logo-rules', anyAdminAuth, async (req, res) => {
+ try { res.json(await LogoRule.find().sort({ createdAt: -1 }).lean()); } catch (e) { res.status(500).json({ error: 'Failed to load logo rules' }); }
+});
+app.post('/api/admin/logo-rules', anyAdminAuth, upload.single('logo'), async (req, res) => {
+ try {
+  const keyword = String(req.body.keyword || '').trim().slice(0, 120);
+  if (!keyword) return res.status(400).json({ error: 'Type the product name or word (e.g. Facebook)' });
+  if (!req.file) return res.status(400).json({ error: 'Upload the logo' });
+  const markets = parseLogoMarkets(req.body.markets);
+  if (!markets.length) return res.status(400).json({ error: 'Pick at least one marketplace' });
+  const rule = await LogoRule.create({ keyword, match: req.body.match === 'exact' ? 'exact' : 'contains', overrideExisting: req.body.overrideExisting === 'true' || req.body.overrideExisting === true, markets, logo: fileUrl(req.file) });
+  _logoRulesCache = null;
+  res.json({ ok: true, rule });
+ } catch (e) { res.status(500).json({ error: 'Failed to save: ' + e.message }); }
+});
+app.put('/api/admin/logo-rules/:id', anyAdminAuth, upload.single('logo'), async (req, res) => {
+ try {
+  const set = {};
+  if (req.body.keyword !== undefined) { const k = String(req.body.keyword).trim().slice(0, 120); if (!k) return res.status(400).json({ error: 'Name cannot be empty' }); set.keyword = k; }
+  if (req.body.match !== undefined) set.match = req.body.match === 'exact' ? 'exact' : 'contains';
+  if (req.body.overrideExisting !== undefined) set.overrideExisting = req.body.overrideExisting === 'true' || req.body.overrideExisting === true;
+  if (req.body.markets !== undefined) { const m = parseLogoMarkets(req.body.markets); if (!m.length) return res.status(400).json({ error: 'Pick at least one marketplace' }); set.markets = m; }
+  if (req.file) set.logo = fileUrl(req.file);
+  const rule = await LogoRule.findByIdAndUpdate(req.params.id, { $set: set }, { new: true });
+  _logoRulesCache = null;
+  res.json({ ok: !!rule, rule });
+ } catch (e) { res.status(500).json({ error: 'Failed to update: ' + e.message }); }
+});
+app.delete('/api/admin/logo-rules/:id', anyAdminAuth, async (req, res) => {
+ try { await LogoRule.findByIdAndDelete(req.params.id); _logoRulesCache = null; res.json({ ok: true }); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/public/welcome-popup', async (req, res) => {
+ res.set('Cache-Control', 'no-store');
+ try {
+  const d = (await WelcomePopup.findById('main').lean()) || {};
+  const o = welcomePopupOut(d);
+  if (!o.enabled || !o.link) return res.json({ enabled: false });
+  res.json(o);
+ } catch (e) { res.json({ enabled: false }); }
+});
+app.get('/api/admin/welcome-popup', anyAdminAuth, async (req, res) => {
+ try { res.json(welcomePopupOut((await WelcomePopup.findById('main').lean()) || {})); }
+ catch (e) { res.status(500).json({ error: 'Failed to load welcome pop-up' }); }
+});
+app.post('/api/admin/welcome-popup', anyAdminAuth, async (req, res) => {
+ try {
+  const b = req.body || {};
+  const link = String(b.link || '').trim();
+  const enabled = b.enabled === true || b.enabled === 'true';
+  if (link && !/^https:\/\//i.test(link)) return res.status(400).json({ error: 'Channel link must start with https://' });
+  if (enabled && !link) return res.status(400).json({ error: 'Add the WhatsApp channel link before turning the pop-up on' });
+  const frequency = ['session', 'everyPage', 'afterSignup'].includes(String(b.frequency)) ? String(b.frequency) : 'session';
+  const set = {
+   enabled, link, frequency,
+   title: String(b.title || '').trim().slice(0, 60),
+   message: String(b.message || '').trim().slice(0, 300),
+   buttonText: String(b.buttonText || '').trim().slice(0, 30) || 'Join now',
+   updatedAt: new Date()
+  };
+  const doc = await WelcomePopup.findByIdAndUpdate('main', { $set: set, $inc: { version: 1 } }, { upsert: true, new: true });
+  res.json({ ok: true, ...welcomePopupOut(doc) });
+ } catch (e) { res.status(500).json({ error: 'Failed to save welcome pop-up: ' + e.message }); }
 });
 app.get('/api/public/site-links', async (req, res) => {
  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -7548,9 +7440,9 @@ app.get('/api/public/site-links', async (req, res) => {
  res.set('Expires', '0');
  try {
  const links = await getSiteLinks();
- const tgUser = String(links.telegramUsername || '').replace(/^@/, '');
+ const tgUser = String(links.telegramUsername || 'klslogs').replace(/^@/, '');
    const tgLink = links.telegramLink || ('https://t.me/' + tgUser);
-   res.json({ whatsappNumber: links.whatsappNumber, adminPhone: links.adminPhone || links.whatsappNumber, whatsappGroupLink: links.whatsappGroupLink, whatsappChannelLink: links.whatsappChannelLink, telegramUsername: tgUser, telegramLink: tgLink, telegramChannelLink: links.telegramChannelLink || '', telegramCommunityLink: links.telegramCommunityLink || '', whatsappChatLink: links.whatsappChatLink || ('https://wa.me/' + links.whatsappNumber), whatsappEnabled: links.whatsappEnabled !== false, telegramEnabled: links.telegramEnabled !== false, supportHours: links.supportHours || '', logoUrl: links.logoUrl || '' });
+   res.json({ whatsappNumber: links.whatsappNumber, adminPhone: links.adminPhone || links.whatsappNumber, whatsappGroupLink: links.whatsappGroupLink, whatsappChannelLink: links.whatsappChannelLink, telegramUsername: tgUser, telegramLink: tgLink, whatsappChatLink: links.whatsappChatLink || ('https://wa.me/' + links.whatsappNumber), supportHours: links.supportHours || '', whatsappEnabled: links.whatsappEnabled !== false, telegramEnabled: links.telegramEnabled !== false, bannerEnabled: !!links.bannerEnabled, bannerText: links.bannerText || '', bannerButton: links.bannerButton || 'Join channel', bannerLink: links.bannerLink || '', telegramChannelLink: links.telegramChannelLink || '', telegramCommunityLink: links.telegramCommunityLink || '', popupFrequency: links.popupFrequency || 'session', popupChannels: links.popupChannels || 'both' });
  } catch (e) { res.status(500).json({ error: 'Failed to load site links' }); }
 });
 app.get('/api/admin/site-links', anyAdminAuth, async (req, res) => {
@@ -7558,7 +7450,7 @@ app.get('/api/admin/site-links', anyAdminAuth, async (req, res) => {
 });
 app.post('/api/admin/site-links', anyAdminAuth, async (req, res) => {
  try {
- const { whatsappNumber, adminPhone, whatsappGroupLink, whatsappChannelLink , telegramUsername, telegramLink, telegramChannelLink, telegramCommunityLink, whatsappChatLink, supportHours, whatsappEnabled, telegramEnabled } = req.body;
+ const { whatsappNumber, adminPhone, whatsappGroupLink, whatsappChannelLink , telegramUsername, telegramLink, whatsappChatLink, supportHours } = req.body;
  const update = { updatedAt: new Date() };
  if (whatsappNumber !== undefined) {
  const cleaned = String(whatsappNumber).replace(/[^\d]/g, '');
@@ -7603,54 +7495,36 @@ app.post('/api/admin/site-links', anyAdminAuth, async (req, res) => {
    if (link && !/^https:\/\//.test(link)) return res.status(400).json({ error: 'WhatsApp link must start with https://' });
    update.whatsappChatLink = link;
   }
-  if (whatsappEnabled !== undefined) update.whatsappEnabled = (whatsappEnabled === true || whatsappEnabled === 'true');
-  if (telegramEnabled !== undefined) update.telegramEnabled = (telegramEnabled === true || telegramEnabled === 'true');
   if (supportHours !== undefined) update.supportHours = String(supportHours).trim().slice(0, 120);
+  const rb = req.body;
+  if (rb.whatsappEnabled !== undefined) update.whatsappEnabled = rb.whatsappEnabled === true || rb.whatsappEnabled === 'true';
+  if (rb.telegramEnabled !== undefined) update.telegramEnabled = rb.telegramEnabled === true || rb.telegramEnabled === 'true';
+  if (rb.bannerEnabled !== undefined) update.bannerEnabled = rb.bannerEnabled === true || rb.bannerEnabled === 'true';
+  if (rb.bannerText !== undefined) update.bannerText = String(rb.bannerText).trim().slice(0, 200);
+  if (rb.bannerButton !== undefined) update.bannerButton = String(rb.bannerButton).trim().slice(0, 30);
+  if (rb.bannerLink !== undefined) {
+   const bl = String(rb.bannerLink).trim();
+   if (bl && !/^https:\/\//.test(bl)) return res.status(400).json({ error: 'Banner link must start with https://' });
+   update.bannerLink = bl;
+  }
+  for (const k of ['telegramChannelLink', 'telegramCommunityLink']) {
+   if (rb[k] !== undefined) {
+    const v = String(rb[k]).trim();
+    if (v && !/^https:\/\//.test(v)) return res.status(400).json({ error: 'Telegram links must start with https://' });
+    update[k] = v;
+   }
+  }
+  if (rb.popupFrequency !== undefined && ['once', 'session', 'everyPage'].includes(String(rb.popupFrequency))) update.popupFrequency = String(rb.popupFrequency);
+  if (rb.popupChannels !== undefined && ['both', 'whatsapp', 'telegram'].includes(String(rb.popupChannels))) update.popupChannels = String(rb.popupChannels);
  const doc = await SiteLinks.findByIdAndUpdate('main', { $set: update }, { upsert: true, new: true });
  console.log(`[admin] site-links updated:`, JSON.stringify(update));
- res.json({ ok: true, whatsappNumber: doc.whatsappNumber, adminPhone: doc.adminPhone || doc.whatsappNumber, whatsappGroupLink: doc.whatsappGroupLink, whatsappChannelLink: doc.whatsappChannelLink, telegramUsername: doc.telegramUsername, telegramLink: doc.telegramLink, telegramChannelLink: doc.telegramChannelLink || '', telegramCommunityLink: doc.telegramCommunityLink || '', whatsappChatLink: doc.whatsappChatLink, whatsappEnabled: doc.whatsappEnabled !== false, telegramEnabled: doc.telegramEnabled !== false, supportHours: doc.supportHours });
+ res.json({ ok: true, whatsappNumber: doc.whatsappNumber, adminPhone: doc.adminPhone || doc.whatsappNumber, whatsappGroupLink: doc.whatsappGroupLink, whatsappChannelLink: doc.whatsappChannelLink, telegramUsername: doc.telegramUsername, telegramLink: doc.telegramLink, whatsappChatLink: doc.whatsappChatLink, supportHours: doc.supportHours, whatsappEnabled: doc.whatsappEnabled !== false, telegramEnabled: doc.telegramEnabled !== false, bannerEnabled: !!doc.bannerEnabled, bannerText: doc.bannerText, bannerButton: doc.bannerButton, bannerLink: doc.bannerLink, telegramChannelLink: doc.telegramChannelLink || '', telegramCommunityLink: doc.telegramCommunityLink || '', popupFrequency: doc.popupFrequency || 'session', popupChannels: doc.popupChannels || 'both' });
  } catch (e) { res.status(500).json({ error: 'Failed to update site links: ' + e.message }); }
-});
-const brandLogoUpload = multer({
- storage: makeStorage('uploads', 'image'),
- limits: { fileSize: 3 * 1024 * 1024 },
- fileFilter: (req, file, cb) => {
-  const extensions = { 'image/png': ['.png'], 'image/jpeg': ['.jpg', '.jpeg'], 'image/webp': ['.webp'] };
-  const allowed = extensions[file.mimetype];
-  if (!allowed || !allowed.includes(path.extname(file.originalname).toLowerCase())) return cb(new Error('Use a PNG, JPEG, or WebP image.'));
-  cb(null, true);
- }
-});
-app.post('/api/admin/brand-logo', adminAuth, (req, res, next) => {
- brandLogoUpload.single('image')(req, res, err => {
-  if (err) return res.status(400).json({ error: err.message || 'Could not upload the logo.' });
-  next();
- });
-}, async (req, res) => {
- try {
-  if (!req.file) return res.status(400).json({ error: 'Choose a PNG, JPEG, or WebP logo image.' });
-  const logoUrl = fileUrl(req.file);
-  if (!logoUrl) return res.status(500).json({ error: 'The logo upload did not return a usable image URL.' });
-  await SiteLinks.findByIdAndUpdate('main', { $set: { logoUrl, updatedAt: new Date() } }, { upsert: true, new: true });
-  res.json({ ok: true, logoUrl });
- } catch (e) {
-  console.error('[admin] brand logo update failed:', e.name);
-  res.status(500).json({ error: 'Could not save the site logo.' });
- }
-});
-app.delete('/api/admin/brand-logo', adminAuth, async (req, res) => {
- try {
-  await SiteLinks.findByIdAndUpdate('main', { $set: { logoUrl: '', updatedAt: new Date() } }, { upsert: true, new: true });
-  res.json({ ok: true, logoUrl: '' });
- } catch (e) {
-  console.error('[admin] brand logo removal failed:', e.name);
-  res.status(500).json({ error: 'Could not remove the site logo.' });
- }
 });
 app.get('/api/admin/payment-methods', anyAdminAuth, async (req, res) => {
  try {
  const docs = await PaymentMethodSetting.find({});
- const byMethod = { paymentlink: { enabled: true, disabledMessage: '' } };
+ const byMethod = { paymentlink: { enabled: true, disabledMessage: '' }, paystack: { enabled: true, disabledMessage: '' }, flutterwave: { enabled: true, disabledMessage: '' } };
  docs.forEach(d => { byMethod[d.method] = { enabled: d.enabled, disabledMessage: d.disabledMessage || '' }; });
  res.json(byMethod);
  } catch (e) { res.status(500).json({ error: 'Failed to load payment method settings' }); }
@@ -7658,7 +7532,7 @@ app.get('/api/admin/payment-methods', anyAdminAuth, async (req, res) => {
 app.post('/api/admin/payment-methods/:method', adminAuth, async (req, res) => {
  try {
  const { method } = req.params;
- if (!['paymentlink'].includes(method)) return res.status(400).json({ error: 'Invalid method' });
+ if (!['paymentlink', 'paystack', 'flutterwave'].includes(method)) return res.status(400).json({ error: 'Invalid method' });
  const { enabled, disabledMessage } = req.body;
  const update = { method, updatedAt: new Date() };
  if (enabled !== undefined) update.enabled = !!enabled;
@@ -7666,36 +7540,6 @@ app.post('/api/admin/payment-methods/:method', adminAuth, async (req, res) => {
  const doc = await PaymentMethodSetting.findOneAndUpdate({ method }, update, { upsert: true, new: true });
  res.json(doc);
  } catch (e) { res.status(500).json({ error: 'Failed to update payment method: ' + e.message }); }
-});
-app.get('/api/admin/payment-gateways', anyAdminAuth, async (req, res) => {
- try {
-  const states = await getGatewayStates();
-  const site = (process.env.SITE_URL || '').replace(/\/$/, '');
-  res.json({
-   ...states,
-   paystackUsdEnabled: String(process.env.PAYSTACK_ALLOW_USD || '').toLowerCase() === 'true',
-   webhookUrls: { flutterwave: `${site}/api/webhooks/flutterwave`, paystack: `${site}/api/webhooks/paystack` }
-  });
- } catch (e) { res.status(500).json({ error: 'Failed to load payment gateways' }); }
-});
-app.post('/api/admin/payment-gateways/:gateway', adminAuth, async (req, res) => {
- try {
-  const { gateway } = req.params;
-  if (!GATEWAY_LIST.includes(gateway)) return res.status(400).json({ error: 'Invalid gateway' });
-  const { enabled, disabledMessage } = req.body;
-  const update = { gateway, updatedAt: new Date() };
-  if (enabled !== undefined) {
-   if (enabled && !gatewayConfigured(gateway)) {
-    const keyName = gateway === 'paystack' ? 'PAYSTACK_SECRET_KEY' : 'FLW_V3_SECRET_KEY';
-    return res.status(400).json({ error: `${GATEWAY_LABELS[gateway]} cannot be switched on yet — ${keyName} is not set on the server.` });
-   }
-   update.enabled = !!enabled;
-  }
-  if (disabledMessage !== undefined) update.disabledMessage = String(disabledMessage).slice(0, 300);
-  await GatewaySetting.findOneAndUpdate({ gateway }, update, { upsert: true, new: true });
-  console.log(`[admin] payment gateway ${gateway} updated:`, JSON.stringify(update));
-  res.json({ ok: true, gateways: await getGatewayStates() });
- } catch (e) { res.status(500).json({ error: 'Failed to update payment gateway: ' + e.message }); }
 });
 app.get('/api/admin/giveaways', adminAuth, async (req, res) => {
  res.json(await Giveaway.find().sort({ createdAt: -1 }));
@@ -7819,51 +7663,50 @@ app.get('/admin.html', (req, res) => {
   res.set('Cache-Control', 'no-store, must-revalidate');
   (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 });
-app.get('/dashboard', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'dashboard.html'))));
-app.get('/deposit', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'deposit.html'))));
-app.get('/notifications', (req, res) => res.redirect(302, '/dashboard#dshAlertsCard'));
-app.get('/games', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'game.html'))));
-app.get('/giveaways', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'giveaway.html'))));
-app.get('/buy-number', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'buy-number.html'))));
-app.get('/buy-number-1', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'buy-number-grizzly.html'))));
-app.get('/buy-number-grizzly', (req, res) => res.redirect(301, '/buy-number-1'));
-app.get('/buy-number-2', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'buy-number-otp.html'))));
-app.get('/buy-number-otp', (req, res) => res.redirect(301, '/buy-number-2'));
+app.get('/dashboard', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'dashboard.html'))));
+app.get('/games', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'game.html'))));
+app.get('/giveaways', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'giveaway.html'))));
+app.get('/buy-number', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'buy-number-hub.html'))));
+app.get('/buy-number-app', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'buy-number.html'))));
 app.get('/virtual-account', (req, res) => res.redirect(301, '/deposit'));
-app.get('/active-number', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'active-number.html'))));
-app.get('/number-history', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'number-history.html'))));
-app.get('/order-status', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'order-status.html'))));
-app.get('/marketplace2', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace2.html'))));
-app.get('/marketplace3', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace3.html'))));
-app.get('/marketplace5', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace5.html'))));
-app.get('/marketplace4', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace4.html'))));
-app.get('/marketplace', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace.html'))));
-app.get('/tools', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'tools.html'))));
+app.get('/instant-numbers', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'instant-numbers.html'))));
+app.get(['/history/market-1', '/history/market-2', '/history/market-3', '/history/market-4', '/history/market-5', '/history/number-1', '/history/number-2'], (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'history-page.html'))));
+app.get('/number-history', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'number-history.html'))));
+app.get('/order-status', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'order-status.html'))));
+app.get('/marketplace2', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'marketplace2.html'))));
+app.get('/marketplace3', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'marketplace3.html'))));
+app.get('/marketplace4', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'marketplace4.html'))));
+app.get('/marketplace5', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'marketplace5.html'))));
+app.get('/marketplace', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'marketplace.html'))));
+app.get('/tools', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'tools.html'))));
 // Friendly category deep links — /logs/whatsapp, /marketplace/gmail, /tools/vpn.
 // These only serve the same HTML page; the category is applied client-side from the
 // URL, so no API contract changes and nothing existing breaks.
-app.get('/logs', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace.html'))));
-app.get('/logs/:category', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace.html'))));
-app.get('/marketplace/:category', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'marketplace.html'))));
-app.get('/tools/:category', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'tools.html'))));
-app.get('/referrals', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'referrals.html'))));
-app.get('/purchases', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'purchases.html'))));
-app.get('/boost', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'boost.html'))));
-app.get('/boost1', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'boost1.html'))));
-app.get('/boost2', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'boost2.html'))));
-app.get('/boost-history', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'boost-history.html'))));
-app.get('/boost-services', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'boost-services.html'))));
+app.get('/logs', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'marketplace.html'))));
+app.get('/logs/:category', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'marketplace.html'))));
+app.get('/marketplace/:category', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'marketplace.html'))));
+app.get('/tools/:category', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'tools.html'))));
+app.get('/referrals', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'referrals.html'))));
+app.get('/purchases', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'purchases.html'))));
+// /boost is the hub with two options: Boosting 1 (Nova) and Boosting 2 (Really Simple Social).
+const sendBoostPage = file => (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', file)));
+app.get('/boost', sendBoostPage('boost-hub.html'));
+app.get('/boost1', sendBoostPage('boost1.html'));
+app.get('/boost1/order', sendBoostPage('boost1-order.html'));
+app.get('/boost2', sendBoostPage('boost.html'));
+app.get('/boost-history', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'boost-history.html'))));
+app.get('/boost-services', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'boost-services.html'))));
 app.get('/all-services', (req, res) => res.redirect(301, '/boost-services'));
-app.get('/transactions', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'transactions.html'))));
-app.get('/support', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'support.html'))));
+app.get('/transactions', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'transactions.html'))));
+app.get('/support', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'support.html'))));
 // Legacy bill/VTU paths (airtime, data, cable TV, electricity, betting) were removed.
 // Kept as permanent redirects so old links and bookmarks land on the homepage.
-app.get(['/services', '/airtime', '/data', '/cable', '/electricity', '/betting', '/data-bill'], (req, res) => res.redirect(301, '/'));
-app.get('/settings', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'settings.html'))));
-app.get('/api-docs', (req, res) => res.redirect(302, '/dashboard'));
-app.get('/apidocs', (req, res) => res.redirect(302, '/dashboard'));
-app.get('/groups', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'groups.html'))));
-app.get('/messages', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'messages.html'))));
+app.get(['/services', '/electricity', '/betting', '/data-bill'], (req, res) => res.redirect(301, '/'));
+app.get('/settings', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'settings.html'))));
+app.get('/api-docs', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'apidocs.html'))));
+app.get('/apidocs', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'apidocs.html'))));
+app.get('/groups', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'groups.html'))));
+app.get('/messages', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'messages.html'))));
 app.get('/chat', (req, res) => res.redirect(301, '/groups'));
 // NOTE: the SPA catch-all used to live here, which silently shadowed EVERY route
 // registered further down this file (global payments, wallet, countries, the
@@ -7907,22 +7750,28 @@ function pushBalanceToUser(userId, newBalance, creditAmount = null) {
 // against Flutterwave so users do NOT stay stuck in pending and do NOT require admin manual acceptance.
 // Also marks failed/cancelled/refunded payments so they never credit the user balance.
 let _pendingCheckRunning = false;
-async function checkAllPendingFlutterwaveDeposits() {
+async function checkAllPendingDeposits() {
   if (_pendingCheckRunning) return;
   _pendingCheckRunning = true;
   try {
-    if (!process.env.FLW_V3_SECRET_KEY) return;
     const since48h = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
     // 1. Check all pending PaymentLinkDeposit records
     const pendingPLs = await PaymentLinkDeposit.find({
       status: 'pending',
-      gateway: { $ne: 'paystack' },
       createdAt: { $gte: since48h }
     }).limit(60);
 
     for (const dep of pendingPLs) {
       try {
+        if (isPaystackRef(dep.txRef)) {
+          if (!klsPaystack.isConfigured()) continue;
+          const ptx = await klsPaystack.verifyTransaction(dep.txRef);
+          if (await paystackTxMatchesDeposit(ptx, dep)) await creditPaystackDeposit(dep, ptx);
+          else if (ptx && ['failed', 'reversed'].includes(String(ptx.status).toLowerCase())) await PaymentLinkDeposit.updateOne({ _id: dep._id, status: 'pending' }, { $set: { status: 'failed', rawPayload: ptx } });
+          continue;
+        }
+        if (!process.env.FLW_V3_SECRET_KEY) continue;
         const verify = await flwAxios.get('/transactions/verify_by_reference', {
           params: { tx_ref: dep.txRef },
           timeout: 10000
@@ -7952,6 +7801,8 @@ async function checkAllPendingFlutterwaveDeposits() {
         }
       }
     }
+
+    if (!process.env.FLW_V3_SECRET_KEY) return;
 
     // 2. Check pending BankTransferDeposit records
     const pendingBTs = await BankTransferDeposit.find({
@@ -8084,46 +7935,10 @@ async function reconcileVADeposits() {
  _vaReconcileRunning = false;
  }
 }
-// Paystack pending deposits: verify each one with Paystack and credit / fail it — independent of
-// Flutterwave's keys, so a Paystack-only setup still self-heals when a webhook is missed.
-let _pendingPsCheckRunning = false;
-async function checkPendingPaystackDeposits() {
-  if (_pendingPsCheckRunning || !process.env.PAYSTACK_SECRET_KEY) return;
-  _pendingPsCheckRunning = true;
-  try {
-    const since48h = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    const pending = await PaymentLinkDeposit.find({ status: 'pending', gateway: 'paystack', createdAt: { $gte: since48h } }).limit(60);
-    for (const dep of pending) {
-      try {
-        const tx = await paystackVerify(dep.txRef);
-        if (paystackTxOk(tx, dep)) {
-          console.log(`[Auto-Reconcile] Pending Paystack deposit ${dep.txRef} succeeded! Crediting user...`);
-          await creditPaymentLinkDeposit(dep, tx);
-        } else if (tx && ['failed', 'reversed'].includes(String(tx.status || '').toLowerCase())) {
-          await PaymentLinkDeposit.updateOne({ _id: dep._id, status: 'pending' }, { $set: { status: 'failed', rawPayload: tx } });
-        } else if (Date.now() - new Date(dep.createdAt).getTime() > 24 * 60 * 60 * 1000 && (!tx || String(tx.status || '').toLowerCase() === 'abandoned')) {
-          await PaymentLinkDeposit.updateOne({ _id: dep._id, status: 'pending' }, { $set: { status: 'failed' } });
-        }
-      } catch (err) {
-        console.warn(`[Auto-Reconcile] Paystack check failed for ${dep.txRef}:`, err.response?.data?.message || err.message);
-      }
-    }
-  } catch (e) {
-    console.error('[Auto-Reconcile] checkPendingPaystackDeposits error:', e.message);
-  } finally {
-    _pendingPsCheckRunning = false;
-  }
-}
-async function checkAllPendingDeposits() {
-  await checkAllPendingFlutterwaveDeposits();
-  await checkPendingPaystackDeposits();
-}
 setTimeout(() => {
   reconcileVADeposits();
   checkAllPendingDeposits();
   setInterval(reconcileVADeposits, 60 * 1000);
-  reconcilePaystackVADeposits();
-  setInterval(reconcilePaystackVADeposits, 2 * 60 * 1000);
   setInterval(checkAllPendingDeposits, 30 * 1000);
 }, 5000);
 // ═══ MACHINE TRANSLATION (whole-site language switch) ═════════════════════
@@ -8179,7 +7994,7 @@ app.post('/api/i18n/translate', async (req, res) => {
 
 // ═══ GLOBAL PAYMENTS ══════════════════════════════════════════════════════
 // Worldwide country directory, multi-currency quoting and per-user locale. See docs/API.md for the full endpoint reference.
-const mysGlobalPay = require('./lib/global-payments')({
+const klsGlobalPay = require('./lib/global-payments')({
   app, express, mongoose, User, Transaction, auth,
   flwV4Axios, getOrCreateFlwCustomer, SystemError
 });
@@ -8198,13 +8013,6 @@ async function retryDepositConfirmation(source, id) {
     const dep = await PaymentLinkDeposit.findById(id);
     if (!dep) return { ok: false, message: 'Deposit not found' };
     if (dep.status === 'success') return { ok: true, credited: false, reference: dep.txRef, message: 'Already credited' };
-    if (dep.gateway === 'paystack') {
-      const psTx = await paystackVerify(dep.txRef);
-      if (!paystackTxOk(psTx, dep)) return { ok: true, credited: false, reference: dep.txRef, message: `Paystack reports status: ${psTx?.status || 'not found'}` };
-      await creditPaymentLinkDeposit(dep, psTx);
-      const freshPs = await PaymentLinkDeposit.findById(id).lean();
-      return { ok: true, credited: freshPs.status === 'success', creditNgn: dep.creditAmount, reference: dep.txRef, message: 'Confirmation re-run against Paystack' };
-    }
     const verify = await flwAxios.get('/transactions/verify_by_reference', { params: { tx_ref: dep.txRef }, timeout: 15000 });
     const tx = verify.data?.data;
     if (!tx || tx.status !== 'successful') return { ok: true, credited: false, reference: dep.txRef, message: `Flutterwave reports status: ${tx?.status || 'not found'}` };
@@ -8232,15 +8040,6 @@ async function retryDepositConfirmation(source, id) {
     const dep = await VirtualAccountDeposit.findById(id);
     if (!dep) return { ok: false, message: 'Deposit not found' };
     if (dep.status === 'success') return { ok: true, credited: false, reference: dep.flwRef, message: 'Already credited' };
-    if (dep.gateway === 'paystack') {
-      const psOwner = await User.findById(dep.userId);
-      if (!psOwner) return { ok: false, message: 'Owner account no longer exists' };
-      const psVtx = await paystackVerify(String(dep.flwRef).replace(/^PSK-/, ''));
-      if (!psVtx) return { ok: true, credited: false, reference: dep.flwRef, message: 'Paystack has no record of this payment' };
-      await handlePaystackVaCredit(psOwner, psVtx);
-      const psFresh = await VirtualAccountDeposit.findById(id).lean();
-      return { ok: true, credited: psFresh.status === 'success', creditNgn: psFresh.creditAmount, reference: dep.flwRef, message: 'Paystack virtual account credit re-run' };
-    }
     const user = await User.findById(dep.userId);
     if (!user) return { ok: false, message: 'Owner account no longer exists' };
     await handleVaWebhookCredit(user, dep.rawPayload || { flw_ref: dep.flwRef, id: dep.flwTxId, amount: dep.amount, currency: 'NGN', status: 'successful' });
@@ -8251,34 +8050,34 @@ async function retryDepositConfirmation(source, id) {
   return { ok: false, message: 'Unknown deposit source' };
 }
 
-mysPlatform = require('./lib/platform')({
+klsPlatform = require('./lib/platform')({
   app, express, mongoose, auth, adminAuth, anyAdminAuth,
   User, Transaction, SystemError,
   VirtualAccountDeposit, PaymentLinkDeposit, BankTransferDeposit,
   retryDeposit: retryDepositConfirmation,
 });
-mysGlobalPay.setPlatform(mysPlatform);
+klsGlobalPay.setPlatform(klsPlatform);
 
 // ═══ ENGAGEMENT + ACCOUNT SECURITY ════════════════════════════════════════
 // Password reset by emailed code, win-back emails for idle customers, daily
 // and the logged-in device manager. See lib/engagement.js.
-mysEngagement = require('./lib/engagement')({
+klsEngagement = require('./lib/engagement')({
   app, mongoose, User, Transaction, auth
 });
 
 // Email delivery dashboard, welcome emails, admin campaign controls and the
 // referral reward that pays both sides on the new customer's first spend.
-mysCampaigns = require('./lib/campaigns')({
-  app, mongoose, User, Transaction, auth, anyAdminAuth, engagement: mysEngagement, AdminAccount
+klsCampaigns = require('./lib/campaigns')({
+  app, mongoose, User, Transaction, auth, anyAdminAuth, engagement: klsEngagement, AdminAccount
 });
 
 // ═══ SOCIAL MEDIA BOOSTING ════════════════════════════════════════════════
 // Likes, followers and views resold through the Really Simple Social panel.
 // Everything is namespaced under /api/boost + /api/admin/boost and can be
 // switched off from the admin panel without touching any other feature.
-let mysBoost = null;
+let klsBoost = null;
 try {
-  mysBoost = require('./lib/boost')({
+  klsBoost = require('./lib/boost')({
     app, mongoose, User, Transaction, auth, anyAdminAuth, SystemError, Announcement,
     // Unlocks the public developer endpoints /api/v1/boost/* (X-API-Key + X-API-Secret).
     apiKeyAuth
@@ -8286,7 +8085,7 @@ try {
 } catch (boostErr) {
   console.error('[boost] module failed to load:', boostErr.message);
 }
-// Boosting 1 = Vinasmm (lib/boost1.js, routes /api/boost1 + /api/admin/boost1).
+// Boosting 1 = NovaSolution (lib/boost1.js, routes /api/boost1 + /api/admin/boost1).
 // Boosting 2 = Really Simple Social (lib/boost.js, routes /api/boost + /api/admin/boost).
 try {
   require('./lib/boost1')({ app, mongoose, User, Transaction, auth, anyAdminAuth });
@@ -8300,16 +8099,20 @@ try {
 } catch (paErr) {
   console.error('[price-adjust] module failed to load:', paErr.message);
 }
-// Airtime / Data / Cable TV (VTUGATE) - lib/vtu.js
+// Buy Number 2 + Temp Email + Rentals (SMS-COOL API) - lib/otp-suite.js
 try {
-  require('./lib/vtu')({ app, mongoose, User, Transaction, auth, anyAdminAuth });
-} catch (vtuErr) {
-  console.error('[vtu] module failed to load:', vtuErr.message);
+  require('./lib/otp-suite')(app, { mongoose, User, Transaction, auth, anyAdminAuth });
+  // Airtime / Data / Cable TV (VTUGATE) - lib/vtu.js
+  try {
+    require('./lib/vtu')({ app, mongoose, User, Transaction, auth, anyAdminAuth });
+  } catch (vtuErr) {
+    console.error('[vtu] module failed to load:', vtuErr.message);
+  }
+  app.get('/vtu', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'vtu.html'))));
+  app.get(['/airtime', '/data', '/cable'], (req, res) => res.redirect(301, '/vtu'));
+} catch (otpErr) {
+  console.error('[otp-suite] module failed to load:', otpErr.message);
 }
-app.get('/vtu', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'vtu.html'))));
-app.get(['/airtime', '/data', '/cable'], (req, res) => res.redirect(301, '/vtu'));
-// Buy-page notice banner (admin editable) - lib/buy-notice.js
-try { require('./lib/buy-notice').register(app, { mongoose, anyAdminAuth }); } catch (e) { console.error('[buy-notice] failed:', e.message); }
 
 // ── Restock alerts ───────────────────────────────────────────────────────────
 // Watches SMS server stock, the boost catalogue and every log/tool category.
@@ -8345,307 +8148,26 @@ app.post('/api/admin/restock-announce', anyAdminAuth, async (req, res) => {
 });
 
 
-// Working Pics + admin order search (lib/extras.js). Tutorials are served by lib/tutorials.js.
-try {
-  require('./lib/extras')({ app, mongoose, auth, adminAuth, upload, fileUrl, makeStorage, multer, User, Transaction });
-} catch (extrasErr) { console.error('[extras] failed to load:', extrasErr.message); }
+// Tutorials + Working Pics — must be mounted BEFORE the 404/SPA fallback below, or every
+// /api/admin/working-pics call answers "Unknown API endpoint".
+require('./lib/extras')({ app, mongoose, auth, adminAuth, upload, fileUrl, makeStorage, multer, User, Transaction });
 
-// Instant SMS numbers (lib/instant-sms.js, lib/instant-routes.js) + admin control (lib/instant-settings.js)
-try {
-  const { mountInstant, mountInstantWebhook } = require('./lib/instant-routes');
-  const instantSettings = require('./lib/instant-settings').register(app, { mongoose, anyAdminAuth, applyMarkup: applyNumberMarkup });
-  mountInstant(app, { auth, User, Transaction, getConfig: getNumberServerConfig, applyMarkup: applyNumberMarkup, getSettings: instantSettings.getSettings, priceFor: instantSettings.priceFor, creditReferralCommission, windowMs: NUMBER_RENTAL_WINDOW_MS, isoFor: (name) => { const clean = String(name || '').trim(); if (!clean) return ''; return COUNTRY_ALIASES[clean.toLowerCase()] || isoCountries.getAlpha2Code(clean, 'en') || ''; } });
-  mountInstantWebhook(app);
-} catch (instantErr) { console.error('[instant] failed to load:', instantErr.message); }
-try { require('./lib/history').mountHistory(app, { auth, User, NumberListing }); } catch (e) { console.error('[history] failed:', e.message); }
-app.get('/instant-numbers', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'instant-numbers.html'))));
-app.get(['/history/market-1', '/history/market-2', '/history/market-3', '/history/market-4', '/history/number-1', '/history/number-2'], (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'history-page.html'))));
+// ── Fast SMS numbers (lib/instant-sms.js, lib/instant-routes.js) ──
+const { mountInstant, mountInstantWebhook } = require('./lib/instant-routes');
+// Admin control for Fast SMS (on/off, own profit ladder, hide, price overrides) — see lib/instant-settings.js
+const instantSettings = require('./lib/instant-settings').register(app, { mongoose, anyAdminAuth, applyMarkup: applyNumberMarkup });
+mountInstant(app, { auth, User, Transaction, getConfig: getNumberServerConfig, applyMarkup: applyNumberMarkup, getSettings: instantSettings.getSettings, priceFor: instantSettings.priceFor, creditReferralCommission, windowMs: NUMBER_RENTAL_WINDOW_MS, isoFor: (name) => { const clean = String(name || '').trim(); if (!clean) return ''; return COUNTRY_ALIASES[clean.toLowerCase()] || isoCountries.getAlpha2Code(clean, 'en') || ''; } });
+mountInstantWebhook(app);
+require('./lib/history').mountHistory(app, { auth, User, NumberListing });
 
-// ── Admin: temporary customer passwords, paged users, per-user history, linked accounts ──
-// Admin sets a TEMPORARY password for a customer. It works alongside the customer's own
-// password until it expires. The customer's own password is not changed.
-app.put('/api/admin/users/:id/temp-password', adminAuth, async (req, res) => {
- try {
- const pw = String(req.body.password || '');
- const hours = Number(req.body.hours);
- if (pw.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
- if (pw.length > 100) return res.status(400).json({ error: 'Password is too long.' });
- if (![24, 168].includes(hours)) return res.status(400).json({ error: 'Choose 24 hours or 7 days.' });
- const hash = await bcrypt.hash(pw, 12);
- const expiresAt = new Date(Date.now() + hours * 3600 * 1000);
- const user = await User.findByIdAndUpdate(req.params.id, { $set: { tempPassword: { hash, expiresAt } } }, { new: true }).select('name email');
- if (!user) return res.status(404).json({ error: 'User not found' });
- console.log('[MYS] Admin set a temporary password for ' + user.email + ' until ' + expiresAt.toISOString());
- res.json({ success: true, message: 'Temporary password set for ' + user.name + ' until ' + expiresAt.toLocaleString('en-NG') + '. Their own password still works too.' });
- } catch (e) { res.status(400).json({ error: 'Could not set temporary password: ' + e.message }); }
-});
-app.put('/api/admin/users/:id/temp-password/clear', adminAuth, async (req, res) => {
- try {
- const user = await User.findByIdAndUpdate(req.params.id, { $unset: { tempPassword: 1 } }, { new: true }).select('name');
- if (!user) return res.status(404).json({ error: 'User not found' });
- res.json({ success: true, message: 'Temporary password removed for ' + user.name + '.' });
- } catch (e) { res.status(400).json({ error: 'Could not remove it: ' + e.message }); }
-});
-// ══════════════════════ ADMIN USERS — paged list, one user, linked accounts ══════════════════════
-// Paged so the admin page never loads every user at once.
-app.get('/api/admin/users/page', adminAuth, async (req, res) => {
- try {
- const size = Math.min(50, Math.max(5, Number(req.query.size) || 30));
- const page = Math.max(1, Number(req.query.page) || 1);
- const search = String(req.query.search || '').trim().slice(0, 100);
- let filter = {};
- if (search) {
- const rx = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
- filter = { $or: [{ name: rx }, { email: rx }, { contactPhone: rx }, { gameId: rx }, { 'virtualAccount.accountNumber': rx }] };
- }
- const [total, users] = await Promise.all([
- User.countDocuments(filter),
- User.find(filter).select('name email contactPhone gameId balance restricted restrictedReason createdAt lastActiveAt')
- .sort({ createdAt: -1 }).skip((page - 1) * size).limit(size).lean()
- ]);
- res.set('Cache-Control', 'no-store');
- res.json({ users, total, page, size, pages: Math.max(1, Math.ceil(total / size)) });
- } catch (e) { res.status(500).json({ error: 'Could not load users.' }); }
-});
-app.get('/api/admin/users/:id/full', adminAuth, async (req, res) => {
- try {
- const u = await User.findById(req.params.id).select('-password -apiSecret -tempPassword.hash').lean();
- if (!u) return res.status(404).json({ error: 'User not found' });
- res.set('Cache-Control', 'no-store');
- res.json(u);
- } catch (e) { res.status(400).json({ error: 'Bad user id' }); }
-});
-// Everything one customer has done, in one list (boosting, numbers, temp email, rentals, airtime, wallet).
-app.get('/api/admin/users/:id/history', adminAuth, async (req, res) => {
- try {
- const uid = req.params.id;
- if (!mongoose.Types.ObjectId.isValid(uid)) return res.status(400).json({ error: 'Bad user id' });
- const oid = new mongoose.Types.ObjectId(uid);
- const rows = [];
- const grab = async (name, query, map) => {
- try {
- const M = mongoose.models[name];
- if (!M) return;
- const docs = await M.find(query).sort({ createdAt: -1 }).limit(100).lean();
- docs.forEach(d => rows.push(map(d)));
- } catch (e) { console.error('[admin history] ' + name + ':', e.message); }
- };
- await grab('BoostOrder', { userId: oid }, o => ({ when: o.createdAt, kind: 'Boosting', item: o.serviceName || '', detail: o.link || '', amount: o.price, status: o.status || '' }));
- await grab('NovaBoost1Order', { userId: oid }, o => ({ when: o.createdAt, kind: 'Boosting 1', item: o.itemName || '', detail: o.link || '', amount: o.sellTotal, status: o.status || '' }));
- await grab('SmsCoolOrder', { userId: oid }, o => ({ when: o.createdAt, kind: 'Number (SMS)', item: o.serviceName || '', detail: o.phoneNumber || '', amount: o.price, status: o.status || '' }));
- await grab('SmsCoolEmail', { userId: oid }, o => ({ when: o.createdAt, kind: 'Temp email', item: o.serviceName || '', detail: o.email || '', amount: o.price, status: o.status || '' }));
- await grab('SmsCoolRental', { userId: oid }, o => ({ when: o.createdAt, kind: 'Rental', item: o.serviceName || '', detail: o.phone || '', amount: o.price, status: o.status || '' }));
- await grab('VtuOrder', { userId: oid }, o => ({ when: o.createdAt, kind: 'Airtime & data', item: o.label || '', detail: o.target || '', amount: o.charged, status: o.status || '' }));
- await grab('NumberListing', { soldTo: oid }, o => ({ when: o.soldAt || o.createdAt, kind: 'Buy number', item: [o.server === 'server2' ? 'Buy Number 2' : 'Buy Number 1', o.provider, o.country].filter(Boolean).join(' · '), detail: [o.phoneNumber, o.code ? 'code ' + o.code : ''].filter(Boolean).join(' · '), amount: o.sellPrice, status: o.code ? 'delivered' : o.status || '' }));
- await grab('Transaction', { userId: oid }, t => ({ when: t.createdAt, kind: 'Wallet', item: t.type || '', detail: t.description || '', amount: t.amount, status: t.status || '' }));
- rows.sort((a, b) => new Date(b.when || 0) - new Date(a.when || 0));
- res.set('Cache-Control', 'no-store');
- res.json({ rows: rows.slice(0, 300) });
- } catch (e) { res.status(500).json({ error: 'Could not load history.' }); }
-});
-app.get('/api/admin/users/:id/linked', adminAuth, async (req, res) => {
- try {
- const u = await User.findById(req.params.id).select('signupIp signupFingerprint').lean();
- if (!u) return res.status(404).json({ error: 'User not found' });
- const or = [];
- if (u.signupIp) or.push({ signupIp: u.signupIp });
- if (u.signupFingerprint) or.push({ signupFingerprint: u.signupFingerprint });
- if (!or.length) return res.json([]);
- const rows = await User.find({ $or: or, _id: { $ne: u._id } }).select('name email restricted').limit(50).lean();
- res.set('Cache-Control', 'no-store');
- res.json(rows);
- } catch (e) { res.status(400).json({ error: 'Bad user id' }); }
-});
-// ══════════════════════ SUGGESTIONS ("Recommended for you") ══════════════════════
-// Ranked from real orders in the last 30 days. Admin can pin items or hide them.
-const SuggestionSetting = mongoose.models.SuggestionSetting || mongoose.model('SuggestionSetting', new mongoose.Schema({
-  _id: { type: String, default: 'main' },
-  pinned: [{ key: String, label: String, sub: String, href: String, slot: Number, mk: String, pid: String, price: Number, picture: String }],
-  hidden: [String],
-  platformMix: { facebook: { type: Number, default: 2 }, tiktok: { type: Number, default: 2 }, instagram: { type: Number, default: 2 } }
-}, { versionKey: false }));
-const DEFAULT_PLATFORM_MIX = { facebook: 2, tiktok: 2, instagram: 2 };
-async function buildSuggestionCandidates() {
-  const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
-  const out = [];
-  try {
-    const rows = await NumberListing.aggregate([
-      { $match: { soldTo: { $ne: null }, soldAt: { $gte: since } } },
-      { $group: { _id: '$server', n: { $sum: 1 }, p: { $min: '$sellPrice' } } }
-    ]);
-    rows.forEach(r => {
-      const srv = r._id === 'server2' ? 'server2' : 'server1';
-      out.push({ key: 'number:' + srv, label: srv === 'server2' ? 'Buy Number 2' : 'Buy Number 1',
-        sub: srv === 'server2' ? 'Any service, any country' : 'USA WhatsApp & more', href: '/buy-number?server=' + srv, count: r.n, price: r.p });
-    });
-  } catch (e) { console.error('[suggest] numbers failed:', e.message); }
-  try {
-    const BO = mongoose.models.BoostOrder;
-    if (BO) {
-      const rows = await BO.aggregate([
-        { $match: { createdAt: { $gte: since } } },
-        { $group: { _id: '$serviceName', n: { $sum: 1 }, p: { $min: '$price' } } },
-        { $sort: { n: -1 } }, { $limit: 5 }
-      ]);
-      rows.forEach(r => { if (r._id) out.push({ key: 'boost:' + r._id, label: String(r._id).slice(0, 60), sub: 'Social boosting', href: '/boost', count: r.n, price: r.p }); });
-    }
-  } catch (e) { console.error('[suggest] boost failed:', e.message); }
-  try {
-    const E = mongoose.models.SmsCoolEmail;
-    if (E) { const [a] = await E.aggregate([{ $match: { createdAt: { $gte: since } } }, { $group: { _id: null, n: { $sum: 1 }, p: { $min: '$price' } } }]); out.push({ key: 'email', label: 'Temp email', sub: 'Disposable inbox', href: '/temp-email', count: a ? a.n : 0, price: a ? a.p : undefined }); }
-  } catch (e) {}
-  try {
-    const R = mongoose.models.SmsCoolRental;
-    if (R) { const [a] = await R.aggregate([{ $match: { createdAt: { $gte: since } } }, { $group: { _id: null, n: { $sum: 1 }, p: { $min: '$price' } } }]); out.push({ key: 'rental', label: 'Rentals', sub: 'Rent a number for a while', href: '/rental', count: a ? a.n : 0, price: a ? a.p : undefined }); }
-  } catch (e) {}
-  return out.sort((a, b) => b.count - a.count);
-}
-async function getSuggestions() {
-  const setting = (await SuggestionSetting.findById('main').lean()) || { pinned: [], hidden: [] };
-  const hidden = new Set(setting.hidden || []);
-  const pinned = (setting.pinned || []).filter(p => !hidden.has(p.key));
-  const mix = { ...DEFAULT_PLATFORM_MIX, ...(setting.platformMix || {}) };
-  return { pinned, platformMix: mix, hidden: setting.hidden || [], candidates: null };
-}
-app.get('/api/suggestions', async (req, res) => {
-  try {
-    const d = await getSuggestions();
-    res.set('Cache-Control', 'public, max-age=60');
-    // The site builds the Facebook / TikTok / Instagram cards from the live marketplace listings.
-    res.json({ pinned: d.pinned.slice(0, 6).map(({ key, label, sub, href, slot, mk, pid, price, picture }) => ({ key, label, sub, href, slot, mk, pid, price, picture })), platformMix: d.platformMix });
-  } catch (e) { res.json({ pinned: [], platformMix: DEFAULT_PLATFORM_MIX }); }
-});
-app.get('/api/admin/suggestions', adminAuth, async (req, res) => {
-  try {
-    const d = await getSuggestions();
-    res.set('Cache-Control', 'no-store');
-    res.json({ candidates: await buildSuggestionCandidates(), pinned: d.pinned, hidden: d.hidden, platformMix: d.platformMix });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-app.put('/api/admin/suggestions', adminAuth, async (req, res) => {
-  try {
-    // Each pinned item can sit in a chosen card slot (0-5 = card 1-6). One item per slot; the last one sent wins.
-    const okPic = (u) => { u = String(u || ''); return u.length <= 500 && /^(https?:\/\/|\/)/i.test(u) ? u : ''; };
-    const bySlot = new Map(); const noSlot = [];
-    (Array.isArray(req.body.pinned) ? req.body.pinned : []).forEach(p => {
-      const item = { key: String(p.key || '').slice(0, 120), label: String(p.label || '').slice(0, 80), sub: String(p.sub || '').slice(0, 80), href: String(p.href || '').slice(0, 300) };
-      if (!item.key || !item.label || !item.href.startsWith('/')) return;
-      if (['m1', 'm2', 'm3', 'm4'].includes(p.mk)) { item.mk = p.mk; item.pid = String(p.pid || '').slice(0, 80); }
-      const pr = Number(p.price); if (Number.isFinite(pr) && pr > 0) item.price = pr;
-      const pic = okPic(p.picture); if (pic) item.picture = pic;
-      const sl = Number(p.slot);
-      if (Number.isInteger(sl) && sl >= 0 && sl <= 5) { item.slot = sl; bySlot.set(sl, item); } else noSlot.push(item);
-    });
-    const pinned = [...bySlot.entries()].sort((a, b) => a[0] - b[0]).map(e => e[1]);
-    for (const it of noSlot) { if (pinned.length >= 6) break; let f = 0; while (bySlot.has(f)) f++; it.slot = f; bySlot.set(f, it); pinned.push(it); }
-    pinned.sort((a, b) => a.slot - b.slot);
-    const hidden = (Array.isArray(req.body.hidden) ? req.body.hidden : []).map(String).slice(0, 50);
-    const set = { pinned, hidden };
-    if (req.body.platformMix !== undefined) {
-      const m = req.body.platformMix || {};
-      const mix = {};
-      for (const k of ['facebook', 'tiktok', 'instagram']) {
-        const n = Number(m[k]);
-        if (!Number.isInteger(n) || n < 0 || n > 6) return res.status(400).json({ error: 'Each platform count must be a whole number from 0 to 6.' });
-        mix[k] = n;
-      }
-      if (mix.facebook + mix.tiktok + mix.instagram !== 6) return res.status(400).json({ error: 'Facebook + TikTok + Instagram must add up to exactly 6.' });
-      set.platformMix = mix;
-    }
-    await SuggestionSetting.updateOne({ _id: 'main' }, { $set: set }, { upsert: true });
-    res.json({ success: true, message: 'Suggestions saved' });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ── Service logo images for the number pages (never a broken image) ──
-// Extra words a customer may type for a service, so "facebook" finds it even if the provider
-// labels it differently (e.g. just "fb").
-const SERVICE_SEARCH_EXTRA = {
-  facebook: ['facebook', 'fb', 'meta', 'messenger'], instagram: ['instagram', 'ig', 'insta', 'threads'],
-  whatsapp: ['whatsapp', 'wa', 'whatsapp business'], telegram: ['telegram', 'tg'],
-  google: ['google', 'gmail', 'youtube', 'google voice'], gmail: ['gmail', 'google'], youtube: ['youtube', 'google'],
-  x: ['twitter', 'x', 'tweet'], tiktok: ['tiktok', 'tik tok', 'douyin'], microsoftoutlook: ['outlook', 'hotmail', 'microsoft'],
-  microsoft: ['microsoft', 'outlook', 'azure'], apple: ['apple', 'icloud'], snapchat: ['snapchat', 'snap'],
-  discord: ['discord'], linkedin: ['linkedin'], amazon: ['amazon', 'aws'], paypal: ['paypal'], tencentqq: ['qq'],
-  wechat: ['wechat', 'weixin'], binance: ['binance', 'bnb']
-};
-function serviceKeywords(code, name) {
-  const set = new Set();
-  const slug = serviceBrandSlug(code, name);
-  if (slug) { set.add(slug); (SERVICE_SEARCH_EXTRA[slug] || []).forEach(k => set.add(k)); }
-  return [...set];
-}
-
-// ---- /api/numbers/icon : serves a logo image for any service, never a broken one ----
-const _iconCache = new Map();
-const _iconPending = new Map();
-let _iconOut = { n: 0, t: 0 };
-function iconOutboundOk() { const now = Date.now(); if (now - _iconOut.t > 60000) _iconOut = { n: 0, t: now }; return ++_iconOut.n <= 200; }
-function iconBadgeSvg(name) {
-  const words = [...String(name || '').matchAll(/[\p{L}\p{N}]+/gu)].map(m => m[0]);
-  const initials = ((words[0] || '•')[0] + (words[1] ? words[1][0] : '')).toUpperCase();
-  let h = 0; for (const ch of String(name || '').toLowerCase()) h = (h * 31 + ch.codePointAt(0)) % 360;
-  const size = initials.length > 1 ? 19 : 24;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${h},68%,56%)"/><stop offset="1" stop-color="hsl(${(h + 40) % 360},62%,40%)"/></linearGradient></defs><rect width="48" height="48" rx="11" fill="url(#g)"/><text x="24" y="24" text-anchor="middle" dominant-baseline="central" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="${size}" fill="#fff">${initials}</text></svg>`;
-}
-async function buildServiceIcon(slug, domain, name) {
-  if (slug && iconOutboundOk()) {
-    try {
-      const r = await axios.get('https://cdn.simpleicons.org/' + slug, { responseType: 'text', timeout: 4000, validateStatus: st => st === 200 });
-      const t = String(r.data || '');
-      if (/^\s*<svg/i.test(t) && !/<script|onload|javascript:/i.test(t)) {
-        const inner = t.replace(/^[\s\S]*?<svg[^>]*>/i, '').replace(/<\/svg>\s*$/i, '').replace(/<title>[\s\S]*?<\/title>/i, '');
-        return { real: true, type: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="11" fill="#fff"/><g transform="translate(9 9) scale(1.25)">${inner}</g></svg>` };
-      }
-    } catch (e) { /* no mark for this brand — try its website icon */ }
-  }
-  if (domain && iconOutboundOk()) {
-    try {
-      const r = await axios.get('https://www.google.com/s2/favicons', { params: { domain, sz: 128 }, responseType: 'arraybuffer', timeout: 4000, validateStatus: st => st === 200 });
-      const type = String(r.headers['content-type'] || '');
-      if (type.startsWith('image/') && r.data && r.data.length > 100) return { real: true, type, body: Buffer.from(r.data) };
-    } catch (e) { /* fall through to the badge */ }
-  }
-  return { real: false, type: 'image/svg+xml', body: iconBadgeSvg(name) };
-}
-app.get('/api/numbers/icon', async (req, res) => {
-  const s = String(req.query.s || ''), d = String(req.query.d || '');
-  const slug = /^[a-z0-9]{1,40}$/.test(s) ? s : '';
-  const domain = /^[a-z0-9-]+(\.[a-z0-9-]+){1,3}$/.test(d) ? d : '';
-  const name = String(req.query.n || '').replace(/[^\p{L}\p{N} ]/gu, '').trim().slice(0, 40);
-  const key = slug + '|' + domain + '|' + name.toLowerCase();
-  try {
-    let e = _iconCache.get(key);
-    if (!e) {
-      if (!_iconPending.has(key)) _iconPending.set(key, buildServiceIcon(slug, domain, name).finally(() => _iconPending.delete(key)));
-      e = await _iconPending.get(key);
-      if (e.real || !(slug || domain)) { if (_iconCache.size > 4000) _iconCache.clear(); _iconCache.set(key, e); }
-    }
-    res.set({ 'Content-Type': e.type, 'Cache-Control': e.real ? 'public, max-age=604800' : 'public, max-age=3600', 'X-Content-Type-Options': 'nosniff' });
-    res.send(e.body);
-  } catch (err) {
-    res.set({ 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=300' });
-    res.send(iconBadgeSvg(name));
-  }
-});
 // ═══ 404 + SPA FALLBACK — MUST STAY LAST ══════════════════════════════════
 // Anything under /api that reached this point genuinely does not exist, so it
 // answers with JSON. Registering the HTML fallback ahead of an API route makes
 // that route return a web page to fetch(), which is impossible to debug from
 // the browser — keep this block at the very end of the file.
-// MIZZY-UPGRADE late: logo library, Buy Number 3 admin, Marketplace 4, Boost 2 order page
-try {
-  require('./lib/mizzy-upgrade').late(app, { mongoose, anyAdminAuth });
-} catch (mizzyErr) { console.error('[mizzy-upgrade] failed to load:', mizzyErr.message); }
-try {
-  require('./lib/market4').register(app, { mongoose, User, Transaction, auth, anyAdminAuth, sendAdminEmail });
-} catch (m4Err) { console.error('[market4] failed to load:', m4Err.message); }
-app.get('/boost1/order', (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', 'boost1-order.html'))));
 app.all('/api/*', (req, res) => {
   res.status(404).json({ error: `Unknown API endpoint: ${req.method} ${req.path}` });
 });
-// MYS-UPDATE-4
-app.get(['/tutorials', '/help', '/about'], (req, res) => res.sendFile(path.join(__dirname, 'public', req.path.replace(/^\//, '') + '.html')));
 app.get('*', (req, res) => {
   // Always hand back the freshly built HTML — no stale home page from a cache.
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -8655,4 +8177,5 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(` MYS on :${PORT}`));
+
+app.listen(PORT, () => console.log(` KLS on :${PORT}`));
