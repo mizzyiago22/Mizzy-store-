@@ -5,6 +5,7 @@
   var cart = {};            // productId -> qty
   var refs = {};            // productId -> idempotency ref for the current checkout
   var busy = false;
+  var catLogo = {};         // category name -> logo url (from the logo library)
   var $ = function (id) { return document.getElementById(id); };
   var E = function (s) { return (typeof esc === 'function') ? esc(s) : String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
   var money = function (n) { return (typeof P === 'function') ? P(n) : '₦' + Number(n || 0).toLocaleString(); };
@@ -41,6 +42,7 @@
         '.m5-logo-ph{display:flex;align-items:center;justify-content:center;background:var(--gold,#0b7cf5);color:#fff;font-weight:900;font-size:18px;border:0}' +
         '.m5-head{display:flex;gap:10px;align-items:center;min-width:0}.m5-head .m4-card-head{flex:1;min-width:0}' +
         '.m4-cat-ico.m5-ico-img{padding:0;overflow:hidden;background:#fff;border:1px solid var(--border2,#dbe6f6)}.m4-cat-ico.m5-ico-img img{width:100%;height:100%;object-fit:cover}' +
+        '.m4-card .m4-qty input{color:var(--t1,#fff)!important;-webkit-text-fill-color:var(--t1,#fff)!important;background:var(--card,rgba(255,255,255,.06))!important;opacity:1!important;font-weight:800;font-size:16px;text-align:center;width:54px;min-width:54px}' +
         '.m5-buy{flex:1;min-height:40px;border:0;border-radius:10px;font-weight:800;font-size:14px;color:#fff;background:linear-gradient(135deg,#155EEF,#38BDF8);cursor:pointer}' +
         '.m5-buy:active{transform:scale(.98)}.m5-buy[disabled]{opacity:.5;cursor:not-allowed}';
       document.head.appendChild(st);
@@ -56,6 +58,7 @@
       if (e.maintenance) { grid.innerHTML = '<div class="no-items" style="grid-column:1/-1;padding:50px 20px"><div style="font-size:40px">🛠️</div><h3>Under maintenance</h3><p>' + E(e.message) + '</p></div>'; return; }
       grid.innerHTML = '<div class="no-items" style="grid-column:1/-1">' + E(e.message) + '<br/><button class="btn-secondary" style="margin-top:10px" onclick="initMarket5()">Retry</button></div>'; return;
     }
+    try { var cl = await req('/api/market5/categories', 'GET', null, false); (cl || []).forEach(function (c) { var l = c.logo || c.picture; if (l) catLogo[c.name] = l; }); } catch (e) {}
     render();
   }
 
@@ -79,10 +82,10 @@
     if (view === 'cats') {
       title.textContent = 'Choose a category';
       var map = {};
-      items.forEach(function (i) { var g = groupOf(i); (map[g] = map[g] || { n: 0, stock: 0, pic: '' }); map[g].n++; if (!map[g].pic && i.picture) map[g].pic = i.picture; if (i.inStock) map[g].stock += i.stock; });
+      items.forEach(function (i) { var g = groupOf(i); (map[g] = map[g] || { n: 0, stock: 0, pic: '' }); map[g].n++; if (i.picture) { if (map[g].pic === '') map[g].pic = i.picture; else if (map[g].pic !== i.picture) map[g].pic = null; } else { map[g].pic = null; } if (i.inStock) map[g].stock += i.stock; });
       var names = Object.keys(map).sort(function (a, b) { return a.localeCompare(b); });
       grid.innerHTML = names.length ? names.map(function (g) {
-        return '<button type="button" class="m4-cat" data-cat="' + E(g) + '">' + (map[g].pic ? '<span class="m4-cat-ico m5-ico-img"><img src="' + E(map[g].pic) + '" alt="" loading="lazy" onerror="this.parentNode.className=\'m4-cat-ico\';this.parentNode.textContent=\'' + E(g.charAt(0).toUpperCase()) + '\'"/></span>' : '<span class="m4-cat-ico">' + E(g.charAt(0).toUpperCase()) + '</span>') + '<span class="m4-cat-name">' + E(g) + '</span><span class="m4-cat-n">' + map[g].n + ' product' + (map[g].n === 1 ? '' : 's') + '</span></button>';
+        return '<button type="button" class="m4-cat" data-cat="' + E(g) + '">' + ((catLogo[g] || map[g].pic) ? '<span class="m4-cat-ico m5-ico-img"><img src="' + E(catLogo[g] || map[g].pic) + '" alt="" loading="lazy" onerror="this.parentNode.className=\'m4-cat-ico\';this.parentNode.textContent=\'' + E(g.charAt(0).toUpperCase()) + '\'"/></span>' : '<span class="m4-cat-ico">' + E(g.charAt(0).toUpperCase()) + '</span>') + '<span class="m4-cat-name">' + E(g) + '</span><span class="m4-cat-n">' + map[g].n + ' product' + (map[g].n === 1 ? '' : 's') + '</span></button>';
       }).join('') : '<div class="no-items" style="grid-column:1/-1">No products available yet</div>';
       Array.prototype.forEach.call(grid.querySelectorAll('.m4-cat'), function (b) { b.onclick = function () { curCat = b.getAttribute('data-cat'); view = 'cat'; render(); window.scrollTo(0, 0); }; });
     } else {
