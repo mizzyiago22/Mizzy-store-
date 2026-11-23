@@ -1129,7 +1129,8 @@ function applyNumberMarkup(costNgn, cfg) {
 
 function grizzlyPriceNgn(costUsd, cfg) {
   const costNgn = Number(costUsd || 0) * (Number(cfg.usdToNgn) || 0);
-  return { costNgn: Math.round(costNgn), price: applyNumberMarkup(Math.round(costNgn), cfg) };
+  let PAx; try { PAx = require('./lib/price-adjust'); } catch (e) { PAx = { apply: (_k, v) => v }; }
+  return { costNgn: Math.round(costNgn), price: PAx.apply('bn1', applyNumberMarkup(Math.round(costNgn), cfg), { floor: Math.round(costNgn) }) };
 }
 
 // ── Emoji helpers so the buy page reads like an app, not a database dump ──────
