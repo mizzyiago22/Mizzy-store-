@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Instant Numbers · Admin</title>
+<title>Fast SMS · Admin</title>
 <style>
 :root{--bg:#0b1020;--card:#121a2e;--line:#22304a;--txt:#e6ecf7;--mut:#8b9ab5;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--amber:#f59e0b}
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4f6fb;--card:#fff;--line:#dfe5f0;--txt:#0f172a;--mut:#64748b}}
@@ -29,11 +29,9 @@ button.danger{background:transparent;color:var(--red);border:1px solid var(--red
 .gate input{width:100%;margin:10px 0}
 #app{display:none}
 </style>
-<link rel="stylesheet" href="/admin-embed.css?v=1"/>
-<script src="/admin-embed.js?v=2"></script>
 </head>
 <body>
-<div class="top"><h1>Instant Numbers — settings</h1><button class="ghost" id="lockBtn">Lock</button></div>
+<div class="top"><h1>Fast SMS — settings</h1><button class="ghost" id="lockBtn">Lock</button></div>
 
 <div id="gate" class="gate card">
   <h2>Admin passcode</h2>
@@ -45,13 +43,13 @@ button.danger{background:transparent;color:var(--red);border:1px solid var(--red
 <div id="app" class="wrap">
   <div class="card">
     <h2>Status</h2>
-    <p class="hint">When off, customers see "Instant Numbers is closed" and nothing can be bought.</p>
-    <label class="row"><input type="checkbox" id="enabled"/> Instant Numbers is open to customers</label>
+    <p class="hint">When off, customers see "Fast SMS is closed" and nothing can be bought.</p>
+    <label class="row"><input type="checkbox" id="enabled"/> Fast SMS is open to customers</label>
   </div>
 
   <div class="card">
     <h2>Markup (how much you add to the cost)</h2>
-    <p class="hint">Pick one general markup for every Instant number. Prices are rounded up to the nearest ₦ set below.</p>
+    <p class="hint">Pick one general markup for every Fast SMS number. Prices are rounded up to the nearest ₦ set below.</p>
     <div class="row"><select id="mMode">
       <option value="tiers">Profit ladder (different profit per price range)</option>
       <option value="fixed">Fixed amount: cost + ₦ (e.g. +500)</option>
@@ -116,7 +114,7 @@ button.danger{background:transparent;color:var(--red);border:1px solid var(--red
   }
 
   function showApp() { $('gate').style.display = 'none'; $('app').style.display = 'block'; load(); }
-  function showGate(msg){ if(window.__admExpired) window.__admExpired(msg); } function __unusedGate(msg) { $('app').style.display = 'none'; $('gate').style.display = 'block'; $('gateMsg').textContent = msg || ''; }
+  function showGate(msg) { $('app').style.display = 'none'; $('gate').style.display = 'block'; $('gateMsg').textContent = msg || ''; }
 
   function load() {
     Promise.all([api('/api/admin/instant-settings'), api('/api/admin/instant-catalog')]).then(function (r) {
