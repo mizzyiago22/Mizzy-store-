@@ -429,7 +429,7 @@ tr:hover td{background:rgba(255,255,255,.035)}
       <div class="sec owner-only" style="border-color:var(--gold)">
         <div class="sec-title">Marketplace &amp; Server 2 settings</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button type="button" class="btn-primary" onclick="switchTab('logs2')">Marketplace 2 (Rakib Socials) — switches &amp; prices</button>
+          <button type="button" class="btn-primary" onclick="switchTab('logs2')">Marketplace 2 (Sameeha Social Hub) — switches &amp; prices</button>
           <button type="button" class="btn-primary" onclick="switchTab('logs3')">Marketplace 3 (Sujan Department) — switch &amp; prices</button>
           <button type="button" class="btn-primary" onclick="switchTab('numbers2')">Server 2 — low SMS rate pools</button>
           <button type="button" class="btn-primary" onclick="showProviderReadiness()">Provider connections health</button>
@@ -604,11 +604,11 @@ tr:hover td{background:rgba(255,255,255,.035)}
         <div class="form-row">
           <div class="fg"><label>Marketplace (manual logs)</label>
             <button class="btn-primary" type="button" id="m2Btn1" onclick="m2Toggle('market1Enabled')" style="width:100%">…</button></div>
-          <div class="fg"><label>Marketplace 2 (Rakib Socials)</label>
+          <div class="fg"><label>Marketplace 2 (Sameeha Social Hub)</label>
             <button class="btn-primary" type="button" id="m2Btn2" onclick="m2Toggle('market2Enabled')" style="width:100%">…</button></div>
         </div>
         <div class="form-row">
-          <div class="fg" style="flex:2"><label>Provider API URL</label><input type="url" id="m2BaseUrl" placeholder="https://rakibsocials.com/api/v1"/></div>
+          <div class="fg" style="flex:2"><label>Provider API URL</label><input type="url" id="m2BaseUrl" placeholder="https://sameehasocialhub.com/api/v1"/></div>
           <div class="fg" style="flex:2"><label>Provider API key (leave blank to keep current)</label><input type="password" id="m2ApiKey" autocomplete="new-password" placeholder="Enter API key securely"/></div>
         </div>
         <div class="form-row">
@@ -626,10 +626,10 @@ tr:hover td{background:rgba(255,255,255,.035)}
         <div class="info-box" id="m2Balance">Loading supplier balance…</div>
       </div>
       <div class="sec">
-        <div class="sec-title"><svg class="icon i-package" aria-hidden="true"><use href="#i-package"/></svg> Marketplace 2 — RakibSocials products</div>
+        <div class="sec-title"><svg class="icon i-package" aria-hidden="true"><use href="#i-package"/></svg> Marketplace 2 — Sameeha Social Hub products</div>
         <div class="info-box"><svg class="icon i-pin" aria-hidden="true"><use href="#i-pin"/></svg>
           Every product from the API shows here, including new ones. Synced products appear automatically using the default markup until you set a custom price. Disable a product to hide it.
-          "API cost" is what RakibSocials charges you; profit = your price − API cost.</div>
+          "API cost" is what Sameeha Social Hub charges you; profit = your price − API cost.</div>
         <div class="form-row">
           <div class="fg"><input type="text" id="m2Search" placeholder="Search products…" oninput="m2Render()"/></div>
           <div class="fg"><select id="m2Filter" onchange="m2Render()"><option value="">All products</option><option value="priced">Live (priced)</option><option value="unpriced">Not priced yet</option><option value="instock">In stock</option></select></div>
@@ -1755,6 +1755,7 @@ tr:hover td{background:rgba(255,255,255,.035)}
 <div id="tab-custhistory" class="tab-panel"><iframe class="adm-embed" src="/admin-history.html" title="Order history"></iframe></div>
 <div id="tab-instantadm" class="tab-panel"><iframe class="adm-embed" src="/admin-instant.html" title="Instant Numbers"></iframe></div>
 <div id="tab-pricesadm" class="tab-panel"><iframe class="adm-embed" src="/admin-prices.html" title="Prices"></iframe></div>
+<div id="tab-market5adm" class="tab-panel"><iframe class="adm-embed" src="/admin-market5.html" title="Marketplace 5"></iframe></div>
 <div id="tab-custsugg" class="tab-panel"><iframe class="adm-embed" src="/admin-suggestions.html" title="Recommended items"></iframe></div>
     <div id="tab-orderlookup" class="tab-panel">
       <div class="sec">
@@ -2676,7 +2677,7 @@ const ADMIN_NAV = [
   ]},
   { group:'Marketplace settings', owner:true, items:[
     { tab:'logs2', icon:'i-plug', label:'Logs 2 (Marketplace 2)', owner:true, keywords:'marketplace manual switch prices stock' },
-    { tab:'logs3', icon:'i-plug', label:'Logs 3 (Marketplace 3)', owner:true, keywords:'rakib rakibsocials marketplace three switch prices stock orders' },
+    { tab:'logs3', icon:'i-plug', label:'Logs 3 (Marketplace 3)', owner:true, keywords:'sujan marketplace three switch prices stock orders' },
     { tab:'logs4', icon:'i-plug', label:'Logs 4 (Marketplace 4)', owner:true, keywords:'marketplace four 4 sync switch prices stock orders' },
     { tab:'kinglogos', icon:'i-zap', label:'Product logos', owner:true, keywords:'logo logos picture image facebook icon brand' },
     { tab:'numbers2', icon:'i-smartphone', label:'Server 2 — low SMS rate pools', owner:true },
@@ -2684,6 +2685,7 @@ const ADMIN_NAV = [
     { tab:'boost1adm', icon:'i-rocket', label:'Boosting 1 (Vinasmm) services & prices', owner:true, accent:'accent', keywords:'boost 1 vinasmm vina services prices markup sync' },
     { tab:'instantadm', icon:'i-smartphone', label:'Fast SMS: prices & markup', owner:true, accent:'accent', keywords:'instant numbers tiger markup percent fixed price profit hide countries services' },
     { tab:'pricesadm', icon:'i-smartphone', label:'Prices: add / subtract on every service', owner:true, accent:'accent', keywords:'price prices adjust add minus subtract increase decrease marketplace rentals temp email buy number boosting percent naira' },
+    { tab:'market5adm', icon:'i-package', label:'Marketplace 5 (ExpressLogs): key, prices, orders', owner:true, accent:'accent', keywords:'marketplace five 5 expresslogs express logs api key price prices orders refund balance switch maintenance' },
     { tab:'vtuadm', icon:'i-smartphone', label:'Airtime, Data & Cable (VTU)', owner:true, accent:'accent' },
     { tab:'workingpics', icon:'i-gift', label:'Working pics', owner:true },
     { tab:'tutlib', icon:'i-video', label:'Tutorial library', owner:true, keywords:'tutorial tutorials video images login how to facebook tiktok customers watch' },
@@ -7147,7 +7149,7 @@ async function m2LoadConfig(){
     document.getElementById('m2Low').value=m2Cfg.lowBalanceNgn||0;
     document.getElementById('m2Email').value=m2Cfg.alertEmail||'';
     document.getElementById('m2Markup').value=(m2Cfg.defaultMarkupNgn===null||m2Cfg.defaultMarkupNgn===undefined)?'':m2Cfg.defaultMarkupNgn;
-    document.getElementById('m2BaseUrl').value=m2Cfg.baseUrl||'https://rakibsocials.com/api/v1';
+    document.getElementById('m2BaseUrl').value=m2Cfg.baseUrl||'https://sameehasocialhub.com/api/v1';
   } catch(e){ document.getElementById('m2Balance').textContent='Could not load Marketplace settings: '+e.message; }
 }
 async function m2Toggle(k){
@@ -7158,7 +7160,7 @@ async function m2SaveConfig(){
 }
 async function m2LoadBalance(){
   const el=document.getElementById('m2Balance');
-  try { const b=await aFetch('/api/admin/market2/balance'); el.innerHTML=`Supplier (Rakib Socials) balance: <b>${m2N(b.balance)}</b> · alert below ${m2N(b.threshold)}`; el.style.color = b.balance < b.threshold ? 'var(--red)' : ''; }
+  try { const b=await aFetch('/api/admin/market2/balance'); el.innerHTML=`Supplier (Sameeha Social Hub) balance: <b>${m2N(b.balance)}</b> · alert below ${m2N(b.threshold)}`; el.style.color = b.balance < b.threshold ? 'var(--red)' : ''; }
   catch(e){ el.textContent='Balance check failed: '+e.message+' — check the Marketplace 2 API key in settings'; el.style.color='var(--red)'; }
 }
 async function m2LoadProducts(refresh){

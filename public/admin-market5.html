@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Marketplace 5 · Admin</title>
+<style>
+:root{--bg:#0b1020;--card:#121a2e;--line:#22304a;--txt:#e6ecf7;--mut:#8b9ab5;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;--amber:#f59e0b}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4f6fb;--card:#fff;--line:#dfe5f0;--txt:#0f172a;--mut:#64748b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.top h1{font-size:17px;margin:0}
+.wrap{max-width:980px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 4px}
+.hint{color:var(--mut);font-size:12.5px;margin:0 0 10px}
+input,select,textarea{background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;max-width:100%}
+input[type=number]{width:110px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+button{background:var(--blue);color:#fff;border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+button.danger{background:transparent;color:var(--red);border:1px solid var(--red)}
+button.small{padding:5px 9px;font-size:12.5px}
+button:disabled{opacity:.5}
+.msg{font-size:13px;margin-left:6px}.ok{color:var(--green)}.bad{color:var(--red)}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700}
+.pill.on{background:rgba(34,197,94,.15);color:var(--green)}.pill.off{background:rgba(239,68,68,.15);color:var(--red)}
+.gate{max-width:360px;margin:80px auto;text-align:center}.gate input{width:100%;margin:10px 0}
+#app{display:none}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px}
+th{text-align:left;color:var(--mut);font-weight:600;padding:6px 4px}
+td{padding:6px 4px;border-top:1px solid var(--line);vertical-align:middle}
+td input[type=number]{width:96px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.stat{border:1px solid var(--line);border-radius:10px;padding:8px 10px}.stat b{display:block;font-size:16px}
+.attn{border:1px solid var(--amber);background:rgba(245,158,11,.08);border-radius:10px;padding:10px;margin:8px 0}
+textarea{width:100%;min-height:70px}
+</style>
+</head>
+<body>
+<div class="top"><h1>Marketplace 5 — ExpressLogs</h1><button class="ghost" id="lockBtn">Lock</button></div>
+
+<div id="gate" class="gate card">
+  <h2>Admin passcode</h2>
+  <input type="password" id="passIn" placeholder="Passcode"/>
+  <button id="passBtn">Open</button>
+  <p class="msg bad" id="gateMsg"></p>
+</div>
+
+<div id="app" class="wrap">
+
+  <div class="card">
+    <h2>Status <span id="stPill" class="pill on">…</span></h2>
+    <p class="hint">When off, customers see the maintenance message and cannot buy from Marketplace 5.</p>
+    <div class="row"><button id="toggleBtn">…</button></div>
+    <div class="row"><input id="maintMsg" style="flex:1;min-width:220px" maxlength="300" placeholder="Maintenance message"/><button class="ghost" id="saveMsg">Save message</button><span class="msg" id="msgMsg"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>Connection (ExpressLogs API key)</h2>
+    <p class="hint">Paste your ExpressLogs API key from your buyer profile. It is stored encrypted and never shown again. Address: <b id="baseUrl">…</b></p>
+    <div class="row"><span id="keyState" class="pill off">…</span>
+      <input type="password" id="apiKey" style="flex:1;min-width:220px" placeholder="Paste new API key" autocomplete="off"/>
+      <button id="saveKey">Save key</button><span class="msg" id="keyMsg"></span></div>
+    <div class="row"><button class="ghost" id="balBtn">Check supplier balance</button><span class="msg" id="balMsg"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>Pricing and alerts</h2>
+    <p class="hint">Default markup = what you add to ExpressLogs' price when you have not set an exact price for an item. Use the Prices page to add or subtract on every Marketplace 5 price at once.</p>
+    <div class="row">Default markup ₦ <input type="number" id="markup" min="0" step="1"/>
+      Low-balance alert below ₦ <input type="number" id="lowBal" min="0" step="1"/></div>
+    <div class="row">Alert email <input id="alertEmail" type="email" style="flex:1;min-width:220px" placeholder="you@example.com"/>
+      <button id="saveCfg">Save</button><span class="msg" id="cfgMsg"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>Products <span class="hint" id="prodCount" style="display:inline"></span></h2>
+    <p class="hint">Cost is what ExpressLogs charges you. Your price is what customers pay. Hide an item with the tick box.</p>
+    <div class="row"><input id="q" placeholder="Search…" style="flex:1;min-width:160px"/><select id="cat"><option value="">All groups</option></select>
+      <button class="ghost" id="refreshBtn">Refresh from ExpressLogs</button><span class="msg" id="prodMsg"></span></div>
+    <div class="scroll"><table><thead><tr><th>Item</th><th>Group</th><th>Cost</th><th>Your price</th><th>Profit</th><th>Stock</th><th>Show</th><th></th></tr></thead><tbody id="prodBody"></tbody></table></div>
+    <div class="row"><button class="ghost" id="moreBtn" style="display:none">Show more</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Orders</h2>
+    <div class="stats" id="stats"></div>
+    <div id="attn"></div>
+    <div class="scroll"><table><thead><tr><th>When</th><th>Customer</th><th>Item</th><th>Qty</th><th>Paid</th><th>Status</th><th></th></tr></thead><tbody id="ordBody"></tbody></table></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var KEY = 'ksl_admin_pass', pass = '';
+  try { pass = sessionStorage.getItem(KEY) || ''; } catch (e) {}
+  var $ = function (id) { return document.getElementById(id); };
+  var CFG = null, LIST = [], SHOWN = 80;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function n(v) { return '₦' + Number(v || 0).toLocaleString(); }
+  function api(path, opts) {
+    opts = opts || {};
+    var h = { 'x-admin-passcode': pass };
+    if (opts.body) h['Content-Type'] = 'application/json';
+    return fetch(path, { method: opts.method || 'GET', headers: h, body: opts.body ? JSON.stringify(opts.body) : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw new Error(d.error || ('Error ' + r.status)); return d; }); });
+  }
+  function say(id, text, bad) { var e = $(id); e.className = 'msg ' + (bad ? 'bad' : 'ok'); e.textContent = text || ''; }
+  function showApp() { $('gate').style.display = 'none'; $('app').style.display = 'block'; loadAll(); }
+  function showGate(m) { $('app').style.display = 'none'; $('gate').style.display = 'block'; $('gateMsg').textContent = m || ''; }
+
+  function drawCfg() {
+    var on = CFG.market5Enabled !== false;
+    $('stPill').className = 'pill ' + (on ? 'on' : 'off'); $('stPill').textContent = on ? 'ON' : 'OFF';
+    $('toggleBtn').textContent = on ? 'Turn Marketplace 5 OFF (maintenance)' : 'Turn Marketplace 5 ON';
+    $('maintMsg').value = CFG.maintenanceMessage || '';
+    $('baseUrl').textContent = CFG.baseUrl || '';
+    $('keyState').className = 'pill ' + (CFG.apiKeyConfigured ? 'on' : 'off'); $('keyState').textContent = CFG.apiKeyConfigured ? 'Key saved' : 'No key yet';
+    $('markup').value = CFG.defaultMarkupNgn == null ? '' : CFG.defaultMarkupNgn;
+    $('markup').placeholder = '300 (built-in)';
+    $('lowBal').value = CFG.lowBalanceNgn == null ? '' : CFG.lowBalanceNgn;
+    $('alertEmail').value = CFG.alertEmail || '';
+    if (CFG.lastBalanceAt) { $('balMsg').className = 'msg ' + (CFG.lastBalanceError ? 'bad' : 'ok'); $('balMsg').textContent = CFG.lastBalanceError ? ('Last check failed: ' + CFG.lastBalanceError) : ('Last balance ' + n(CFG.lastBalance)); }
+  }
+  function putCfg(body, msgId, okText) {
+    return api('/api/admin/market5/config', { method: 'PUT', body: body })
+      .then(function () { say(msgId, okText || 'Saved'); return api('/api/admin/market5/config'); })
+      .then(function (c) { CFG = c; drawCfg(); })
+      .catch(function (e) { say(msgId, e.message, true); });
+  }
+  $('toggleBtn').onclick = function () { putCfg({ market5Enabled: !(CFG.market5Enabled !== false) }, 'msgMsg', 'Updated'); };
+  $('saveMsg').onclick = function () { putCfg({ maintenanceMessage: $('maintMsg').value }, 'msgMsg'); };
+  $('saveKey').onclick = function () { var k = $('apiKey').value.trim(); if (!k) return say('keyMsg', 'Paste the key first.', true); putCfg({ apiKey: k }, 'keyMsg', 'Key saved').then(function () { $('apiKey').value = ''; loadProducts(true); }); };
+  $('saveCfg').onclick = function () {
+    var m = $('markup').value.trim(), body = { lowBalanceNgn: Number($('lowBal').value || 0), alertEmail: $('alertEmail').value.trim() };
+    body.defaultMarkupNgn = m === '' ? null : Number(m);
+    putCfg(body, 'cfgMsg').then(function () { loadProducts(false); });
+  };
+  $('balBtn').onclick = function () {
+    say('balMsg', 'Checking…');
+    api('/api/admin/market5/balance').then(function (b) { say('balMsg', 'ExpressLogs balance: ' + n(b.balance) + ' (alert below ' + n(b.threshold) + ')'); })
+      .catch(function (e) { say('balMsg', 'Failed: ' + e.message, true); });
+  };
+
+  function loadProducts(refresh) {
+    say('prodMsg', 'Loading…');
+    return api('/api/admin/market5/products' + (refresh ? '?refresh=1' : '')).then(function (l) {
+      LIST = l || []; SHOWN = 80;
+      var cats = {}; LIST.forEach(function (p) { cats[p.category] = 1; });
+      var sel = $('cat'), cur = sel.value; sel.innerHTML = '<option value="">All groups</option>' + Object.keys(cats).sort().map(function (c) { return '<option>' + esc(c) + '</option>'; }).join(''); sel.value = cur;
+      say('prodMsg', ''); drawProducts();
+    }).catch(function (e) { say('prodMsg', e.message + (CFG && !CFG.apiKeyConfigured ? ' — save your API key first.' : ''), true); $('prodBody').innerHTML = ''; });
+  }
+  function filtered() {
+    var q = $('q').value.trim().toLowerCase(), c = $('cat').value;
+    return LIST.filter(function (p) { return (!c || p.category === c) && (!q || (p.name + ' ' + (p.customTitle || '')).toLowerCase().indexOf(q) > -1); })
+      .sort(function (a, b) { return a.category.localeCompare(b.category) || a.sellPrice - b.sellPrice; });
+  }
+  function drawProducts() {
+    var rows = filtered(); $('prodCount').textContent = '(' + rows.length + ' items)';
+    $('prodBody').innerHTML = rows.slice(0, SHOWN).map(function (p) {
+      return '<tr data-id="' + p.id + '"><td>' + esc(p.customTitle || p.name) + '</td><td>' + esc(p.category) + '</td><td>' + n(p.cost) + '</td>' +
+        '<td><input type="number" class="sp" min="0" step="1" value="' + (p.sellPrice || '') + '"/></td>' +
+        '<td>' + n(p.profit) + '</td><td>' + (p.stock || 0) + '</td>' +
+        '<td><input type="checkbox" class="en"' + (p.enabled ? ' checked' : '') + '/></td>' +
+        '<td><button class="small save">Save</button> <span class="msg"></span></td></tr>';
+    }).join('');
+    $('moreBtn').style.display = rows.length > SHOWN ? '' : 'none';
+  }
+  $('moreBtn').onclick = function () { SHOWN += 80; drawProducts(); };
+  $('q').oninput = function () { SHOWN = 80; drawProducts(); }; $('cat').onchange = function () { SHOWN = 80; drawProducts(); };
+  $('refreshBtn').onclick = function () { loadProducts(true); };
+  $('prodBody').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button.save'); if (!b) return;
+    var tr = b.closest('tr'), id = tr.dataset.id, msg = tr.querySelector('.msg');
+    var price = Number(tr.querySelector('.sp').value || 0), en = tr.querySelector('.en').checked;
+    b.disabled = true; msg.className = 'msg'; msg.textContent = '…';
+    api('/api/admin/market5/products/' + id, { method: 'PUT', body: { sellPrice: price, enabled: en } })
+      .then(function () { msg.className = 'msg ok'; msg.textContent = 'Saved'; b.disabled = false; return loadProducts(false); })
+      .catch(function (e) { msg.className = 'msg bad'; msg.textContent = e.message; b.disabled = false; });
+  });
+
+  function loadOrders() {
+    api('/api/admin/market5/orders').then(function (d) {
+      var t = d.totals || {};
+      $('stats').innerHTML = [['Orders', t.count || 0], ['Sales', n(t.sales)], ['Cost', n(t.cost)], ['Profit', n(t.profit)]].map(function (x) { return '<div class="stat"><span class="hint">' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('');
+      $('attn').innerHTML = (d.attention || []).length ? '<h2 style="margin-top:12px">Needs attention</h2>' + d.attention.map(function (o) {
+        return '<div class="attn" data-id="' + o._id + '"><b>' + esc(o.title) + '</b> · ' + esc(o.userEmail) + ' · ' + n(o.sellTotal) + ' · <b>' + esc(o.status) + '</b><br><span class="hint">' + esc(o.note || '') + '</span>' + actions(o) + '</div>';
+      }).join('') : '<p class="hint">Nothing needs attention.</p>';
+      $('ordBody').innerHTML = (d.orders || []).map(function (o) {
+        return '<tr data-id="' + o._id + '"><td>' + esc(new Date(o.createdAt).toLocaleString()) + '</td><td>' + esc(o.userEmail) + '</td><td>' + esc(o.title) + '</td><td>' + (o.quantity || '') + '</td><td>' + n(o.sellTotal) + '</td><td>' + esc(o.status) + '</td><td><button class="small ghost keys">Keys</button></td></tr>';
+      }).join('');
+    }).catch(function (e) { $('attn').innerHTML = '<p class="msg bad">' + esc(e.message) + '</p>'; });
+  }
+  function actions(o) {
+    return '<div class="row"><button class="small deliver">Deliver by hand</button><button class="small danger refund">Refund customer</button><button class="small ghost resync">Re-send to purchases</button><button class="small ghost keys">View keys</button></div>';
+  }
+  function orderAction(ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    var box = b.closest('[data-id]'); if (!box) return; var id = box.dataset.id;
+    if (b.classList.contains('keys')) return api('/api/admin/market5/orders/' + id + '/keys').then(function (r) { alert((r.userEmail || '') + '\n\n' + ((r.keys || []).join('\n') || '(no keys stored)')); }).catch(function (e) { alert(e.message); });
+    if (b.classList.contains('resync')) return api('/api/admin/market5/orders/' + id + '/resync', { method: 'POST', body: {} }).then(function (r) { alert(r.ok ? 'Sent to the customer’s purchases' : 'Nothing to send'); loadOrders(); }).catch(function (e) { alert(e.message); });
+    if (b.classList.contains('refund')) { if (!confirm('Refund this customer?')) return; return api('/api/admin/market5/orders/' + id + '/refund', { method: 'POST', body: {} }).then(function () { alert('Customer refunded'); loadOrders(); }).catch(function (e) { alert(e.message); }); }
+    if (b.classList.contains('deliver')) { var k = prompt('Paste the details to deliver (one per line). Copy them from your ExpressLogs order history:'); if (!k) return; return api('/api/admin/market5/orders/' + id + '/deliver', { method: 'POST', body: { keys: k } }).then(function () { alert('Delivered to the customer'); loadOrders(); }).catch(function (e) { alert(e.message); }); }
+  }
+  $('attn').addEventListener('click', orderAction); $('ordBody').addEventListener('click', orderAction);
+
+  function loadAll() {
+    api('/api/admin/market5/config').then(function (c) { CFG = c; drawCfg(); loadProducts(false); loadOrders(); })
+      .catch(function (e) { try { sessionStorage.removeItem(KEY); } catch (x) {} showGate(e.message); });
+  }
+  $('passBtn').onclick = function () { pass = $('passIn').value.trim(); try { sessionStorage.setItem(KEY, pass); } catch (e) {} showApp(); };
+  $('passIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('passBtn').click(); });
+  $('lockBtn').onclick = function () { try { sessionStorage.removeItem(KEY); } catch (e) {} pass = ''; showGate(''); };
+  if (pass) showApp(); else showGate('');
+})();
+</script>
+</body>
+</html>

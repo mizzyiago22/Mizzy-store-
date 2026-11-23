@@ -714,7 +714,9 @@
   var MK=[
     {n:'Marketplace 1',u:'/api/logs?type=log',p:'/marketplace'},
     {n:'Marketplace 2',u:'/api/market2/products',p:'/marketplace2'},
-    {n:'Marketplace 3',u:'/api/market3/products',p:'/marketplace3'}
+    {n:'Marketplace 3',u:'/api/market3/products',p:'/marketplace3'},
+    {n:'Marketplace 4',u:'/api/market4/products',p:'/marketplace4'},
+    {n:'Marketplace 5',u:'/api/market5/products',p:'/marketplace5'}
   ];
   var t=null;try{t=localStorage.getItem('ksl_token');}catch(e){}
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -761,7 +763,8 @@
 (function(){
   var groups=[
     {title:'Marketplace',note:'Browse accounts and digital products.',items:[
-      ['/marketplace','svc-emerald','i-cart','Marketplace']
+      ['/marketplace','svc-emerald','i-cart','Marketplace'],
+      ['/marketplace5','svc-emerald','i-cart','Marketplace 5']
     ]},
     {title:'Numbers & email',note:'Get verification numbers, temporary inboxes and rentals.',items:[
       ['/buy-number','svc-indigo','i-smartphone','Buy Numbers'],
