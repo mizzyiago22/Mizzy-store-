@@ -35,6 +35,10 @@ async function initMarket2() {
   const chips = document.getElementById('mktChips');
   if (chips) chips.innerHTML = [['all', 'All'], ...cats.map(c => [c, c])]
     .map(([v, l]) => `<button type="button" class="mkt-chip${v === m2Cat ? ' active' : ''}" data-chip="${esc(v)}" onclick="pickMktChip('${esc(v).replace(/'/g, "\\'")}')">${esc(l)}</button>`).join('');
+  // Deep link from the site's Recommended row: /marketplace2?item=<id> opens that product.
+  const linkId = new URLSearchParams(location.search).get('item');
+  const linked = linkId && m2Items.find(i => String(i.id) === linkId);
+  if (linked) setTimeout(() => m2Open(linked.id), 120);
   m2Apply();
 }
 
@@ -124,7 +128,7 @@ async function m2Buy(id) {
   const quantity = Math.max(1, parseInt(document.getElementById('m2Qty').value, 10) || 1);
   btn.disabled = true; btn.textContent = 'Processing…';
   try {
-    const r = await req('/api/market2/buy', 'POST', { productId: item.productKey, quantity }, true);
+    const r = await req('/api/market2/buy', 'POST', { productId: item.productKey, quantity, clientRef: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10) }, true);
     if (r.pending) {
       document.getElementById('m2Result').innerHTML = `<div class="pc-details-wrap" style="margin-top:16px">
         <p style="color:var(--green,#18a0fb);font-weight:700;margin:0 0 8px">Payment received — ${P(r.amountPaid)}</p>
