@@ -48,3 +48,44 @@ html body select:-webkit-autofill{
   -webkit-box-shadow:0 0 0 1000px #0f1a2e inset !important;
   box-shadow:0 0 0 1000px #0f1a2e inset !important;
 }
+
+/* ═══ ADMIN CARDS (Boosting 1 / Nova, Boosting switch, etc.) ═════════════════
+   These sections use a plain ".card" which turned WHITE while its text stayed
+   light, so everything looked blank. Pin them to the same dark look as the rest of the panel. */
+html body .tab-panel .card{
+  background:#111b2e !important;
+  border:1px solid #2c3d57 !important;
+  color:#e8f0fb !important;
+  box-shadow:none !important;
+  transform:none !important;
+}
+html body .tab-panel .card h1,
+html body .tab-panel .card h2,
+html body .tab-panel .card h3,
+html body .tab-panel .card h4,
+html body .tab-panel .card b,
+html body .tab-panel .card strong,
+html body .tab-panel .card label,
+html body .tab-panel .card td,
+html body .tab-panel .card th{color:#f4f8ff !important}
+html body .tab-panel .card h3{color:#38bdf8 !important}
+html body .tab-panel .card p,
+html body .tab-panel .card .muted,
+html body .tab-panel .card small,
+html body .tab-panel .card li,
+html body .tab-panel .card div{color:#c3d0e4}
+html body .tab-panel .card code{color:#7dd3fc !important;background:rgba(56,189,248,.12) !important;padding:1px 5px;border-radius:5px}
+html body .tab-panel .card table{background:transparent !important}
+html body .tab-panel .card th{background:#17243a !important}
+html body .tab-panel .card tr{background:transparent !important;border-color:#2c3d57 !important}
+html body .tab-panel .card a{color:#7dd3fc}
+html body .tab-panel .card .btn,
+html body .tab-panel .card button.btn{
+  background:#0b7cf5 !important;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;
+  border:1px solid #0b7cf5 !important;opacity:1 !important;
+}
+html body .tab-panel .card .btn-sm,
+html body .tab-panel .card button.btn-sm{
+  background:#1a2a44 !important;color:#f4f8ff !important;-webkit-text-fill-color:#f4f8ff !important;
+  border:1px solid #4a6285 !important;opacity:1 !important;
+}
