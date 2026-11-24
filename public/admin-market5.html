@@ -45,7 +45,7 @@ textarea{width:100%;min-height:70px}
 .catbtn{border:1px solid var(--line);border-radius:10px;min-height:38px;font-weight:700;font-size:13px;cursor:pointer;background:transparent;color:#22c55e}
 .catbtn.off{color:var(--mut)}
 </style>
-<link rel="stylesheet" href="/admin-embed.css?v=1"/>
+<link rel="stylesheet" href="/admin-embed.css?v=2"/>
 <script src="/admin-embed.js?v=2"></script>
 </head>
 <body>
@@ -59,6 +59,8 @@ textarea{width:100%;min-height:70px}
 </div>
 
 <div id="app" class="wrap">
+
+  <div id="loadErr" class="attn" style="display:none;border-color:var(--red);background:rgba(239,68,68,.08)"><b id="loadErrTxt"></b><div class="row"><button class="small" id="loadErrBtn">Try again</button></div></div>
 
   <div class="card">
     <h2>Status <span id="stPill" class="pill on">…</span></h2>
@@ -122,7 +124,7 @@ textarea{width:100%;min-height:70px}
     var h = { 'x-admin-passcode': pass };
     if (opts.body) h['Content-Type'] = 'application/json';
     return fetch(path, { method: opts.method || 'GET', headers: h, body: opts.body ? JSON.stringify(opts.body) : undefined })
-      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw new Error(d.error || ('Error ' + r.status)); return d; }); });
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) { var er = new Error(d.error || ('Error ' + r.status)); er.status = r.status; throw er; } return d; }); });
   }
   function say(id, text, bad) { var e = $(id); e.className = 'msg ' + (bad ? 'bad' : 'ok'); e.textContent = text || ''; }
   function showApp() { $('gate').style.display = 'none'; $('app').style.display = 'block'; loadAll(); }
@@ -245,9 +247,17 @@ textarea{width:100%;min-height:70px}
   $('catRefresh').onclick = function () { say('catMsg', 'Loading…'); loadCats(true); };
 
   function loadAll() {
+    $('loadErr').style.display = 'none';
     api('/api/admin/market5/config').then(function (c) { CFG = c; drawCfg(); loadProducts(false); loadOrders(); loadCats(false); })
-      .catch(function (e) { try { sessionStorage.removeItem(KEY); } catch (x) {} showGate(e.message); });
+      .catch(function (e) {
+        // Only a real rejection of the admin login (401/403 from OUR server) is treated as "session ended".
+        // Any other problem (server error, supplier error, network) shows a normal message and the page stays open.
+        if (e && (e.status === 401 || e.status === 403)) { showGate(e.message); return; }
+        $('loadErrTxt').textContent = 'Could not load Marketplace 5: ' + ((e && e.message) || 'unknown error') + '. Your admin login is still active.';
+        $('loadErr').style.display = 'block';
+      });
   }
+  $('loadErrBtn').onclick = function () { loadAll(); };
   $('passBtn').onclick = function () { pass = $('passIn').value.trim(); try { sessionStorage.setItem(KEY, pass); } catch (e) {} showApp(); };
   $('passIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('passBtn').click(); });
   $('lockBtn').onclick = function () { try { sessionStorage.removeItem(KEY); } catch (e) {} pass = ''; showGate(''); };

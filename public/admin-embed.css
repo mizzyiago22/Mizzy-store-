@@ -29,3 +29,53 @@ td{padding:10px!important}
   .row>button{flex:1 1 auto}
   input[type=number]{width:100%!important}
 }
+/* ═══ ADMIN INPUT READABILITY FIX ═══════════════════════════════════════════
+   Typed text, numbers and prices inside admin text boxes were nearly invisible
+   (dark-on-dark / faded). This pins every admin input to clear light-on-dark
+   colours that do not depend on the theme variables or the phone's dark mode.
+   Loaded LAST in admin.html and imported by admin-embed.css (embedded sections). */
+html{color-scheme:dark}
+html body input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]),
+html body textarea,
+html body select{
+  background-color:#0f1a2e !important;
+  color:#f4f8ff !important;
+  -webkit-text-fill-color:#f4f8ff !important;
+  caret-color:#38bdf8 !important;
+  border:1.5px solid #5a7399 !important;
+  opacity:1 !important;
+  font-weight:600;
+  text-shadow:none !important;
+}
+html body input:focus,
+html body textarea:focus,
+html body select:focus{
+  border-color:#38bdf8 !important;
+  box-shadow:0 0 0 3px rgba(56,189,248,.22) !important;
+  outline:0;
+}
+html body input::placeholder,
+html body textarea::placeholder{
+  color:#a9bbd6 !important;
+  -webkit-text-fill-color:#a9bbd6 !important;
+  opacity:1 !important;
+  font-weight:400;
+}
+html body input:disabled,
+html body textarea:disabled,
+html body select:disabled{
+  color:#c3d0e4 !important;
+  -webkit-text-fill-color:#c3d0e4 !important;
+  background-color:#17233a !important;
+  opacity:1 !important;
+}
+html body select option,
+html body select optgroup{background:#0f1a2e !important;color:#f4f8ff !important}
+html body input:-webkit-autofill,
+html body textarea:-webkit-autofill,
+html body select:-webkit-autofill{
+  -webkit-text-fill-color:#f4f8ff !important;
+  caret-color:#38bdf8 !important;
+  -webkit-box-shadow:0 0 0 1000px #0f1a2e inset !important;
+  box-shadow:0 0 0 1000px #0f1a2e inset !important;
+}
