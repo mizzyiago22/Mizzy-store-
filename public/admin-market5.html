@@ -119,16 +119,29 @@ textarea{width:100%;min-height:70px}
   var CFG = null, LIST = [], SHOWN = 80;
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function n(v) { return '₦' + Number(v || 0).toLocaleString(); }
-  function api(path, opts) {
+  function curPass() { try { return sessionStorage.getItem(KEY) || pass; } catch (e) { return pass; } }
+  function api(path, opts, _retried) {
     opts = opts || {};
-    var h = { 'x-admin-passcode': pass };
+    var h = {}, p = curPass();
+    if (p) h['x-admin-passcode'] = p;                 // the embed helper adds the staff login when there is no passcode
     if (opts.body) h['Content-Type'] = 'application/json';
     return fetch(path, { method: opts.method || 'GET', headers: h, body: opts.body ? JSON.stringify(opts.body) : undefined })
-      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) { var er = new Error(d.error || ('Error ' + r.status)); er.status = r.status; throw er; } return d; }); });
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          if (!r.ok) {
+            if ((r.status === 401 || r.status === 403) && !_retried) {   // one quiet retry before giving up
+              return new Promise(function (ok) { setTimeout(ok, 400); }).then(function () { return api(path, opts, true); });
+            }
+            var er = new Error(d.error || ('Error ' + r.status)); er.status = r.status; er.path = path; throw er;
+          }
+          return d;
+        });
+      });
   }
   function say(id, text, bad) { var e = $(id); e.className = 'msg ' + (bad ? 'bad' : 'ok'); e.textContent = text || ''; }
   function showApp() { $('gate').style.display = 'none'; $('app').style.display = 'block'; loadAll(); }
-  function showGate(m){ if(window.__admExpired) window.__admExpired(m); } function __unusedGate(m) { $('app').style.display = 'none'; $('gate').style.display = 'block'; $('gateMsg').textContent = m || ''; }
+  // This page never shows a "session ended" screen: problems appear as a normal message and the page stays open.
+  function showGate(m) { $('app').style.display = 'block'; $('loadErrTxt').textContent = m || 'Something went wrong.'; $('loadErr').style.display = 'block'; }
 
   function drawCfg() {
     var on = CFG.market5Enabled !== false;
@@ -250,18 +263,13 @@ textarea{width:100%;min-height:70px}
     $('loadErr').style.display = 'none';
     api('/api/admin/market5/config').then(function (c) { CFG = c; drawCfg(); loadProducts(false); loadOrders(); loadCats(false); })
       .catch(function (e) {
-        // Only a real rejection of the admin login (401/403 from OUR server) is treated as "session ended".
-        // Any other problem (server error, supplier error, network) shows a normal message and the page stays open.
-        if (e && (e.status === 401 || e.status === 403)) { showGate(e.message); return; }
-        $('loadErrTxt').textContent = 'Could not load Marketplace 5: ' + ((e && e.message) || 'unknown error') + '. Your admin login is still active.';
-        $('loadErr').style.display = 'block';
+        showGate('Could not load Marketplace 5 (' + (e && e.status ? 'HTTP ' + e.status + ': ' : '') + ((e && e.message) || 'unknown error') + ').');
       });
   }
   $('loadErrBtn').onclick = function () { loadAll(); };
   $('passBtn').onclick = function () { pass = $('passIn').value.trim(); try { sessionStorage.setItem(KEY, pass); } catch (e) {} showApp(); };
   $('passIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('passBtn').click(); });
-  $('lockBtn').onclick = function () { try { sessionStorage.removeItem(KEY); } catch (e) {} pass = ''; showGate(''); };
-  if (pass) showApp(); else showGate('');
+  showApp();
 })();
 </script>
 </body>
