@@ -7666,8 +7666,12 @@ app.get('/admin.html', (req, res) => {
 app.get('/dashboard', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'dashboard.html'))));
 app.get('/games', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'game.html'))));
 app.get('/giveaways', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'giveaway.html'))));
-app.get('/buy-number', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'buy-number-hub.html'))));
-app.get('/buy-number-app', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'buy-number.html'))));
+// /buy-number is the hub (buy-number.html). Buy Number 1 = Grizzly page, Buy Number 2 = OTP Suite page.
+const sendPublic = file => (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', file)));
+app.get('/buy-number', sendPublic('buy-number.html'));
+app.get('/buy-number-1', sendPublic('buy-number-grizzly.html'));
+app.get('/buy-number-2', sendPublic('buy-number-otp.html'));
+app.get('/buy-number-app', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', req.query.server === 'server2' ? 'buy-number-otp.html' : 'buy-number-grizzly.html'))));
 app.get('/virtual-account', (req, res) => res.redirect(301, '/deposit'));
 app.get('/instant-numbers', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'instant-numbers.html'))));
 app.get(['/history/market-1', '/history/market-2', '/history/market-3', '/history/market-4', '/history/market-5', '/history/number-1', '/history/number-2'], (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'history-page.html'))));
@@ -7690,10 +7694,10 @@ app.get('/referrals', (req, res) => (res.set('Cache-Control', 'no-cache'), res.s
 app.get('/purchases', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'purchases.html'))));
 // /boost is the hub with two options: Boosting 1 (Nova) and Boosting 2 (Really Simple Social).
 const sendBoostPage = file => (req, res) => (res.set('Cache-Control', 'no-store, must-revalidate'), res.sendFile(path.join(__dirname, 'public', file)));
-app.get('/boost', sendBoostPage('boost-hub.html'));
+app.get('/boost', sendBoostPage('boost.html'));
 app.get('/boost1', sendBoostPage('boost1.html'));
 app.get('/boost1/order', sendBoostPage('boost1-order.html'));
-app.get('/boost2', sendBoostPage('boost.html'));
+app.get('/boost2', sendBoostPage('boost2.html'));
 app.get('/boost-history', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'boost-history.html'))));
 app.get('/boost-services', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'boost-services.html'))));
 app.get('/all-services', (req, res) => res.redirect(301, '/boost-services'));
@@ -7703,8 +7707,8 @@ app.get('/support', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sen
 // Kept as permanent redirects so old links and bookmarks land on the homepage.
 app.get(['/services', '/electricity', '/betting', '/data-bill'], (req, res) => res.redirect(301, '/'));
 app.get('/settings', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'settings.html'))));
-app.get('/api-docs', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'apidocs.html'))));
-app.get('/apidocs', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'apidocs.html'))));
+// apidocs.html is not part of the project, so send these links to Support instead of a "Not Found".
+app.get(['/api-docs', '/apidocs'], (req, res) => res.redirect(302, fs.existsSync(path.join(__dirname, 'public', 'apidocs.html')) ? '/apidocs.html' : '/support'));
 app.get('/groups', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'groups.html'))));
 app.get('/messages', (req, res) => (res.set('Cache-Control', 'no-cache'), res.sendFile(path.join(__dirname, 'public', 'messages.html'))));
 app.get('/chat', (req, res) => res.redirect(301, '/groups'));
@@ -8167,6 +8171,13 @@ require('./lib/history').mountHistory(app, { auth, User, NumberListing });
 // the browser — keep this block at the very end of the file.
 app.all('/api/*', (req, res) => {
   res.status(404).json({ error: `Unknown API endpoint: ${req.method} ${req.path}` });
+});
+// Any page that exists as public/<name>.html (login, deposit, tutorials, active-number, ...) opens at /<name>,
+// so a link never lands on "Not Found" or the home page by mistake.
+app.get(/^\/([a-z0-9-]+)$/i, (req, res, next) => {
+  const f = path.join(__dirname, 'public', req.params[0] + '.html');
+  if (!/^(index|admin)/i.test(req.params[0]) && fs.existsSync(f)) return (res.set('Cache-Control', 'no-cache'), res.sendFile(f));
+  next();
 });
 app.get('*', (req, res) => {
   // Always hand back the freshly built HTML — no stale home page from a cache.
