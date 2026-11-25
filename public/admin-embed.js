@@ -25,7 +25,22 @@
     }
   } catch (e) {}
 
+  var memPass = '', memStaff = '';
+  /* the admin page sends its login here (see sendAdminAuthTo in admin.html) */
+  window.addEventListener('message', function (e) {
+    try {
+      if (!window.parent || e.source !== window.parent || e.origin !== location.origin) return;
+      var d = e.data; if (!d || d.type !== 'ksl-admin-auth') return;
+      var had = !!(memPass || memStaff || sessionStorage.getItem(KEY) || sessionStorage.getItem(KEY_STAFF));
+      if (d.pass) { memPass = d.pass; try { sessionStorage.setItem(KEY, d.pass); } catch (x) {} }
+      if (d.staff) { memStaff = d.staff; try { sessionStorage.setItem(KEY_STAFF, JSON.stringify({ token: d.staff, account: d.account || null })); } catch (x) {} }
+      /* the section loaded before the login arrived: start it again, now with the login in place */
+      if (!had && (memPass || memStaff)) location.reload();
+    } catch (x) {}
+  });
+
   function cred() {
+    if (memPass || memStaff) return { pass: memPass, staff: memStaff };
     var pass = '', staff = '';
     try { pass = sessionStorage.getItem(KEY) || ''; } catch (e) {}
     if (!pass) {
@@ -96,7 +111,11 @@
   /* called by the section pages whenever a load fails */
   window.__admExpired = function (msg) {
     var c = cred();
-    if (!c.pass && !c.staff) return paint('expired');            // nothing saved at all
+    if (!c.pass && !c.staff) {                                    // nothing here yet: ask the admin page for the login
+      try { window.parent.postMessage({ type: 'ksl-admin-need-auth' }, location.origin); } catch (x) {}
+      setTimeout(function () { var c2 = cred(); if (!c2.pass && !c2.staff) paint('expired'); }, 1500);
+      return;
+    }
     if (!c.pass) return paint('error', msg);                      // staff login: never claim "expired" from here
     if (!origFetch) return paint('error', msg);
     origFetch('/api/admin/verify', {

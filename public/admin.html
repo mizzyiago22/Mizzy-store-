@@ -713,6 +713,19 @@ tr:hover td{background:rgba(255,255,255,.035)}
 <div id="tab-custhistory" class="tab-panel"><iframe class="adm-embed" src="/admin-history.html" title="Order history"></iframe></div>
 <div id="tab-instantadm" class="tab-panel"><iframe class="adm-embed" src="/admin-instant.html" title="Fast SMS"></iframe></div>
 <div id="tab-pricesadm" class="tab-panel"><iframe class="adm-embed" src="/admin-prices.html?v=3" title="Prices"></iframe></div>
+<div id="tab-features" class="tab-panel">
+  <div class="sec">
+    <h2 style="margin-top:0">Features: turn on / off</h2>
+    <p class="muted" style="font-size:13px">A feature that is OFF disappears from the customer site, and its API stops working straight away. Customers see "temporarily unavailable" if they open it directly.</p>
+    <div id="featFeedback" class="form-feedback"></div>
+    <div id="featList">Loading…</div>
+  </div>
+  <div class="sec">
+    <h2 style="margin-top:0">Categories: show / hide</h2>
+    <p class="muted" style="font-size:13px">Hide a category (for example <b>Facebook</b> or <b>Facebook followers</b>) inside a marketplace or boosting section. Customers will not see anything in it and cannot buy from it. Switch it back on to show it again.</p>
+    <div id="featCats">Loading…</div>
+  </div>
+</div>
 <div id="tab-market5adm" class="tab-panel"><iframe class="adm-embed" src="/admin-market5.html?v=3" title="Marketplace 5"></iframe></div>
 <div id="tab-custsugg" class="tab-panel"><iframe class="adm-embed" src="/admin-suggestions.html" title="Recommended items"></iframe></div>
 <div id="tab-tools" class="tab-panel">
@@ -2259,8 +2272,25 @@ async function doStaffLogin() {
     enterPanel();
   } catch(e) { setFb(fb,'Server error: '+e.message,'err'); }
 }
+// ── Hand the admin login to every embedded section, so no section asks for the passcode again.
+function sendAdminAuthTo(frame){
+  try{
+    if(!frame||!frame.contentWindow) return;
+    const pass = currentRole==='super' ? (adminPass||'') : '';
+    const staff = currentRole==='staff' ? (staffToken||'') : '';
+    if(!pass && !staff) return;
+    frame.contentWindow.postMessage({type:'ksl-admin-auth', pass, staff, account: staffAccount||null}, location.origin);
+  }catch(e){}
+}
+function sendAdminAuthToAll(){ document.querySelectorAll('iframe.adm-embed').forEach(sendAdminAuthTo); }
+document.addEventListener('load', e=>{ if(e.target && e.target.tagName==='IFRAME') sendAdminAuthTo(e.target); }, true);
+window.addEventListener('message', e=>{
+  if(e.origin!==location.origin || !e.data || e.data.type!=='ksl-admin-need-auth') return;
+  document.querySelectorAll('iframe.adm-embed').forEach(f=>{ if(f.contentWindow===e.source) sendAdminAuthTo(f); });
+});
 function enterPanel() {
   document.getElementById('lockScreen').style.display='none';
+  sendAdminAuthToAll();
   applyRoleUI();
   initAdmin();
 }
@@ -2322,6 +2352,9 @@ const ADMIN_NAV = [
     { tab:'otp2', icon:'i-smartphone', label:'SMS-COOL: Buy Number 2, Temp Email & Rentals', accent:'accent' },
     { tab:'vtuadm', icon:'i-smartphone', label:'Airtime, Data & Cable (VTU)', accent:'accent' },
     { tab:'boost', icon:'i-rocket', label:'Boosting 2 (Really Simple) settings & profit', accent:'accent' },
+  ]},
+  { group:'Customer features', owner:true, items:[
+    { tab:'features', icon:'i-check-circle', label:'Features & categories: on / off', owner:true, accent:'accent', keywords:'features on off switch turn disable enable hide show category facebook twitter instagram tiktok marketplace boost email rental number vtu games giveaway referral deposit support' },
   ]},
   { group:'Catalogue', owner:true, items:[
     { tab:'logs',   icon:'i-package', label:'Logs',   owner:true },
@@ -2520,6 +2553,47 @@ async function b1Resolve(id,action){
   catch(e){ msg.textContent='Order resolution failed: '+e.message; }
 }
 
+
+// ── Features & categories (on / off) — backed by /api/admin/features (lib/feature-flags.js)
+let featData = null;
+function featMsg(t, bad){ const el=document.getElementById('featFeedback'); if(!el) return; el.textContent=t||''; el.style.color=bad?'var(--red)':'var(--green,#2ecc71)'; }
+async function loadFeatures(){
+  const list=document.getElementById('featList'), cats=document.getElementById('featCats');
+  if(!list||!cats) return;
+  try{
+    featData = await aFetch('/api/admin/features');
+    const groups = {};
+    featData.features.forEach(f => { (groups[f.group] = groups[f.group] || []).push(f); });
+    list.innerHTML = Object.keys(groups).map(g =>
+      `<div style="margin:14px 0 6px;font-weight:700">${esc(g)}</div>` +
+      groups[g].map(f =>
+        `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:6px;${f.enabled?'':'opacity:.65'}">` +
+        `<span>${esc(f.label)}</span>` +
+        `<button type="button" class="${f.enabled?'btn-primary':'btn-secondary'}" data-feat="${esc(f.key)}" data-on="${f.enabled?'0':'1'}" style="min-width:150px">${f.enabled?'ON · tap to turn off':'OFF · tap to turn on'}</button></div>`
+      ).join('')
+    ).join('');
+    cats.innerHTML = featData.categories.map(c =>
+      `<div style="margin:16px 0 6px;font-weight:700">${esc(c.label)}</div>` +
+      (c.items.length ? c.items.map(i =>
+        `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:6px;${i.hidden?'opacity:.65':''}">` +
+        `<span>${esc(i.name)}${i.hidden?' <small class="muted">· hidden from customers</small>':''}</span>` +
+        `<button type="button" class="${i.hidden?'btn-secondary':'btn-primary'}" data-cscope="${esc(c.scope)}" data-cname="${esc(i.name)}" data-chidden="${i.hidden?'0':'1'}" style="min-width:150px">${i.hidden?'OFF · tap to show':'ON · tap to hide'}</button></div>`
+      ).join('') : '<div class="muted" style="font-size:13px">No categories loaded yet. Open that marketplace or boosting section once so its list loads, then come back here.</div>')
+    ).join('');
+  }catch(e){ list.textContent='Could not load features: '+e.message; cats.textContent=''; }
+}
+document.addEventListener('click', async (ev) => {
+  const f = ev.target.closest && ev.target.closest('button[data-feat]');
+  const c = ev.target.closest && ev.target.closest('button[data-cscope]');
+  if (!f && !c) return;
+  const btn = f || c; btn.disabled = true;
+  try{
+    if (f) { await aFetch('/api/admin/features/' + encodeURIComponent(f.dataset.feat), 'PUT', { enabled: f.dataset.on === '1' }); featMsg('Saved. Customers see the change right away.'); }
+    else   { await aFetch('/api/admin/feature-categories', 'PUT', { scope: c.dataset.cscope, name: c.dataset.cname, hidden: c.dataset.chidden === '1' }); featMsg('Saved: "' + c.dataset.cname + '" is now ' + (c.dataset.chidden === '1' ? 'hidden from customers.' : 'shown to customers.')); }
+    await loadFeatures();
+  }catch(e){ featMsg(e.message, true); btn.disabled = false; }
+});
+
 function switchTab(name,el) {
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
@@ -2535,6 +2609,7 @@ function switchTab(name,el) {
   if(name==='campaigns')    cmpLoad();
   if(name==='logs')         { loadLogs(); loadCategories(); loadCategoriesIntoSelects(); loadRestockDemand(); }
   if(name==='tools')        loadTools();
+  if(name==='features')     loadFeatures();
   if(name==='logs2')        { m2LoadConfig(); m2LoadProducts(false); m2LoadBalance(); m2LoadOrders(); }
   if(name==='logs3')        { m3LoadConfig(); m3LoadProducts(false); m3LoadBalance(); m3LoadOrders(); }
   if(name==='logs4')        { m4LoadConfig(); m4LoadCats(false); m4LoadBalance(); m4LoadOrders(); }
