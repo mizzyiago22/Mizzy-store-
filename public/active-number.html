@@ -93,7 +93,7 @@ function fromOtp(o){
 var ADAPTER={
   '1':{get:function(){return api('/api/numbers/status/'+encodeURIComponent(ID)).then(fromListing)},cancel:function(){return api('/api/numbers/cancel/'+encodeURIComponent(ID),{method:'POST',body:'{}'})}},
   '3':{get:function(){return api('/api/numbers/status/'+encodeURIComponent(ID)).then(fromListing)},cancel:function(){return api('/api/numbers/cancel/'+encodeURIComponent(ID),{method:'POST',body:'{}'})}},
-  '2':{get:function(){return api('/api/numbers/n2/sms/'+encodeURIComponent(ID)).then(function(d){return fromOtp(d.order)})},cancel:function(){return api('/api/numbers/n2/cancel/'+encodeURIComponent(ID),{method:'POST',body:'{}'})}}
+  '2':{get:function(){return api('/api/numbers/otp-suite/sms/'+encodeURIComponent(ID)).then(function(d){return fromOtp(d.order)})},cancel:function(){return api('/api/numbers/otp-suite/cancel/'+encodeURIComponent(ID),{method:'POST',body:'{}'})}}
 }[S];
 
 var cur=null,pollT=null,tickT=null,finished=false;
