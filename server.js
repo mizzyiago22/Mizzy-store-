@@ -8179,9 +8179,15 @@ app.all('/api/*', (req, res) => {
 });
 // Any page that exists as public/<name>.html (login, deposit, tutorials, active-number, ...) opens at /<name>,
 // so a link never lands on "Not Found" or the home page by mistake.
+// Fragment files (deposit.html, referrals-fragment.html) are injected into index.html by script.js.
+// They are not standalone pages, so serving them at /<name> shows unstyled markup with no
+// header, scripts or stylesheets. Skip them here so the SPA shell handles those routes.
+const FRAGMENT_ONLY_PAGES = new Set(['deposit', 'referrals-fragment']);
 app.get(/^\/([a-z0-9-]+)$/i, (req, res, next) => {
-  const f = path.join(__dirname, 'public', req.params[0] + '.html');
-  if (!/^(index|admin)/i.test(req.params[0]) && fs.existsSync(f)) return (res.set('Cache-Control', 'no-cache'), res.sendFile(f));
+  const name = req.params[0];
+  if (FRAGMENT_ONLY_PAGES.has(name.toLowerCase())) return next();
+  const f = path.join(__dirname, 'public', name + '.html');
+  if (!/^(index|admin)/i.test(name) && fs.existsSync(f)) return (res.set('Cache-Control', 'no-cache'), res.sendFile(f));
   next();
 });
 app.get('*', (req, res) => {
