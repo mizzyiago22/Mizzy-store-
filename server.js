@@ -17,6 +17,9 @@ const { OAuth2Client } = require('google-auth-library');
 const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
 if (!googleClient) console.warn(' GOOGLE_CLIENT_ID not set in .env — Google Sign-In will be disabled until configured.');
 const app = express();
+// Admin on/off switches for every customer feature (blocks disabled APIs/pages) — see lib/feature-flags.js
+const FF = require('./lib/feature-flags');
+FF.gate(app);
 const rateLimit = require('express-rate-limit');
 app.use(cors({ origin: '*', methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'], allowedHeaders: ['Content-Type','Authorization','x-admin-passcode','x-subadmin-token'] }));
 app.options('*', cors()); // handle pre-flight OPTIONS requests
@@ -1705,6 +1708,8 @@ const anyAdminAuth = async (req, res, next) => {
  if (p && p === process.env.ADMIN_PASSCODE) { req.adminRole = 'super'; return next(); }
  return subAdminAuth(req, res, next);
 };
+// Admin → Features tab: feature and category switches
+FF.routes(app, { anyAdminAuth });
 // Marketplace 2 (Sameeha Social Hub API) + marketplace on/off switches — see lib/market2.js
 require('./lib/market2').register(app, { mongoose, User, Transaction, auth, anyAdminAuth, sendAdminEmail });
 // Marketplace 5 (ExpressLogs API) — see lib/market5.js
