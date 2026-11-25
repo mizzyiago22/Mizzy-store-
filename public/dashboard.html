@@ -314,6 +314,22 @@
     }
     .mz-dock-link.active, .mz-dock-link:hover { color: var(--ms-blue); }
     .mz-dock-link svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
+    /* ── ALL SERVICES (grouped feature boxes) ── */
+    .dsx-box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 16px; margin-bottom: 14px; }
+    .dsx-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .dsx-head h4 { display: flex; align-items: center; gap: 8px; font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
+    .dsx-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); display: inline-block; }
+    .dsx-head a { font-size: 12px; font-weight: 700; color: var(--ms-blue-dark); white-space: nowrap; }
+    .dsx-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .dsx-item { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px; border-radius: 14px; background: rgba(148, 163, 184, .09); border: 1px solid transparent; color: var(--text); transition: border-color .15s, transform .15s; }
+    .dsx-item:hover, .dsx-item:active { border-color: var(--c); transform: translateY(-1px); }
+    .dsx-ico { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: rgba(148, 163, 184, .14); color: var(--c); }
+    .dsx-ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .dsx-lbl { font-size: 13px; font-weight: 700; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
+    html[data-theme="light"] .dsx-head a { color: #0066ae; }
+    html[data-theme="light"] .dsx-item { background: #f1f6fb; }
+    html[data-theme="light"] .dsx-ico { background: #ffffff; }
+    @media (max-width: 340px) { .dsx-grid { grid-template-columns: 1fr; } }
     .ms-contact__links { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
     .ms-contact__links a { min-width:0; padding:13px 8px; border:1px solid var(--card-border); border-radius:8px; background:var(--bg); text-align:center; color:var(--ms-blue); font-size:12px; font-weight:700; }
     .ms-contact__links a:hover { border-color:var(--ms-blue); }
@@ -527,6 +543,64 @@
       </div>
     </section>
 
+    <!-- All services: grouped feature boxes (Marketplace, Numbers & Rentals, Boost, ...) -->
+    <section class="dsx" aria-label="All services">
+      <div class="mz-section-header" style="margin:6px 4px 12px"><h3 class="mz-section-title">All services</h3></div>
+      <div class="dsx-box" style="--c:#10b981">
+        <div class="dsx-head"><h4><i class="dsx-dot"></i>Marketplace</h4><a href="/marketplace">Open Marketplace 1 →</a></div>
+        <div class="dsx-grid">
+          <a class="dsx-item" href="/marketplace" style="--c:#10b981"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 001 .8h9.2a1 1 0 001-.8L21 8H6"/></svg></span><span class="dsx-lbl">Marketplace 1</span></a>
+          <a class="dsx-item" href="/marketplace2" style="--c:#10b981"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 001 .8h9.2a1 1 0 001-.8L21 8H6"/></svg></span><span class="dsx-lbl">Marketplace 2</span></a>
+          <a class="dsx-item" href="/marketplace3" style="--c:#10b981"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 001 .8h9.2a1 1 0 001-.8L21 8H6"/></svg></span><span class="dsx-lbl">Marketplace 3</span></a>
+          <a class="dsx-item" href="/marketplace4" style="--c:#10b981"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 001 .8h9.2a1 1 0 001-.8L21 8H6"/></svg></span><span class="dsx-lbl">Marketplace 4</span></a>
+          <a class="dsx-item" href="/marketplace5" style="--c:#10b981"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 001 .8h9.2a1 1 0 001-.8L21 8H6"/></svg></span><span class="dsx-lbl">Marketplace 5</span></a>
+          <a class="dsx-item" href="/tools" style="--c:#10b981"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 015.7 5l-5 5-2.4-2.4-5 5a2 2 0 01-2.8-2.8l5-5-2.4-2.4"/></svg></span><span class="dsx-lbl">Format &amp; tools</span></a>
+          <a class="dsx-item" href="/working-pics" style="--c:#10b981"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M21 16l-5.5-5.5L4 21"/></svg></span><span class="dsx-lbl">Working Pics</span></a>
+        </div>
+      </div>
+      <div class="dsx-box" style="--c:#3b82f6">
+        <div class="dsx-head"><h4><i class="dsx-dot"></i>Numbers &amp; Rentals</h4><a href="/buy-number">All number services →</a></div>
+        <div class="dsx-grid">
+          <a class="dsx-item" href="/buy-number-app?server=server1" style="--c:#3b82f6"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></span><span class="dsx-lbl">Buy Number 1</span></a>
+          <a class="dsx-item" href="/buy-number-app?server=server2" style="--c:#3b82f6"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></span><span class="dsx-lbl">Buy Number 2</span></a>
+          <a class="dsx-item" href="/instant-numbers" style="--c:#3b82f6"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></span><span class="dsx-lbl">Fast SMS</span></a>
+          <a class="dsx-item" href="/rental" style="--c:#3b82f6"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="dsx-lbl">Rentals</span></a>
+          <a class="dsx-item" href="/temp-email" style="--c:#3b82f6"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span><span class="dsx-lbl">Temp Email</span></a>
+          <a class="dsx-item" href="/number-history" style="--c:#3b82f6"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3"/><path d="M3 12a9 9 0 109-9"/><path d="M3 4v5h5"/></svg></span><span class="dsx-lbl">Number history</span></a>
+        </div>
+      </div>
+      <div class="dsx-box" style="--c:#ec4899">
+        <div class="dsx-head"><h4><i class="dsx-dot"></i>Boost</h4><a href="/boost">Open Boost →</a></div>
+        <div class="dsx-grid">
+          <a class="dsx-item" href="/boost1" style="--c:#ec4899"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></span><span class="dsx-lbl">Boost 1</span></a>
+          <a class="dsx-item" href="/boost2" style="--c:#ec4899"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></span><span class="dsx-lbl">Boost 2</span></a>
+          <a class="dsx-item" href="/boost-services" style="--c:#ec4899"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span class="dsx-lbl">All boost services</span></a>
+          <a class="dsx-item" href="/boost-history" style="--c:#ec4899"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3"/><path d="M3 12a9 9 0 109-9"/><path d="M3 4v5h5"/></svg></span><span class="dsx-lbl">Boost history</span></a>
+        </div>
+      </div>
+      <div class="dsx-box" style="--c:#06b6d4">
+        <div class="dsx-head"><h4><i class="dsx-dot"></i>More services</h4><a href="/vtu">Airtime &amp; Data →</a></div>
+        <div class="dsx-grid">
+          <a class="dsx-item" href="/vtu" style="--c:#06b6d4"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></span><span class="dsx-lbl">Airtime &amp; Data</span></a>
+          <a class="dsx-item" href="/games" style="--c:#06b6d4"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 11v4M5 13h4M16 12h.01M18 14h.01"/></svg></span><span class="dsx-lbl">Games</span></a>
+          <a class="dsx-item" href="/giveaways" style="--c:#06b6d4"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 9h18M12 9v12M12 9c-2-4-6-4-6-1.5S10 9 12 9zm0 0c2-4 6-4 6-1.5S14 9 12 9z"/></svg></span><span class="dsx-lbl">Giveaways</span></a>
+          <a class="dsx-item" href="/referrals" style="--c:#06b6d4"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0M16 8a3 3 0 010 6M18 20a6 6 0 00-3-5"/></svg></span><span class="dsx-lbl">Referrals</span></a>
+          <a class="dsx-item" href="/groups" style="--c:#06b6d4"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0M16 8a3 3 0 010 6M18 20a6 6 0 00-3-5"/></svg></span><span class="dsx-lbl">Groups</span></a>
+          <a class="dsx-item" href="/messages" style="--c:#06b6d4"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8.5 8.5 0 01-11.9 7.8L4 21l1.2-5A8.5 8.5 0 1121 12z"/></svg></span><span class="dsx-lbl">Messages</span></a>
+        </div>
+      </div>
+      <div class="dsx-box" style="--c:#a855f7">
+        <div class="dsx-head"><h4><i class="dsx-dot"></i>Learn &amp; support</h4><a href="/support">Contact support →</a></div>
+        <div class="dsx-grid">
+          <a class="dsx-item" href="/tutorials" style="--c:#a855f7"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h12a3 3 0 013 3v13H7a3 3 0 01-3-3z"/><path d="M4 17a3 3 0 013-3h12"/></svg></span><span class="dsx-lbl">Tutorials</span></a>
+          <a class="dsx-item" href="/support" style="--c:#a855f7"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8.5 8.5 0 01-11.9 7.8L4 21l1.2-5A8.5 8.5 0 1121 12z"/></svg></span><span class="dsx-lbl">Support</span></a>
+          <a class="dsx-item" href="/purchases" style="--c:#a855f7"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l1 13H5z"/><path d="M9 7a3 3 0 016 0"/></svg></span><span class="dsx-lbl">My Orders</span></a>
+          <a class="dsx-item" href="/transactions" style="--c:#a855f7"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span class="dsx-lbl">Transactions</span></a>
+          <a class="dsx-item" href="/deposit" style="--c:#a855f7"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 012-2h13a1 1 0 011 1v3"/><path d="M3 7v11a2 2 0 002 2h14a1 1 0 001-1v-6a1 1 0 00-1-1h-4a2 2 0 000 4h5"/></svg></span><span class="dsx-lbl">Add Money</span></a>
+          <a class="dsx-item" href="/settings" style="--c:#a855f7"><span class="dsx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></span><span class="dsx-lbl">Profile &amp; Settings</span></a>
+        </div>
+      </div>
+    </section>
     <!-- Account Actions -->
     <section class="mz-section" style="padding:12px 18px">
       <div style="display:flex;justify-content:space-between;align-items:center">
