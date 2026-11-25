@@ -17,3 +17,7 @@
 .kui-spin{width:54px;height:54px;border-radius:50%;border:5px solid #dbe6f6;border-top-color:#18a0fb;animation:kuispin .8s linear infinite}
 @keyframes kuispin{to{transform:rotate(360deg)}}
 .kui-logo{width:36px;height:36px;border-radius:10px;object-fit:contain;background:#fff;padding:3px;flex:0 0 36px}
+
+/* Banner close button: keep it a small plain icon even on pages whose global button style is full-width/gradient. */
+.kui-banner .kui-x{width:auto!important;min-width:0!important;height:auto!important;padding:0 4px!important;margin:0!important;background:none!important;background-image:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;color:#5a6c8c!important;font-size:20px!important;font-weight:400!important;line-height:1!important;flex:0 0 auto!important}
+.kui-banner .kui-txt{flex:1 1 auto!important;min-width:0!important;width:auto!important;white-space:normal!important;word-break:break-word!important}
