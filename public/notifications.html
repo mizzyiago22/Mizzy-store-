@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="/js/auth-keeper.js?v=1"></script>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Notifications | Mizzy Sales</title>
+<link rel="icon" href="/favicon.ico"/>
+<script>try{var t=localStorage.getItem('ksl_theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');if(!localStorage.getItem('ksl_token'))location.replace('/login')}catch(e){}</script>
+<style>
+:root{--bg:#0b0f19;--card:#131b2e;--line:rgba(148,163,184,.16);--t:#f0f6fc;--m:#8b9bb4}
+[data-theme="light"]{--bg:#f4f8fc;--card:#fff;--line:rgba(0,0,0,.1);--t:#0e1726;--m:#5e6d82}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',system-ui,sans-serif;padding:16px 16px 110px}
+.wrap{max-width:560px;margin:0 auto}a.back{color:#38bdf8;text-decoration:none;font-weight:700;font-size:14px}
+h1{font-size:22px;margin:14px 0 4px}.sub{color:var(--m);font-size:13px;margin-bottom:16px}
+.item{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+.item.unread{border-color:#38bdf8}.item b{display:block;font-size:14px}.item p{margin:4px 0 0;color:var(--m);font-size:13px;line-height:1.4}.item small{color:var(--m);font-size:11px}
+.empty{text-align:center;color:var(--m);padding:40px 10px}
+button{font:700 13px inherit;background:#155eef;color:#fff;border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
+</style></head><body><div class="wrap">
+<a class="back" href="/dashboard">← Back to dashboard</a>
+<h1>Notifications</h1><div class="sub">Deposits, purchases, support replies and announcements.</div>
+<div id="list" class="empty">Loading…</div>
+<div style="text-align:center;margin-top:14px"><button id="mark" type="button">Mark all as read</button></div>
+</div>
+<script>
+(function(){
+ var tok=localStorage.getItem('ksl_token'),H={Authorization:'Bearer '+tok};
+ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function load(){fetch('/api/user/notifications',{headers:H}).then(function(r){return r.ok?r.json():null}).then(function(d){
+  var box=document.getElementById('list'),items=(d&&d.items)||[];
+  if(!items.length){box.className='empty';box.textContent='No notifications yet.';return}
+  box.className='';
+  box.innerHTML=items.sort(function(a,b){return new Date(b.createdAt)-new Date(a.createdAt)}).map(function(n){
+   var href=n.link&&/^\//.test(n.link)&&n.link!=='/notifications'?n.link:'#';
+   return '<a class="item'+(n.unread?' unread':'')+'" href="'+esc(href)+'"><b>'+esc(n.title)+'</b><p>'+esc(n.message)+'</p><small>'+esc(new Date(n.createdAt).toLocaleString())+'</small></a>'}).join('')
+ }).catch(function(){document.getElementById('list').textContent='Could not load notifications.'})}
+ document.getElementById('mark').onclick=function(){fetch('/api/user/notifications/mark-seen',{method:'POST',headers:H}).then(load)};
+ load();
+})();
+</script>
+<script src="/js/mys-dock.js?v=2" defer></script>
+</body></html>
