@@ -1,0 +1,71 @@
+/* Mizzy Sales dashboard - modern app-style layout (header, wallet card, banners, service cards).
+   Loaded last on /dashboard only. Colours follow the site's blue brand and the light/dark theme. */
+body.dx-page{--dx-card:var(--card-bg,#131b2e);--dx-line:rgba(148,163,184,.16);--dx-text:var(--text,#f0f6fc);--dx-mute:var(--text-muted,#8b9bb4)}
+body.dx-page .mz-container{max-width:560px;padding:0 16px}
+/* the old logo + burger bar is replaced by the greeting header (menu stays in the bottom bar: Services) */
+body.dx-page .std-header{display:none!important}
+
+/* ---------- header ---------- */
+.dx-head{display:flex;align-items:center;gap:12px;padding:18px 2px 16px;border-bottom:1px solid var(--dx-line);margin-bottom:18px}
+.dx-logo img{display:block;width:42px;height:42px;border-radius:50%;object-fit:cover}
+.dx-greet{flex:1;min-width:0;display:flex;flex-direction:column}
+.dx-greet span{font:800 15px/1.2 'Plus Jakarta Sans',sans-serif;color:var(--dx-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dx-greet small{font-size:11.5px;font-weight:600;color:#38bdf8;margin-top:2px}
+.dx-head-actions{display:flex;align-items:center;gap:2px}.dx-head-actions .dx-avatar{margin-left:6px}
+.dx-icon-btn{position:relative;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:transparent;border:0;color:var(--dx-mute);cursor:pointer;text-decoration:none}
+.dx-icon-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.dx-badge{position:absolute;top:1px;right:-2px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#ef4444;color:#fff;font:800 11px/1 'Plus Jakarta Sans',sans-serif;display:none;align-items:center;justify-content:center;border:2px solid var(--bg,#0b0f19)}
+.dx-avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;overflow:hidden;cursor:pointer;background:rgba(56,189,248,.16);border:1px solid rgba(56,189,248,.3);color:#7dd3fc;font:800 16px 'Plus Jakarta Sans',sans-serif}
+.dx-avatar img{width:100%;height:100%;object-fit:cover}
+
+/* ---------- wallet ---------- */
+.dx-wallet{position:relative;overflow:hidden;border-radius:26px;padding:22px 20px 20px;color:#fff;
+  background:radial-gradient(300px 220px at 100% 0,rgba(56,189,248,.5),transparent 65%),linear-gradient(135deg,#0b2a8f 0%,#155eef 55%,#2a9df4 120%);
+  border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 50px -26px rgba(21,94,239,.9)}
+.dx-wallet::after{content:"M";position:absolute;right:-8px;top:-34px;font:italic 800 190px/1 'Sora',sans-serif;color:rgba(255,255,255,.08);pointer-events:none}
+.dx-w-top{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.dx-w-label{display:flex;align-items:center;gap:10px;font:700 16px 'Plus Jakarta Sans',sans-serif;color:rgba(255,255,255,.92)}
+.dx-w-eye{background:none!important;border:0!important;width:auto!important;height:auto!important;padding:0!important;color:#fff;display:grid;place-items:center;cursor:pointer}
+.dx-w-eye svg{stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.dx-w-status{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);font:700 13px 'Plus Jakarta Sans',sans-serif}
+.dx-w-status i{width:9px;height:9px;border-radius:50%;background:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.25)}
+.dx-w-amt{position:relative;z-index:1;margin-top:12px;font:800 clamp(34px,10vw,46px)/1.1 'Sora',sans-serif;letter-spacing:-.5px}
+.dx-w-sub{position:relative;z-index:1;margin-top:6px;font-size:13px;color:rgba(255,255,255,.75);font-weight:500}
+.dx-w-btns{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+.dx-btn{display:flex;align-items:center;justify-content:center;gap:8px;height:50px;border-radius:15px;font:800 15px 'Plus Jakarta Sans',sans-serif;text-decoration:none;transition:transform .15s}
+.dx-btn:active{transform:scale(.97)}
+.dx-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.dx-btn-solid{background:#fff;color:#0b2a8f}
+.dx-btn-ghost{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);color:#fff}
+
+/* ---------- promo banners ---------- */
+.dx-promos{display:flex;gap:0;margin-top:16px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:18px}
+.dx-promos::-webkit-scrollbar{display:none}
+.dx-promo{flex:0 0 100%;scroll-snap-align:start;position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;padding:14px 14px;border-radius:18px;text-decoration:none;color:var(--dx-text);
+  background:linear-gradient(120deg,color-mix(in srgb,var(--c) 14%,var(--dx-card)),var(--dx-card));border:1px solid color-mix(in srgb,var(--c) 28%,transparent)}
+.dx-promo-ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;background:color-mix(in srgb,var(--c) 18%,transparent);border:1px solid color-mix(in srgb,var(--c) 35%,transparent);color:var(--c)}
+.dx-promo-ico svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.dx-promo-txt{flex:1;min-width:0;display:flex;flex-direction:column}
+.dx-promo-txt b{font:800 15px 'Plus Jakarta Sans',sans-serif}
+.dx-promo-txt small{font-size:12.5px;color:var(--dx-mute);margin-top:2px}
+.dx-promo-cta{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:12px;background:#155eef;color:#fff;font:800 13.5px 'Plus Jakarta Sans',sans-serif;white-space:nowrap}
+.dx-promo-cta svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.dx-dots{display:flex;justify-content:center;gap:6px;margin:10px 0 4px}
+.dx-dots i{width:6px;height:6px;border-radius:999px;background:var(--dx-line);transition:all .25s}
+.dx-dots i.on{width:22px;background:#38bdf8}
+
+/* ---------- services ---------- */
+.dx-title{font:800 22px 'Plus Jakarta Sans',sans-serif;color:var(--dx-text);margin:22px 2px 14px}
+body.dx-page .mz-actions-grid.dx-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:0 0 22px}
+.dx-card{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;gap:12px;min-height:128px;padding:16px;border-radius:20px;text-decoration:none;color:var(--dx-text);
+  background:var(--dx-card);border:1px solid var(--dx-line);transition:transform .15s,border-color .2s}
+.dx-card:hover{border-color:color-mix(in srgb,var(--c) 50%,transparent)}
+.dx-card:active{transform:scale(.98)}
+.dx-card-ico svg{width:28px;height:28px;stroke:var(--c);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
+.dx-card-txt{display:flex;flex-direction:column;gap:3px;margin-top:auto;position:relative;z-index:1}
+.dx-card-txt b{font:800 15px/1.25 'Plus Jakarta Sans',sans-serif}
+.dx-card-txt small{font-size:12px;color:var(--dx-mute);line-height:1.3}
+.dx-card-go{position:absolute;top:16px;right:16px;width:19px;height:19px;stroke:var(--dx-text);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.dx-card-wm{position:absolute;right:-18px;bottom:-18px;width:96px;height:96px;stroke:var(--c);fill:none;stroke-width:1.2;opacity:.1;pointer-events:none}
+
+@media(max-width:360px){.dx-promo-cta{padding:8px 10px}.dx-promo-txt small{display:none}.dx-w-btns{gap:8px}.dx-btn{font-size:13.5px}}
