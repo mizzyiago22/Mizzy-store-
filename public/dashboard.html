@@ -400,8 +400,9 @@
 <script src="/js/mys-dock.js?v=2" defer></script>
   <link rel="stylesheet" href="/css/site-header.css?v=1"/>
 <link rel="stylesheet" href="/css/mizzy-contrast-fix.css?v=1">
+<link rel="stylesheet" href="/css/dashboard-dex.css?v=1">
 </head>
-<body data-std-recommended>
+<body data-std-recommended class="dx-page">
 
   <!-- SVG Icon Library -->
   <svg style="display:none">
@@ -420,27 +421,17 @@
   </svg>
 
   <div class="mz-container">
-    <!-- Navigation -->
-    <header class="mz-nav">
-      <div class="mz-user-pill" id="dshProfileBtn" onclick="dshToggleUserMenu(event)">
-        <div class="mz-avatar" id="dshAvatar">
+    <!-- Header: greeting, alerts, profile -->
+    <header class="dx-head">
+      <a class="dx-logo" href="/dashboard" aria-label="Mizzy Sales"><img src="/img/mizzy-logo.jpg" alt="" width="42" height="42"/></a>
+      <div class="dx-greet"><span id="dshHi">Good morning</span><small>Mizzy Sales VIP</small></div>
+      <div class="dx-head-actions">
+        <button type="button" class="dx-icon-btn" onclick="dshToggleTheme()" title="Toggle appearance" aria-label="Toggle appearance"><svg><use href="#i-zap"/></svg></button>
+        <a href="/notifications" class="dx-icon-btn" title="Alerts" aria-label="Alerts"><svg><use href="#i-bell"/></svg><span class="dx-badge" id="dshNotifDot" style="display:none">0</span></a>
+        <div class="dx-avatar" id="dshProfileBtn" onclick="dshToggleUserMenu(event)" role="button" aria-label="Profile and settings">
           <span id="dshAvatarInitial">M</span>
-          <img id="dshAvatarImg" src="" alt="Mizzy Sales" style="display:none" onerror="this.style.display='none'"/>
+          <img id="dshAvatarImg" src="" alt="" style="display:none" onerror="this.style.display='none'"/>
         </div>
-        <div class="mz-user-meta">
-          <span class="mz-hi" id="dshHi">Welcome back</span>
-          <span class="mz-sub">Mizzy Sales VIP</span>
-        </div>
-      </div>
-
-      <div class="mz-actions-top">
-        <button type="button" class="mz-circle-btn" onclick="dshToggleTheme()" title="Toggle appearance">
-          <svg><use href="#i-zap"/></svg>
-        </button>
-        <a href="/notifications" class="mz-circle-btn" title="Alerts">
-          <svg><use href="#i-bell"/></svg>
-          <span id="dshNotifDot" style="display:none;position:absolute;top:6px;right:6px;width:8px;height:8px;background:#ef4444;border-radius:50%"></span>
-        </a>
       </div>
     </header>
 
@@ -451,75 +442,116 @@
     </div>
 
     <!-- Wallet card -->
-    <section class="mp-wallet mz-wallet" aria-label="Wallet balance">
-      <div class="mp-w-top">
-        <div class="mp-w-brand"><span class="mp-w-logo"><svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 5.5 6l4.5 5 3-8 3 8 4.5-5L23 17H3Z"/></svg></span>Mizzy Sales</div>
-        <svg class="mp-w-nfc" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8a6 6 0 010 8M11 5.5a10 10 0 010 13M15 3a14 14 0 010 18"/></svg>
-      </div>
-      <div class="mp-w-mid">
-        <div class="mp-w-chip"></div>
-        <div class="mp-w-label">Wallet balance
-          <button type="button" class="mp-w-eye" onclick="dshToggleBalanceVisibility()" aria-label="Show or hide balance">
-            <svg width="15" height="15" viewBox="0 0 24 24"><use id="dshEyeIcon" href="#i-eye"/></svg>
+    <section class="dx-wallet" aria-label="Wallet balance">
+      <div class="dx-w-top">
+        <div class="dx-w-label">Wallet Balance
+          <button type="button" class="dx-w-eye mp-w-eye" onclick="dshToggleBalanceVisibility()" aria-label="Show or hide balance">
+            <svg width="18" height="18" viewBox="0 0 24 24"><use id="dshEyeIcon" href="#i-eye"/></svg>
           </button>
         </div>
-        <div class="mp-w-amt" id="dshBalance">₦0.00</div>
+        <span class="dx-w-status"><i></i>Active</span>
       </div>
-      <div class="mp-w-bot">
-        <div class="mp-w-holder"><small>Member</small><b id="dshCardName">Mizzy member</b></div>
-        <a href="/deposit" class="mp-w-add"><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add money</a>
+      <div class="dx-w-amt" id="dshBalance">₦0.00</div>
+      <div class="dx-w-sub"><span id="dshCardName">Mizzy member</span></div>
+      <div class="dx-w-btns">
+        <a href="/deposit" class="dx-btn dx-btn-solid"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Fund Wallet</a>
+        <a href="/giveaways" class="dx-btn dx-btn-ghost"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 9h18M12 9v12M12 9c-2-4-6-4-6-1.5S10 9 12 9zm0 0c2-4 6-4 6-1.5S14 9 12 9z"/></svg>See Rewards</a>
       </div>
     </section>
 
-    <!-- 4 Quick Actions -->
-    <div class="mz-actions-grid ms-grid6">
-      <a href="/buy-number" class="mz-tile">
-        <div class="mz-tile-icon"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></div>
-        <span class="mz-tile-label">Buy Numbers</span><span class="mz-tile-sub">SMS verification</span>
+    <!-- Promo banners (swipe) -->
+    <div class="dx-promos" id="dxPromos">
+      <a href="/buy-number" class="dx-promo" style="--c:#38bdf8">
+        <span class="dx-promo-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></span>
+        <span class="dx-promo-txt"><b>Virtual Numbers</b><small>OTP numbers for any app</small></span>
+        <span class="dx-promo-cta">Get one <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
-      <a href="/temp-email" class="mz-tile">
-        <div class="mz-tile-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div>
-        <span class="mz-tile-label">Temp Mail</span><span class="mz-tile-sub">Disposable email codes</span>
+      <a href="/marketplace" class="dx-promo" style="--c:#fb923c">
+        <span class="dx-promo-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 001 .8h9.2a1 1 0 001-.8L21 8H6"/></svg></span>
+        <span class="dx-promo-txt"><b>Marketplace</b><small>Ready-to-use accounts &amp; logs</small></span>
+        <span class="dx-promo-cta">Shop <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
-      <a href="/rental" class="mz-tile">
-        <div class="mz-tile-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-        <span class="mz-tile-label">Rentals</span><span class="mz-tile-sub">Keep a number for days</span>
+      <a href="/boost" class="dx-promo" style="--c:#ec4899">
+        <span class="dx-promo-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></span>
+        <span class="dx-promo-txt"><b>Boost</b><small>Followers, likes &amp; views</small></span>
+        <span class="dx-promo-cta">Boost <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
-      <a href="/vtu" class="mz-tile">
-        <div class="mz-tile-icon"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M14 12h4"/></svg></div>
-        <span class="mz-tile-label">Airtime &amp; Data</span><span class="mz-tile-sub">Airtime, data &amp; cable TV</span>
+    </div>
+    <div class="dx-dots" id="dxDots" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
+
+    <h3 class="dx-title">Services</h3>
+    <div class="mz-actions-grid dx-grid">
+      <a href="/buy-number" class="dx-card" style="--c:#38bdf8">
+        <span class="dx-card-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></span>
+        <span class="dx-card-txt"><b>Buy Numbers</b><small>SMS verification</small></span>
+        <svg class="dx-card-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg class="dx-card-wm" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>
       </a>
-      <a href="/marketplace" class="mz-tile">
-        <div class="mz-tile-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 001 .8h9.2a1 1 0 001-.8L21 8H6"/></svg></div>
-        <span class="mz-tile-label">Marketplace</span><span class="mz-tile-sub">Ready to use</span>
+      <a href="/temp-email" class="dx-card" style="--c:#a78bfa">
+        <span class="dx-card-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+        <span class="dx-card-txt"><b>Temp Mail</b><small>Disposable email codes</small></span>
+        <svg class="dx-card-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg class="dx-card-wm" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
       </a>
-      <a href="/working-pics" class="mz-tile">
-        <div class="mz-tile-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M21 16l-5.5-5.5L4 21"/></svg></div>
-        <span class="mz-tile-label">Working Pics</span><span class="mz-tile-sub">Verified media</span>
+      <a href="/rental" class="dx-card" style="--c:#34d399">
+        <span class="dx-card-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <span class="dx-card-txt"><b>Rentals</b><small>Keep a number for days</small></span>
+        <svg class="dx-card-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg class="dx-card-wm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
       </a>
-      <a href="/boost" class="mz-tile">
-        <div class="mz-tile-icon"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div>
-        <span class="mz-tile-label">Boosts</span><span class="mz-tile-sub">Grow your page</span>
+      <a href="/vtu" class="dx-card" style="--c:#fbbf24">
+        <span class="dx-card-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M14 12h4"/></svg></span>
+        <span class="dx-card-txt"><b>Airtime &amp; Data</b><small>Airtime, data &amp; cable TV</small></span>
+        <svg class="dx-card-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg class="dx-card-wm" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M14 12h4"/></svg>
       </a>
-      <a href="/tutorials" class="mz-tile">
-        <div class="mz-tile-icon"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></svg></div>
-        <span class="mz-tile-label">Tutorials</span><span class="mz-tile-sub">Step-by-step guides</span>
+      <a href="/marketplace" class="dx-card" style="--c:#fb923c">
+        <span class="dx-card-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 001 .8h9.2a1 1 0 001-.8L21 8H6"/></svg></span>
+        <span class="dx-card-txt"><b>Marketplace</b><small>Ready to use</small></span>
+        <svg class="dx-card-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg class="dx-card-wm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 001 .8h9.2a1 1 0 001-.8L21 8H6"/></svg>
       </a>
-      <a href="/tools" class="mz-tile">
-        <div class="mz-tile-icon"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 015.7 5l-5 5-2.4-2.4-5 5a2 2 0 01-2.8-2.8l5-5-2.4-2.4"/></svg></div>
-        <span class="mz-tile-label">Format &amp; tools</span><span class="mz-tile-sub">Utilities</span>
+      <a href="/working-pics" class="dx-card" style="--c:#f472b6">
+        <span class="dx-card-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M21 16l-5.5-5.5L4 21"/></svg></span>
+        <span class="dx-card-txt"><b>Working Pics</b><small>Verified media</small></span>
+        <svg class="dx-card-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg class="dx-card-wm" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M21 16l-5.5-5.5L4 21"/></svg>
       </a>
-      <a href="/giveaways" class="mz-tile">
-        <div class="mz-tile-icon"><svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 9h18M12 9v12M12 9c-2-4-6-4-6-1.5S10 9 12 9zm0 0c2-4 6-4 6-1.5S14 9 12 9z"/></svg></div>
-        <span class="mz-tile-label">Giveaways</span><span class="mz-tile-sub">Win rewards</span>
+      <a href="/boost" class="dx-card" style="--c:#ec4899">
+        <span class="dx-card-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></span>
+        <span class="dx-card-txt"><b>Boosts</b><small>Grow your page</small></span>
+        <svg class="dx-card-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg class="dx-card-wm" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
       </a>
-      <a href="/referrals" class="mz-tile">
-        <div class="mz-tile-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0M16 8a3 3 0 010 6M18 20a6 6 0 00-3-5"/></svg></div>
-        <span class="mz-tile-label">Referrals</span><span class="mz-tile-sub">Earn commission</span>
+      <a href="/tutorials" class="dx-card" style="--c:#60a5fa">
+        <span class="dx-card-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></svg></span>
+        <span class="dx-card-txt"><b>Tutorials</b><small>Step-by-step guides</small></span>
+        <svg class="dx-card-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg class="dx-card-wm" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></svg>
       </a>
-      <a href="/instant-numbers" class="mz-tile">
-        <div class="mz-tile-icon"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></div>
-        <span class="mz-tile-label">Fast SMS</span><span class="mz-tile-sub">SMS verification codes</span>
+      <a href="/tools" class="dx-card" style="--c:#94a3b8">
+        <span class="dx-card-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 015.7 5l-5 5-2.4-2.4-5 5a2 2 0 01-2.8-2.8l5-5-2.4-2.4"/></svg></span>
+        <span class="dx-card-txt"><b>Format &amp; tools</b><small>Utilities</small></span>
+        <svg class="dx-card-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg class="dx-card-wm" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 015.7 5l-5 5-2.4-2.4-5 5a2 2 0 01-2.8-2.8l5-5-2.4-2.4"/></svg>
+      </a>
+      <a href="/giveaways" class="dx-card" style="--c:#f59e0b">
+        <span class="dx-card-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 9h18M12 9v12M12 9c-2-4-6-4-6-1.5S10 9 12 9zm0 0c2-4 6-4 6-1.5S14 9 12 9z"/></svg></span>
+        <span class="dx-card-txt"><b>Giveaways</b><small>Win rewards</small></span>
+        <svg class="dx-card-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg class="dx-card-wm" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 9h18M12 9v12M12 9c-2-4-6-4-6-1.5S10 9 12 9zm0 0c2-4 6-4 6-1.5S14 9 12 9z"/></svg>
+      </a>
+      <a href="/referrals" class="dx-card" style="--c:#22d3ee">
+        <span class="dx-card-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0M16 8a3 3 0 010 6M18 20a6 6 0 00-3-5"/></svg></span>
+        <span class="dx-card-txt"><b>Referrals</b><small>Earn commission</small></span>
+        <svg class="dx-card-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg class="dx-card-wm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0M16 8a3 3 0 010 6M18 20a6 6 0 00-3-5"/></svg>
+      </a>
+      <a href="/instant-numbers" class="dx-card" style="--c:#818cf8">
+        <span class="dx-card-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></span>
+        <span class="dx-card-txt"><b>Fast SMS</b><small>SMS verification codes</small></span>
+        <svg class="dx-card-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg class="dx-card-wm" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>
       </a>
     </div>
 
@@ -636,7 +668,7 @@
         const firstName = name.trim().split(' ')[0] || 'Client';
 
         const hiEl = document.getElementById('dshHi');
-        if (hiEl) hiEl.textContent = 'Hi, ' + firstName;
+        if (hiEl) { const hr = new Date().getHours(); hiEl.textContent = (hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening') + ', ' + firstName; }
 
         const cardName = document.getElementById('dshCardName');
         if (cardName) cardName.textContent = name.trim();
@@ -709,6 +741,32 @@
         .catch(() => {
           document.getElementById('dshTransactions').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px">Recent activity ready in full history</div>';
         });
+    })();
+
+    // Unread alerts badge + banner dots
+    (function(){
+      try {
+        const t = localStorage.getItem('ksl_token');
+        fetch('/api/user/notifications', { headers: { 'Authorization': 'Bearer ' + t } })
+          .then(r => r.ok ? r.json() : null)
+          .then(d => {
+            const b = document.getElementById('dshNotifDot');
+            if (b && d && d.count > 0) { b.textContent = d.count > 9 ? '9+' : String(d.count); b.style.display = 'flex'; }
+          }).catch(() => {});
+      } catch (e) {}
+      const box = document.getElementById('dxPromos'), dots = document.querySelectorAll('#dxDots i');
+      if (box && dots.length) {
+        box.addEventListener('scroll', () => {
+          const i = Math.round(box.scrollLeft / Math.max(1, box.clientWidth));
+          dots.forEach((d, n) => d.classList.toggle('on', n === i));
+        }, { passive: true });
+        let cur = 0;
+        setInterval(() => {
+          if (document.hidden) return;
+          cur = (cur + 1) % dots.length;
+          box.scrollTo({ left: cur * box.clientWidth, behavior: 'smooth' });
+        }, 5000);
+      }
     })();
 
     function dshApplyBalanceVisibility() {
