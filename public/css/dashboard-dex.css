@@ -2,12 +2,12 @@
    Loaded last on /dashboard only. Colours follow the site's blue brand and the light/dark theme. */
 body.dx-page{--dx-card:var(--card-bg,#131b2e);--dx-line:rgba(148,163,184,.16);--dx-text:var(--text,#f0f6fc);--dx-mute:var(--text-muted,#8b9bb4)}
 body.dx-page .mz-container{max-width:560px;padding:0 16px}
-/* the old logo + burger bar is replaced by the greeting header (menu stays in the bottom bar: Services) */
-body.dx-page .std-header{display:none!important}
+/* top bar (logo + hamburger) stays pinned while the page scrolls under it */
+body.dx-page{padding-top:58px}
+body.dx-page .std-header{position:fixed!important;top:0;left:0;right:0;z-index:900}
 
 /* ---------- header ---------- */
-.dx-head{display:flex;align-items:center;gap:12px;padding:18px 2px 16px;border-bottom:1px solid var(--dx-line);margin-bottom:18px}
-.dx-logo img{display:block;width:42px;height:42px;border-radius:50%;object-fit:cover}
+.dx-head{display:flex;align-items:center;gap:12px;padding:16px 2px 14px;border-bottom:1px solid var(--dx-line);margin-bottom:18px}
 .dx-greet{flex:1;min-width:0;display:flex;flex-direction:column}
 .dx-greet span{font:800 15px/1.2 'Plus Jakarta Sans',sans-serif;color:var(--dx-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dx-greet small{font-size:11.5px;font-weight:600;color:#38bdf8;margin-top:2px}
