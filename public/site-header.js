@@ -603,4 +603,4 @@
 })();
 
 // Loads the admin on/off link hider (Admin → Features) on every page that uses this header.
-(function () { try { var s = document.createElement('script'); s.src = '/js/feature-gate.js?v=1'; s.defer = true; document.head.appendChild(s); } catch (e) {} })();
+(function () { try { var s = document.createElement('script'); s.src = '/js/feature-gate.js?v=2'; s.defer = true; document.head.appendChild(s); } catch (e) {} })();
